@@ -1,5 +1,6 @@
 package com.example.ars;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -64,15 +65,17 @@ public class PlantsActivity extends AppCompatActivity {
 
         Button btnLogout = findViewById(R.id.btnMenu4);
         btnLogout.setOnClickListener(v -> {
-            closeSideMenu();
-            finish();
+            startActivity(new Intent(PlantsActivity.this, LoginActivity.class));
+        });
+
+        Button btnWeather = findViewById(R.id.btnMenu2);
+        btnWeather.setOnClickListener(v -> {
+            startActivity(new Intent(PlantsActivity.this, WeatherActivity.class));
         });
 
         FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
         fabAdd.setOnClickListener(v -> {
-            plants.add(0, "Новое растение - Добавлено: сегодня");
-            adapter.notifyItemInserted(0);
-            rvPlants.scrollToPosition(0);
+            startActivity(new Intent(PlantsActivity.this, AddPlantActivity.class));
         });
     }
 
@@ -128,13 +131,23 @@ public class PlantsActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
-            holder.textView.setText(plants.get(position));
-        }
-
-        @Override
         public int getItemCount() {
             return plants.size();
+        }
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int position) {
+            String plant = plants.get(position);
+            holder.textView.setText(plant);
+
+            holder.itemView.setOnClickListener(v -> {
+                Intent intent = new Intent(PlantsActivity.this, PlantDetailActivity.class);
+
+                intent.putExtra("plant_name", plant.split(" - ")[0]);
+                intent.putExtra("notes", "Поливать раз в неделю");
+                intent.putExtra("has_recommendations", true);
+
+                startActivity(intent);
+            });
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {

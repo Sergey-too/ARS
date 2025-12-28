@@ -32,6 +32,18 @@
         <activity
             android:name=".PlantsActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".AddPlantActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".WeatherActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".PlantDetailActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
