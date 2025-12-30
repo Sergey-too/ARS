@@ -9,6 +9,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ARS">
 
+
         <!-- LoginActivity - стартовая -->
         <activity
             android:name=".LoginActivity"
