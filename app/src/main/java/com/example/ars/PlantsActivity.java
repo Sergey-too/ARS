@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -64,9 +66,7 @@ public class PlantsActivity extends AppCompatActivity {
         setupMenuButton(R.id.btnMenu3, "Настройки");
 
         Button btnLogout = findViewById(R.id.btnMenu4);
-        btnLogout.setOnClickListener(v -> {
-            startActivity(new Intent(PlantsActivity.this, LoginActivity.class));
-        });
+        btnLogout.setOnClickListener(v -> logout());
 
         Button btnWeather = findViewById(R.id.btnMenu2);
         btnWeather.setOnClickListener(v -> {
@@ -79,6 +79,27 @@ public class PlantsActivity extends AppCompatActivity {
         });
     }
 
+    // Метод выхода из аккаунта
+    private void logout() {
+        // Показываем диалог подтверждения
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Выход")
+                .setMessage("Вы действительно хотите выйти из аккаунта?")
+                .setPositiveButton("Выйти", (dialog, which) -> {
+                    performLogout();
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    private void performLogout() {
+        Toast.makeText(this, "Вы вышли из аккаунта", Toast.LENGTH_SHORT).show();
+
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
     private void setupMenuButton(int buttonId, String action) {
         Button button = findViewById(buttonId);
         button.setOnClickListener(v -> {

@@ -1,8 +1,8 @@
 package com.example.ars;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.ImageView;
@@ -10,9 +10,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.ars.api.ApiService;
+import com.example.ars.api.RetrofitClient;
 import com.google.android.material.button.MaterialButton;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -25,7 +25,7 @@ import retrofit2.Response;
 
 public class WeatherActivity extends AppCompatActivity {
 
-    private String selectedRegion = "Минск, Минская область";
+    private String selectedRegion = "Минск";
     private ApiService apiService;
 
     @Override
@@ -37,13 +37,13 @@ public class WeatherActivity extends AppCompatActivity {
 
         // Кнопка назад
         ImageView btnBack = findViewById(R.id.btnBack);
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            startActivity(new Intent(WeatherActivity.this, PlantsActivity.class));
+            finish();
+        });
 
-        // Загружаем регионы из БД
+        // Загружаем регионы ТОЛЬКО из БД
         loadRegions();
-
-        // Настройка выпадающего списка
-        setupRegionDropdown();
 
         // Кнопка обновления
         MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
@@ -59,41 +59,33 @@ public class WeatherActivity extends AppCompatActivity {
         apiService.getRegions().enqueue(new Callback<List<Region>>() {
             @Override
             public void onResponse(Call<List<Region>> call, Response<List<Region>> response) {
-                if (response.isSuccessful() && response.body() != null) {
+                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
                     updateRegionDropdown(response.body());
                 } else {
-                    // Если нет регионов, создаем тестовые
-                    createTestRegions();
+                    // Если регионов нет в БД, сообщаем пользователю
+                    Toast.makeText(WeatherActivity.this,
+                            "Регионы не найдены в базе данных", Toast.LENGTH_SHORT).show();
+                    Log.e("API", "Регионы не найдены в БД");
+
+                    // Скрываем или показываем сообщение
+                    TextView tvRegionInfo = findViewById(R.id.tvRegionInfo);
+                    tvRegionInfo.setText("Регионы не загружены");
                 }
             }
 
             @Override
             public void onFailure(Call<List<Region>> call, Throwable t) {
                 Log.e("API", "Ошибка загрузки регионов: " + t.getMessage());
-            }
-        });
-    }
-
-    private void createTestRegions() {
-        apiService.createTestRegions().enqueue(new Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                if (response.isSuccessful()) {
-                    Log.d("API", "Регионы созданы: " + response.body());
-                    // Перезагружаем регионы
-                    loadRegions();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                Log.e("API", "Ошибка создания регионов: " + t.getMessage());
+                Toast.makeText(WeatherActivity.this,
+                        "Ошибка загрузки регионов", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void updateRegionDropdown(List<Region> regions) {
         AutoCompleteTextView actvRegion = findViewById(R.id.actvRegion);
+
+        // УДАЛИЛ статичные регионы - используем только из БД
         ArrayAdapter<Region> regionAdapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_dropdown_item_1line,
@@ -108,43 +100,21 @@ public class WeatherActivity extends AppCompatActivity {
             loadWeatherForRegion(selectedRegion);
         });
 
-        // Устанавливаем начальное значение
+        // Устанавливаем начальное значение из БД
         if (!regions.isEmpty()) {
             actvRegion.setText(regions.get(0).getName(), false);
             selectedRegion = regions.get(0).getName();
             updateRegionInfo();
+            // Автоматически грузим погоду для первого региона
+            loadWeatherForRegion(selectedRegion);
         }
     }
 
-    private void setupRegionDropdown() {
-        AutoCompleteTextView actvRegion = findViewById(R.id.actvRegion);
-        // Пока грузим статичный список
-        String[] defaultRegions = {
-                "Минск, Минская область",
-                "Брестская область",
-                "Витебская область",
-                "Гомельская область",
-                "Гродненская область",
-                "Могилевская область"
-        };
-
-        ArrayAdapter<String> defaultAdapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_dropdown_item_1line,
-                defaultRegions
-        );
-        actvRegion.setAdapter(defaultAdapter);
-
-        actvRegion.setOnItemClickListener((parent, view, position, id) -> {
-            selectedRegion = defaultRegions[position];
-            updateRegionInfo();
-            loadWeatherForRegion(selectedRegion);
-        });
-    }
+    // УДАЛИЛ метод setupRegionDropdown() - он был с тестовыми данными
 
     private void updateRegionInfo() {
         TextView tvRegionInfo = findViewById(R.id.tvRegionInfo);
-        tvRegionInfo.setText("Выбран: " + selectedRegion);
+        tvRegionInfo.setText("Выбран регион: " + selectedRegion);
     }
 
     private void loadWeatherForRegion(String region) {
@@ -156,18 +126,20 @@ public class WeatherActivity extends AppCompatActivity {
                     updateWeatherUI(weatherResponse);
 
                     if (weatherResponse.isTestData()) {
-                        // Если это тестовые данные, предлагаем создать реальные
-                        addRealWeatherData();
+                        Toast.makeText(WeatherActivity.this,
+                                "Используются тестовые данные о погоде", Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    showTestData();
+                    Toast.makeText(WeatherActivity.this,
+                            "Не удалось загрузить данные о погоде", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<WeatherResponse> call, Throwable t) {
                 Log.e("API", "Ошибка загрузки погоды: " + t.getMessage());
-                showTestData();
+                Toast.makeText(WeatherActivity.this,
+                        "Ошибка сети при загрузке погоды", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -212,26 +184,5 @@ public class WeatherActivity extends AppCompatActivity {
         if (tvPrecip != null) tvPrecip.setText(weather.getPrecipitation());
     }
 
-    private void showTestData() {
-        // Показываем тестовые данные
-        Toast.makeText(this, "Используются тестовые данные", Toast.LENGTH_SHORT).show();
-    }
-
-    private void addRealWeatherData() {
-        apiService.addTestWeatherData().enqueue(new Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                if (response.isSuccessful()) {
-                    Log.d("API", "Тестовые данные о погоде добавлены");
-                    // Перезагружаем погоду
-                    loadWeatherForRegion(selectedRegion);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                Log.e("API", "Ошибка добавления данных: " + t.getMessage());
-            }
-        });
-    }
+    // УДАЛИЛ метод addRealWeatherData() - если нужны тестовые данные, их должен создавать сервер
 }
