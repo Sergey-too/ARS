@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -25,7 +24,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <!-- Иконка приложения -->
             <ImageView
                 android:layout_width="60dp"
                 android:layout_height="60dp"
@@ -50,7 +48,6 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- Карточка с формой -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardView"
             android:layout_width="0dp"
@@ -70,7 +67,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <!-- Кнопка назад -->
                 <ImageView
                     android:id="@+id/btnBack"
                     android:layout_width="40dp"
@@ -84,7 +80,6 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- Заголовок формы -->
                 <TextView
                     android:id="@+id/tvFormTitle"
                     android:layout_width="wrap_content"
@@ -98,11 +93,11 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- Место для фотографии -->
+                <!-- Фото -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/photoCard"
                     android:layout_width="0dp"
-                    android:layout_height="180dp"
+                    android:layout_height="150dp"
                     android:layout_marginTop="24dp"
                     app:cardBackgroundColor="@color/color_surface_light"
                     app:cardCornerRadius="16dp"
@@ -121,40 +116,29 @@
 
                         <ImageView
                             android:id="@+id/ivPlantPhoto"
-                            android:layout_width="80dp"
-                            android:layout_height="80dp"
+                            android:layout_width="60dp"
+                            android:layout_height="60dp"
                             android:src="@drawable/ic_add"
-                            app:tint="@color/color_green_primary"
-                            android:contentDescription="Добавить фото" />
+                            app:tint="@color/color_green_primary" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
+                            android:layout_marginTop="8dp"
                             android:text="Добавить фото"
                             android:textColor="@color/color_green_primary"
-                            android:textSize="16sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="Коснитесь для загрузки"
-                            android:textColor="@color/color_text_gray"
-                            android:textSize="12sp" />
-
+                            android:textSize="14sp" />
                     </LinearLayout>
-
                 </androidx.cardview.widget.CardView>
 
-                <!-- Тип растения -->
+                <!-- Категория -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPlantType"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:hint="Тип растения"
+                    android:layout_marginTop="16dp"
+                    android:hint="Категория *"
                     app:boxStrokeColor="@color/color_input_border"
                     app:boxStrokeWidthFocused="2dp"
                     app:endIconMode="dropdown_menu"
@@ -167,23 +151,20 @@
                         android:id="@+id/actvPlantType"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="16dp"
+                        android:padding="12dp"
                         android:textColor="@color/color_text_dark"
                         android:textSize="16sp"
-                        android:inputType="none"
-                        android:completionHint="Выберите тип"
-                        android:completionThreshold="1" />
-
+                        android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Название растения -->
+                <!-- Растение -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPlantName"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Название растения"
+                    android:layout_marginTop="12dp"
+                    android:hint="Растение *"
                     app:boxStrokeColor="@color/color_input_border"
                     app:boxStrokeWidthFocused="2dp"
                     app:endIconMode="dropdown_menu"
@@ -196,13 +177,10 @@
                         android:id="@+id/actvPlantName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="16dp"
+                        android:padding="12dp"
                         android:textColor="@color/color_text_dark"
                         android:textSize="16sp"
-                        android:inputType="none"
-                        android:completionHint="Выберите растение"
-                        android:completionThreshold="1" />
-
+                        android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Регион -->
@@ -211,8 +189,8 @@
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Регион"
+                    android:layout_marginTop="12dp"
+                    android:hint="Регион *"
                     app:boxStrokeColor="@color/color_input_border"
                     app:boxStrokeWidthFocused="2dp"
                     app:endIconMode="dropdown_menu"
@@ -225,64 +203,61 @@
                         android:id="@+id/actvRegion"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="16dp"
+                        android:padding="12dp"
                         android:textColor="@color/color_text_dark"
                         android:textSize="16sp"
-                        android:inputType="none"
-                        android:completionHint="Выберите регион"
-                        android:completionThreshold="1" />
-
+                        android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Дополнительные заметки -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilNotes"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                <!-- Описание растения -->
+                <TextView
+                    android:id="@+id/tvDescriptionLabel"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Дополнительные заметки (необязательно)"
-                    app:boxStrokeColor="@color/color_input_border"
-                    app:boxStrokeWidthFocused="2dp"
-                    app:endIconMode="clear_text"
-                    app:endIconTint="@color/color_green_primary"
+                    android:text="Описание растения:"
+                    android:textColor="@color/color_text_dark"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilRegion">
+                    app:layout_constraintTop_toBottomOf="@+id/tilRegion" />
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etNotes"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="16dp"
-                        android:textColor="@color/color_text_dark"
-                        android:textSize="16sp"
-                        android:inputType="textMultiLine"
-                        android:minLines="3"
-                        android:gravity="top|start" />
+                <!-- Поле для отображения описания -->
+                <TextView
+                    android:id="@+id/tvPlantDescription"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_rounded_gray"
+                    android:padding="12dp"
+                    android:text="Выберите растение чтобы увидеть описание"
+                    android:textColor="@color/color_text_gray"
+                    android:textSize="14sp"
+                    android:minLines="4"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tvDescriptionLabel" />
 
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- Кнопка добавления -->
+                <!-- Кнопка -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnAddPlant"
                     android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_marginTop="32dp"
-                    android:layout_marginBottom="24dp"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="16dp"
                     android:text="Добавить растение"
                     android:textAllCaps="false"
                     android:textColor="@color/color_button_text_primary"
-                    android:textSize="18sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     app:backgroundTint="@color/color_green_primary"
-                    app:cornerRadius="12dp"
+                    app:cornerRadius="8dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilNotes" />
+                    app:layout_constraintTop_toBottomOf="@+id/tvPlantDescription" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>
