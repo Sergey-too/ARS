@@ -2,100 +2,330 @@ package com.example.ars;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.ars.api.ApiService;
+import com.example.ars.api.RetrofitClient;
+import com.example.ars.models.Crop;
+import com.squareup.picasso.Picasso;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class PlantDetailActivity extends AppCompatActivity {
+
+    private ApiService apiService;
+    private Integer cropId;
+    private Crop currentCrop;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plant_detail);
 
-        // Получаем данные из Intent (заглушки пока)
-        Intent intent = getIntent();
-        String plantName = intent.getStringExtra("plant_name");
-        String plantType = intent.getStringExtra("plant_type");
-        String dateAdded = intent.getStringExtra("date_added");
-        String region = intent.getStringExtra("region");
-        String notes = intent.getStringExtra("notes");
-        boolean hasRecommendations = intent.getBooleanExtra("has_recommendations", false);
+        // 1. Инициализация Retrofit
+        apiService = RetrofitClient.getApiService();
 
-        // Если данных нет, используем заглушки
-        if (plantName == null) {
-            plantName = "Монстера";
-            plantType = "Декоративное комнатное";
-            dateAdded = "12.03.2024";
-            region = "Минская область";
-            notes = "Поливать раз в неделю. Любит рассеянный свет. Пересаживать весной.";
-            hasRecommendations = true;
+        // 2. Получаем ID растения из Intent
+        cropId = getIntent().getIntExtra("crop_id", -1);
+        if (cropId == -1) {
+            Toast.makeText(this, "Ошибка: не указано растение", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
         }
 
-        // Заголовок с названием растения
-        TextView tvPlantName = findViewById(R.id.tvPlantName);
-        tvPlantName.setText(plantName);
+        Log.d("PlantDetail", "Открываем детали растения ID: " + cropId);
 
-        // Фото растения (заглушка пока)
-        ImageView ivPlantPhoto = findViewById(R.id.ivPlantPhoto);
-        // TODO: Загрузка фото из БД/URL
-        // ivPlantPhoto.setImageURI(Uri.parse(photoUrl));
+        // 3. Настройка кнопки назад
+        setupBackButton();
 
-        // Заметки пользователя
-        TextView tvNotes = findViewById(R.id.tvNotes);
-        TextView tvNoNotes = findViewById(R.id.tvNoNotes);
+        // 4. Загружаем данные о растении
+        loadPlantDetails();
+    }
 
-        if (notes != null && !notes.isEmpty()) {
-            tvNotes.setText(notes);
-            tvNotes.setVisibility(View.VISIBLE);
-            tvNoNotes.setVisibility(View.GONE);
+    // ==================== МЕТОДЫ НАСТРОЙКИ UI ====================
+
+    private void setupBackButton() {
+        // Если в layout есть кнопка назад, настраиваем ее
+        ImageView btnBack = findViewById(R.id.btnBack);
+        if (btnBack == null) {
+            // Если нет кнопки в layout, нужно добавить ее в XML
+            // Сейчас просто добавим программно
+            btnBack = new ImageView(this);
+            btnBack.setImageResource(R.drawable.ic_arrow_back);
+            // Или используем системную кнопку в ActionBar
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         } else {
-            tvNotes.setVisibility(View.GONE);
-            tvNoNotes.setVisibility(View.VISIBLE);
-        }
-
-        // Кнопка редактирования заметок
-        ImageView btnEditNotes = findViewById(R.id.btnEditNotes);
-        btnEditNotes.setOnClickListener(v -> {
-            // TODO: Открыть редактор заметок
-            // startActivity(new Intent(this, EditNotesActivity.class));
-        });
-
-        // Рекомендации по посадке
-        TextView tvRecommendations = findViewById(R.id.tvRecommendations);
-        TextView tvNoRecommendations = findViewById(R.id.tvNoRecommendations);
-
-        if (hasRecommendations) {
-            // TODO: Загрузить рекомендации из БД
-            String recommendations =
-                    "1. Лучшее время для посадки: весна\n" +
-                            "2. Почва: легкая, дренированная\n" +
-                            "3. Освещение: рассеянный свет\n" +
-                            "4. Полив: умеренный, не допускать переувлажнения\n" +
-                            "5. Температура: 18-25°C";
-
-            tvRecommendations.setText(recommendations);
-            tvRecommendations.setVisibility(View.VISIBLE);
-            tvNoRecommendations.setVisibility(View.GONE);
-        } else {
-            tvRecommendations.setVisibility(View.GONE);
-            tvNoRecommendations.setVisibility(View.VISIBLE);
+            btnBack.setOnClickListener(v -> finish());
         }
     }
 
-    // Метод для обновления данных (будет вызываться при возврате из редактора)
-    public void updateNotes(String newNotes) {
-        TextView tvNotes = findViewById(R.id.tvNotes);
-        TextView tvNoNotes = findViewById(R.id.tvNoNotes);
+    // ==================== ЗАГРУЗКА ДАННЫХ ====================
 
-        if (newNotes != null && !newNotes.isEmpty()) {
-            tvNotes.setText(newNotes);
-            tvNotes.setVisibility(View.VISIBLE);
-            tvNoNotes.setVisibility(View.GONE);
-        } else {
-            tvNotes.setVisibility(View.GONE);
-            tvNoNotes.setVisibility(View.VISIBLE);
+    private void loadPlantDetails() {
+        Log.d("PlantDetail", "Загружаю детали растения ID: " + cropId);
+
+        // Показываем заглушки пока грузятся данные
+        showLoadingState();
+
+        // Вызываем API для получения данных о растении
+        apiService.getCropById(cropId).enqueue(new Callback<Crop>() {
+            @Override
+            public void onResponse(Call<Crop> call, Response<Crop> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    currentCrop = response.body();
+                    Log.d("PlantDetail", "Получено растение: " + currentCrop.getName());
+
+                    // Обновляем UI с полученными данными
+                    updateUI();
+                } else {
+                    Log.e("PlantDetail", "Ошибка загрузки: " + response.code());
+                    Toast.makeText(PlantDetailActivity.this,
+                            "Ошибка загрузки данных: " + response.code(),
+                            Toast.LENGTH_SHORT).show();
+                    showDefaultData();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Crop> call, Throwable t) {
+                Log.e("PlantDetail", "Ошибка сети: " + t.getMessage());
+                Toast.makeText(PlantDetailActivity.this,
+                        "Ошибка сети: " + t.getMessage(),
+                        Toast.LENGTH_SHORT).show();
+                showDefaultData();
+            }
+        });
+    }
+
+    // ==================== ОБНОВЛЕНИЕ UI ====================
+
+    private void showLoadingState() {
+        // Можно показать ProgressBar или изменить текст на "Загрузка..."
+        TextView tvPlantName = findViewById(R.id.tvPlantName);
+        if (tvPlantName != null) {
+            tvPlantName.setText("Загрузка...");
         }
+    }
+
+    private void updateUI() {
+        if (currentCrop == null) return;
+
+        // 1. Обновляем название растения
+        updatePlantName();
+
+        // 2. Обновляем фото растения
+        updatePlantPhoto();
+
+        // 3. Обновляем описание растения
+        updatePlantDescription();
+
+        // 4. Обновляем характеристики растения
+        updatePlantCharacteristics();
+    }
+
+    private void updatePlantName() {
+        TextView tvPlantName = findViewById(R.id.tvPlantName);
+        if (tvPlantName != null) {
+            tvPlantName.setText(currentCrop.getName());
+
+            // Также можно установить заголовок в ActionBar
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setTitle(currentCrop.getName());
+            }
+        }
+    }
+
+    private void updatePlantPhoto() {
+        ImageView ivPlantPhoto = findViewById(R.id.ivPlantPhoto);
+        View photoPlaceholder = findViewById(R.id.photoPlaceholder);
+
+        if (currentCrop.getPhotoPath() != null && !currentCrop.getPhotoPath().isEmpty()) {
+            // Формируем полный URL для фото
+            String photoUrl;
+            if (currentCrop.getPhotoPath().startsWith("http")) {
+                photoUrl = currentCrop.getPhotoPath();
+            } else {
+                photoUrl = RetrofitClient.BASE_URL + currentCrop.getPhotoPath();
+            }
+
+            Log.d("PlantDetail", "Загружаю фото: " + photoUrl);
+
+            // Загружаем фото с помощью Picasso
+            Picasso.get()
+                    .load(photoUrl)
+                    .placeholder(R.drawable.plant_placeholder) // Пока грузится
+                    .error(R.drawable.ic_close) // Если ошибка
+                    .fit()
+                    .centerCrop()
+                    .into(ivPlantPhoto);
+
+            // Скрываем плейсхолдер
+            if (photoPlaceholder != null) {
+                photoPlaceholder.setVisibility(View.GONE);
+            }
+        } else {
+            // Если фото нет, показываем плейсхолдер
+            if (photoPlaceholder != null) {
+                photoPlaceholder.setVisibility(View.VISIBLE);
+            }
+            // Можно установить дефолтное изображение
+            if (ivPlantPhoto != null) {
+                ivPlantPhoto.setImageResource(R.drawable.plant_placeholder);
+            }
+        }
+    }
+
+    private void updatePlantDescription() {
+        // Если в layout нет блока с описанием, нужно его добавить
+        // Сейчас будем использовать блок заметок для описания
+
+        TextView tvDescription = findViewById(R.id.tvDescription);
+        if (tvDescription != null) {
+            if (currentCrop.getDescription() != null && !currentCrop.getDescription().isEmpty()) {
+                tvDescription.setText(currentCrop.getDescription());
+                tvDescription.setVisibility(View.VISIBLE);
+            } else {
+                tvDescription.setText("Описание отсутствует");
+            }
+        }
+    }
+
+    private void updatePlantCharacteristics() {
+        TextView tvRecommendations = findViewById(R.id.tvRecommendations);
+        if (tvRecommendations != null) {
+            StringBuilder characteristics = new StringBuilder();
+
+            // 1. Категория
+            if (currentCrop.getCategory() != null) {
+                characteristics.append("📁 Категория: ")
+                        .append(currentCrop.getCategory())
+                        .append("\n\n");
+            }
+
+            // 2. Температурный режим
+            if (currentCrop.getMinTemp() != null || currentCrop.getMaxTemp() != null) {
+                characteristics.append("🌡️ Температура: ");
+                if (currentCrop.getMinTemp() != null) {
+                    characteristics.append("от ").append(currentCrop.getMinTemp()).append("°C");
+                }
+                if (currentCrop.getMaxTemp() != null) {
+                    if (currentCrop.getMinTemp() != null) characteristics.append(" ");
+                    characteristics.append("до ").append(currentCrop.getMaxTemp()).append("°C");
+                }
+                characteristics.append("\n\n");
+            }
+
+            // 3. Влажность
+            if (currentCrop.getMinHumidity() != null || currentCrop.getMaxHumidity() != null) {
+                characteristics.append("💧 Влажность: ");
+                if (currentCrop.getMinHumidity() != null) {
+                    characteristics.append("от ").append(currentCrop.getMinHumidity()).append("%");
+                }
+                if (currentCrop.getMaxHumidity() != null) {
+                    if (currentCrop.getMinHumidity() != null) characteristics.append(" ");
+                    characteristics.append("до ").append(currentCrop.getMaxHumidity()).append("%");
+                }
+                characteristics.append("\n\n");
+            }
+
+            // 4. Ветер
+            if (currentCrop.getMaxWind() != null) {
+                characteristics.append("💨 Максимальный ветер: ")
+                        .append(currentCrop.getMaxWind())
+                        .append(" м/с\n\n");
+            }
+
+            // 5. Осадки
+            if (currentCrop.getNeededPrecipitation() != null) {
+                characteristics.append("🌧️ Требуемые осадки: ")
+                        .append(currentCrop.getNeededPrecipitation())
+                        .append(" мм/месяц\n\n");
+            }
+
+            // 6. Глубина посадки
+            if (currentCrop.getSowingDepth() != null) {
+                characteristics.append("🕳️ Глубина посадки: ")
+                        .append(currentCrop.getSowingDepth())
+                        .append(" см\n\n");
+            }
+
+            // 7. Дни до всходов
+            if (currentCrop.getDaysToGermination() != null) {
+                characteristics.append("🌱 Дни до всходов: ")
+                        .append(currentCrop.getDaysToGermination())
+                        .append(" дней\n\n");
+            }
+
+            // 8. Дни до урожая
+            if (currentCrop.getDaysToHarvest() != null) {
+                characteristics.append("⏳ Дни до урожая: ")
+                        .append(currentCrop.getDaysToHarvest())
+                        .append(" дней\n\n");
+            }
+
+            // 9. Методы посадки
+            boolean hasPlantingInfo = false;
+            StringBuilder plantingMethods = new StringBuilder();
+
+            if (Boolean.TRUE.equals(currentCrop.getCanSeedlings())) {
+                plantingMethods.append("рассада");
+                hasPlantingInfo = true;
+            }
+
+            if (Boolean.TRUE.equals(currentCrop.getCanDirectSow())) {
+                if (hasPlantingInfo) plantingMethods.append(", ");
+                plantingMethods.append("прямой посев");
+                hasPlantingInfo = true;
+            }
+
+            if (hasPlantingInfo) {
+                characteristics.append("🌿 Методы посадки: ")
+                        .append(plantingMethods.toString())
+                        .append("\n\n");
+            }
+
+            // Если есть характеристики, показываем их
+            if (characteristics.length() > 0) {
+                tvRecommendations.setText(characteristics.toString());
+
+                // Показываем заголовок рекомендаций
+                TextView tvRecommendationsTitle = findViewById(R.id.tvRecommendationsTitle);
+                if (tvRecommendationsTitle != null) {
+                    tvRecommendationsTitle.setText("Характеристики растения");
+                }
+            } else {
+                tvRecommendations.setText("Характеристики растения отсутствуют в базе данных");
+            }
+        }
+    }
+
+    private void showDefaultData() {
+        // Показываем данные по умолчанию если не удалось загрузить
+        TextView tvPlantName = findViewById(R.id.tvPlantName);
+        if (tvPlantName != null) {
+            tvPlantName.setText("Растение #" + cropId);
+        }
+
+        TextView tvRecommendations = findViewById(R.id.tvRecommendations);
+        if (tvRecommendations != null) {
+            tvRecommendations.setText("Не удалось загрузить характеристики растения. Проверьте подключение к интернету.");
+        }
+    }
+
+    // ==================== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ====================
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        // Обработка кнопки назад в ActionBar
+        finish();
+        return true;
     }
 }

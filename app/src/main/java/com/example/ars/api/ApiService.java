@@ -74,6 +74,10 @@ public interface ApiService {
             @Part("category") RequestBody category
     );
 
+    // 6. Получить растение по ID (для детальной страницы)
+    @GET("/api/crops/{id}")
+    Call<Crop> getCropById(@Path("id") Integer id);
+
     // Вспомогательный класс для запроса входа
     class LoginRequest {
         private String identifier;

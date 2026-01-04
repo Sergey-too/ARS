@@ -14,14 +14,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
+import com.example.ars.models.Crop;
 import com.example.ars.models.UserCrop;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -34,6 +33,8 @@ public class PlantsActivity extends AppCompatActivity {
     private boolean isMenuOpen = false;
     private ApiService apiService;
     private SharedPreferencesHelper prefsHelper;
+    private PlantsAdapter adapter;
+    private List<UserCrop> userCrops = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,19 +59,11 @@ public class PlantsActivity extends AppCompatActivity {
             sideMenu.setTranslationX(menuWidth);
         });
 
+        // Настройка RecyclerView
         RecyclerView rvPlants = findViewById(R.id.rvPlants);
         rvPlants.setLayoutManager(new LinearLayoutManager(this));
 
-        // Загружаем тестовые данные (будут заменены на реальные)
-        List<String> plants = new ArrayList<>();
-        plants.add("Монстера - Добавлено: 12.03.2024");
-        plants.add("Фикус - Добавлено: 10.03.2024");
-        plants.add("Кактус - Добавлено: 05.03.2024");
-        plants.add("Орхидея - Добавлено: 01.03.2024");
-        plants.add("Суккулент - Добавлено: 28.02.2024");
-        plants.add("Бамбук - Добавлено: 25.02.2024");
-
-        SimpleAdapter adapter = new SimpleAdapter(plants);
+        adapter = new PlantsAdapter(userCrops);
         rvPlants.setAdapter(adapter);
 
         ImageView btnMenu = findViewById(R.id.btnMenu);
@@ -102,10 +95,19 @@ public class PlantsActivity extends AppCompatActivity {
         loadUserPlants();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Обновляем список при возвращении на экран
+        loadUserPlants();
+    }
+
+    // В методе loadUserPlants()
     private void loadUserPlants() {
         com.example.ars.models.User currentUser = prefsHelper.getUser();
         if (currentUser == null || currentUser.getId() == null) {
             Log.e("PlantsActivity", "Пользователь не найден");
+            showEmptyState();
             return;
         }
 
@@ -114,70 +116,48 @@ public class PlantsActivity extends AppCompatActivity {
         apiService.getUserCrops(currentUser.getId()).enqueue(new Callback<List<UserCrop>>() {
             @Override
             public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
-                Log.d("PlantsActivity", "Ответ от сервера: " + response.code());
-
                 if (response.isSuccessful() && response.body() != null) {
-                    List<UserCrop> userCrops = response.body();
+                    userCrops = response.body();
                     Log.d("PlantsActivity", "Получено растений: " + userCrops.size());
+
+                    // ПРОВЕРКА данных
+                    for (UserCrop userCrop : userCrops) {
+                        Log.d("PlantsActivity", "CropId: " + userCrop.getCropId());
+                        Log.d("PlantsActivity", "Crop object: " + (userCrop.getCrop() != null ? "NOT NULL" : "NULL"));
+
+                        if (userCrop.getCrop() != null) {
+                            Log.d("PlantsActivity", "  Name: " + userCrop.getCrop().getName());
+                            Log.d("PlantsActivity", "  Description: " + userCrop.getCrop().getDescription());
+                        }
+                    }
+
                     updatePlantsList(userCrops);
                 } else {
-                    Log.e("PlantsActivity", "Ошибка ответа: " + response.code());
-                    // Показываем тестовые данные если нет реальных
-                    showTestData();
+                    Log.e("PlantsActivity", "Ошибка загрузки: " + response.code());
+                    showEmptyState();
                 }
             }
 
             @Override
             public void onFailure(Call<List<UserCrop>> call, Throwable t) {
                 Log.e("PlantsActivity", "Ошибка сети", t);
-                showTestData();
+                showEmptyState();
             }
         });
     }
-
-    private void showTestData() {
-        // Если нет данных с сервера, показываем тестовые
-        List<String> testPlants = new ArrayList<>();
-        testPlants.add("Монстера - Добавлено: 12.03.2024");
-        testPlants.add("Фикус - Добавлено: 10.03.2024");
-        testPlants.add("Кактус - Добавлено: 05.03.2024");
-
-        SimpleAdapter adapter = new SimpleAdapter(testPlants);
-        RecyclerView rvPlants = findViewById(R.id.rvPlants);
-        rvPlants.setAdapter(adapter);
-    }
-
     private void updatePlantsList(List<UserCrop> userCrops) {
-        RecyclerView rvPlants = findViewById(R.id.rvPlants);
-
-        if (userCrops.isEmpty()) {
-            // Если нет растений, показываем сообщение
-            List<String> emptyList = new ArrayList<>();
-            emptyList.add("У вас пока нет растений");
-            emptyList.add("Нажмите + чтобы добавить");
-
-            SimpleAdapter adapter = new SimpleAdapter(emptyList);
-            rvPlants.setAdapter(adapter);
+        if (userCrops == null || userCrops.isEmpty()) {
+            showEmptyState();
             return;
         }
 
-        List<String> plantsDisplay = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+        adapter.updateData(userCrops);
+    }
 
-        for (UserCrop userCrop : userCrops) {
-            String plantName = "Растение";
-            if (userCrop.getCrop() != null && userCrop.getCrop().getName() != null) {
-                plantName = userCrop.getCrop().getName();
-            }
-
-            String date = userCrop.getAddedDate() != null ?
-                    sdf.format(userCrop.getAddedDate()) : "дата неизвестна";
-
-            plantsDisplay.add(plantName + " - Добавлено: " + date);
-        }
-
-        SimpleAdapter adapter = new SimpleAdapter(plantsDisplay);
-        rvPlants.setAdapter(adapter);
+    private void showEmptyState() {
+        // Если нет растений, создаем пустой список
+        userCrops.clear();
+        adapter.updateData(userCrops);
     }
 
     // Метод выхода из аккаунта
@@ -237,11 +217,17 @@ public class PlantsActivity extends AppCompatActivity {
         isMenuOpen = false;
     }
 
-    class SimpleAdapter extends RecyclerView.Adapter<SimpleAdapter.ViewHolder> {
-        private List<String> plants;
+    // Создай отдельный файл PlantsAdapter.java или оставь как внутренний класс:
+    class PlantsAdapter extends RecyclerView.Adapter<PlantsAdapter.ViewHolder> {
+        private List<UserCrop> plants;
 
-        SimpleAdapter(List<String> plants) {
+        PlantsAdapter(List<UserCrop> plants) {
             this.plants = plants;
+        }
+
+        public void updateData(List<UserCrop> newPlants) {
+            this.plants = newPlants;
+            notifyDataSetChanged();
         }
 
         @Override
@@ -257,24 +243,57 @@ public class PlantsActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
-            String plant = plants.get(position);
-            holder.textView.setText(plant);
+            UserCrop userCrop = plants.get(position);
+            int cropId = userCrop.getCropId();
+
+            String plantName;
+
+            // 1. Пробуем получить имя из объекта Crop
+            if (userCrop.getCrop() != null) {
+                Crop crop = userCrop.getCrop();
+                if (crop.getName() != null && !crop.getName().isEmpty()) {
+                    plantName = crop.getName();
+                    Log.d("PlantsAdapter", "✅ Имя из crop объекта: " + plantName);
+                } else {
+                    plantName = "Неизвестное растение";
+                    Log.d("PlantsAdapter", "⚠️ Crop есть, но имя пустое");
+                }
+            } else {
+                plantName = "Неизвестное растение";
+                Log.d("PlantsAdapter", "❌ Crop объект NULL для cropId=" + cropId);
+            }
+
+            // 3. УСТАНАВЛИВАЕМ ТЕКСТ!
+            holder.textView.setText(plantName);
+
+            // 4. Также установите описание если есть
+            if (holder.descriptionView != null && userCrop.getCrop() != null) {
+                String description = userCrop.getCrop().getDescription();
+                if (description != null && !description.isEmpty()) {
+                    holder.descriptionView.setText(description);
+                    holder.descriptionView.setVisibility(View.VISIBLE);
+                } else {
+                    holder.descriptionView.setVisibility(View.GONE);
+                }
+            }
 
             holder.itemView.setOnClickListener(v -> {
+                Log.d("PlantsAdapter", "Клик по растению: " + plantName + " (ID: " + cropId + ")");
+
                 Intent intent = new Intent(PlantsActivity.this, PlantDetailActivity.class);
-                intent.putExtra("plant_name", plant.split(" - ")[0]);
-                intent.putExtra("notes", "Поливать раз в неделю");
-                intent.putExtra("has_recommendations", true);
-                startActivity(intent);
+                intent.putExtra("crop_id", cropId);
+                PlantsActivity.this.startActivity(intent);
             });
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
             android.widget.TextView textView;
+            android.widget.TextView descriptionView;
 
             ViewHolder(View itemView) {
                 super(itemView);
                 textView = itemView.findViewById(R.id.tvPlantName);
+                descriptionView = itemView.findViewById(R.id.tvPlantDescription); // если есть в layout
             }
         }
     }

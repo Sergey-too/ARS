@@ -1,14 +1,18 @@
 package com.example.ars.models;
 
-import java.util.Date;
+import com.google.gson.annotations.SerializedName;
 
 public class UserCrop {
     private Integer id;
+
+    @SerializedName("userId")
     private Integer userId;
+
+    @SerializedName("cropId")
     private Integer cropId;
-    private Date addedDate;
-    private String description;
-    private Crop crop; // Для связи с растением
+
+    @SerializedName("crop")
+    private Crop crop;
 
     // Геттеры и сеттеры
     public Integer getId() { return id; }
@@ -19,12 +23,6 @@ public class UserCrop {
 
     public Integer getCropId() { return cropId; }
     public void setCropId(Integer cropId) { this.cropId = cropId; }
-
-    public Date getAddedDate() { return addedDate; }
-    public void setAddedDate(Date addedDate) { this.addedDate = addedDate; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
 
     public Crop getCrop() { return crop; }
     public void setCrop(Crop crop) { this.crop = crop; }

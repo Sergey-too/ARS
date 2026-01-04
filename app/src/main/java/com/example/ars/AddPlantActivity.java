@@ -240,22 +240,17 @@ public class AddPlantActivity extends AppCompatActivity {
 
         actvPlantType.setOnItemClickListener((parent, view, position, id) -> {
             if (position < categories.size()) {
-                // ИСПРАВЛЕНО: используем только название категории
-                // ID не нужен, потому что в API используется название
                 selectedCategoryName = categories.get(position).getName();
 
                 Log.d("CATEGORY", "Выбрана категория: " + selectedCategoryName);
 
-                // Очищаем предыдущий выбор растения
                 actvPlantName.setText("");
                 tvDescription.setText("Выберите растение чтобы увидеть описание");
 
-                // Загружаем растения по НАЗВАНИЮ категории
                 loadCropsByCategoryName(selectedCategoryName);
             }
         });
 
-        // При выборе растения
         actvPlantName.setOnItemClickListener((parent, view, position, id) -> {
             if (position < cropsByCategory.size()) {
                 Crop selectedCrop = cropsByCategory.get(position);
@@ -281,8 +276,6 @@ public class AddPlantActivity extends AppCompatActivity {
         });
     }
 
-    // Загружаем растения по названию категории
-    // Загружаем растения по названию категории
     private void loadCropsByCategoryName(String categoryName) {
         Log.d("CROP_LOAD", "Загрузка растений для категории: " + categoryName);
 
@@ -390,52 +383,49 @@ public class AddPlantActivity extends AppCompatActivity {
             return;
         }
 
-        // Проверяем что категория выбрана (теперь проверяем по названию)
         if (selectedCategoryName == null) {
             Toast.makeText(this, "Выберите категорию растения", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Проверяем что растение выбрано
         if (selectedCropId == null) {
             Toast.makeText(this, "Выберите растение", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Проверяем что регион выбран
+        // Проверяем что регион выбран (для отображения, но не отправляем в БД)
         if (selectedRegionName == null) {
             Toast.makeText(this, "Выберите регион", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Получаем описание
-        TextView tvDescription = findViewById(R.id.tvPlantDescription);
-        String description = tvDescription.getText().toString().trim();
+        Log.d("ADD_PLANT", "Добавление растения: userId=" + currentUser.getId() +
+                ", cropId=" + selectedCropId + ", category=" + selectedCategoryName +
+                ", region=" + selectedRegionName);
 
-        // Если описание равно дефолтному тексту, ставим пустую строку
-        if (description.equals("Выберите растение чтобы увидеть описание") ||
-                description.equals("Описание отсутствует")) {
-            description = "";
-        }
-
-        // Создаем запрос
+        // Создаем запрос (ТОЛЬКО обязательные поля)
         Map<String, Object> request = new HashMap<>();
         request.put("userId", currentUser.getId());
         request.put("cropId", selectedCropId);
-        request.put("region", selectedRegionName);
-        request.put("description", description);
 
-        if (uploadedImageUrl != null && !uploadedImageUrl.isEmpty()) {
-            request.put("photoUrl", uploadedImageUrl);
-        }
+        // НЕ отправляем эти поля - их нет в таблице user_crops:
+        // request.put("region", selectedRegionName);
+        // request.put("description", description);
+        // if (uploadedImageUrl != null && !uploadedImageUrl.isEmpty()) {
+        //     request.put("photoUrl", uploadedImageUrl);
+        // }
 
-        Log.d("ADD_PLANT", "Отправка запроса: " + request);
+        Log.d("ADD_PLANT", "Отправка запроса на /api/crops/user/add: " + request);
 
         apiService.addUserCrop(request).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                Log.d("ADD_PLANT", "Ответ от сервера: код " + response.code());
+
                 if (response.isSuccessful() && response.body() != null) {
                     Map<String, Object> result = response.body();
+                    Log.d("ADD_PLANT", "Тело ответа: " + result);
+
                     Boolean success = (Boolean) result.get("success");
 
                     if (success != null && success) {
@@ -447,13 +437,27 @@ public class AddPlantActivity extends AppCompatActivity {
                         Toast.makeText(AddPlantActivity.this, "Ошибка: " + error, Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    Toast.makeText(AddPlantActivity.this, "Ошибка сервера: " + response.code(), Toast.LENGTH_SHORT).show();
+                    // Выводим больше информации об ошибке
+                    try {
+                        String errorBody = response.errorBody() != null ?
+                                response.errorBody().string() : "No error body";
+                        Log.e("ADD_PLANT", "Error body: " + errorBody);
+                        Log.e("ADD_PLANT", "Error code: " + response.code());
+                        Log.e("ADD_PLANT", "Error message: " + response.message());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    Toast.makeText(AddPlantActivity.this,
+                            "Ошибка сервера: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("ADD_PLANT", "Network error: " + t.getMessage());
+                t.printStackTrace();
+                Toast.makeText(AddPlantActivity.this,
+                        "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
