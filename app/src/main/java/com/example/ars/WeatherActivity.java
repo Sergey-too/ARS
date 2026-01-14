@@ -183,6 +183,4 @@ public class WeatherActivity extends AppCompatActivity {
         if (tvHumidity != null) tvHumidity.setText(weather.getHumidity());
         if (tvPrecip != null) tvPrecip.setText(weather.getPrecipitation());
     }
-
-    // УДАЛИЛ метод addRealWeatherData() - если нужны тестовые данные, их должен создавать сервер
 }

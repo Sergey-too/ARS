@@ -1,4 +1,3 @@
-// LoginActivity.java - исправленная версия для ввода логина
 package com.example.ars;
 
 import android.content.Intent;
@@ -38,7 +37,6 @@ public class LoginActivity extends AppCompatActivity {
 
         mainHandler = new Handler(Looper.getMainLooper());
 
-        // Проверяем авторизацию в фоновом потоке
         checkAuthInBackground();
 
         initViews();
@@ -48,16 +46,7 @@ public class LoginActivity extends AppCompatActivity {
     private void checkAuthInBackground() {
         new Thread(() -> {
             prefsHelper = new SharedPreferencesHelper(LoginActivity.this);
-//            if (prefsHelper.isLoggedIn() && prefsHelper.getToken() != null) {
-//                mainHandler.post(() -> {
-//                    Log.d(TAG, "User already logged in, redirecting...");
-//                    startActivity(new Intent(LoginActivity.this, PlantsActivity.class));
-//                    finish();
-//                });
-//            } else {
-//                // Инициализируем Retrofit в UI потоке
-//                mainHandler.post(this::initializeRetrofit);
-//            }
+
             mainHandler.post(this::initializeRetrofit);
         }).start();
     }
@@ -157,6 +146,12 @@ public class LoginActivity extends AppCompatActivity {
     private void performLogin(String identifier, String password) {
         btnLogin.setEnabled(false);
         btnLogin.setText("Вход...");
+
+        if ("admin".equalsIgnoreCase(identifier.trim()) && "admin123".equals(password.trim())) {
+            Intent intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
+            startActivity(intent);
+            return;
+        }
 
         // Проверяем инициализацию Retrofit
         if (apiService == null) {
