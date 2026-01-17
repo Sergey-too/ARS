@@ -3,6 +3,7 @@ package com.example.ars.api;
 import com.example.ars.models.AuthResponse;
 import com.example.ars.models.Category;
 import com.example.ars.models.Crop;
+import com.example.ars.models.DeleteResponse;
 import com.example.ars.models.Region;
 import com.example.ars.models.User;
 import com.example.ars.models.UserCrop;
@@ -15,12 +16,15 @@ import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Part;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface ApiService {
 
@@ -43,6 +47,10 @@ public interface ApiService {
 
     @GET("/api/weather/android/{regionName}")
     Call<WeatherResponse> getWeatherForRegion(@Path("regionName") String regionName);
+
+    // НОВЫЙ МЕТОД: получить ВСЕ данные по региону для админки
+    @GET("/api/weather/admin/all/{regionName}")
+    Call<WeatherResponse> getAllWeatherForRegion(@Path("regionName") String regionName);
 
     @GET("/api/regions/test")
     Call<String> createTestRegions();
@@ -77,6 +85,27 @@ public interface ApiService {
     // 6. Получить растение по ID (для детальной страницы)
     @GET("/api/crops/{id}")
     Call<Crop> getCropById(@Path("id") Integer id);
+
+    // Удаление данных о погоде
+    @DELETE("/api/weather/delete/{id}")
+    Call<DeleteResponse> deleteWeatherById(@Path("id") Integer id);
+
+    @DELETE("/api/weather/delete-by-date-region")
+    Call<DeleteResponse> deleteWeatherByDateRegion(
+            @Query("date") String date,
+            @Query("regionName") String regionName);
+
+    // 7. Добавить новое растение
+    @POST("/api/crops")
+    Call<Crop> addCrop(@Body Crop crop);
+
+    // 8. Обновить растение
+    @PUT("/api/crops/{id}")
+    Call<Crop> updateCrop(@Path("id") Integer id, @Body Crop crop);
+
+    // 9. Удалить растение
+    @DELETE("/api/crops/{id}")
+    Call<Void> deleteCrop(@Path("id") Integer id);
 
     // Вспомогательный класс для запроса входа
     class LoginRequest {

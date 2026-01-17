@@ -1,7 +1,7 @@
 package com.example.ars.models;
 
-
 public class WeatherData {
+    private Integer id;
     private String date;
     private String temperature;
     private String wind;
@@ -11,6 +11,9 @@ public class WeatherData {
     private String condition;
 
     // Геттеры и сеттеры
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+
     public String getDate() { return date; }
     public void setDate(String date) { this.date = date; }
 

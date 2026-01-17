@@ -1,10 +1,14 @@
 package com.example.ars;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,11 +19,13 @@ import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Category;
 import com.example.ars.models.Crop;
+import com.example.ars.models.DeleteResponse;
 import com.example.ars.models.Region;
 import com.example.ars.models.WeatherData;
 import com.example.ars.models.WeatherResponse;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -46,12 +52,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private TextView tvPlantsStats;
     private TextView tvWeatherStats;
     private TextView tvAdminInfo;
+    private AutoCompleteTextView actvRegionFilter;
+    private TextInputLayout tilRegionFilter;
 
     // Списки данных
     private List<Crop> allPlants = new ArrayList<>();
     private Map<String, String> plantCategories = new HashMap<>();
-    private Map<String, List<WeatherData>> regionWeatherMap = new HashMap<>();
     private List<Region> allRegions = new ArrayList<>();
+    private List<WeatherData> selectedRegionWeather = new ArrayList<>();
+    private String selectedRegion = "";
 
     @SuppressLint({"WrongViewCast", "SetTextI18n"})
     @Override
@@ -72,12 +81,20 @@ public class AdminDashboardActivity extends AppCompatActivity {
         tvWeatherStats = findViewById(R.id.tvWeatherStats);
         tvAdminInfo = findViewById(R.id.tvAdminInfo);
 
+        // Элементы фильтрации по региону
+        tilRegionFilter = findViewById(R.id.tilRegionFilter);
+        actvRegionFilter = findViewById(R.id.actvRegionFilter);
+
         // Устанавливаем время обновления
         updateAdminInfo();
 
         // Кнопки растений
-        MaterialButton btnAddPlant = findViewById(R.id.btnAddPlant);
-        btnAddPlant.setOnClickListener(v -> showAddPlantDialog());
+        Button btnAddPlant = findViewById(R.id.btnAddPlant);
+        btnAddPlant.setOnClickListener(v -> {
+            Intent intent = new Intent(AdminDashboardActivity.this,
+                    AddPlantActivityAdmin.class);
+            startActivity(intent);
+        });
 
         MaterialButton btnRefreshPlants = findViewById(R.id.btnRefreshPlants);
         btnRefreshPlants.setOnClickListener(v -> {
@@ -88,13 +105,18 @@ public class AdminDashboardActivity extends AppCompatActivity {
         // Кнопки погоды
         MaterialButton btnRefreshWeather = findViewById(R.id.btnRefreshWeather);
         btnRefreshWeather.setOnClickListener(v -> {
-            containerWeatherRows.removeAllViews();
-            loadAllWeatherData();
+            if (selectedRegion.isEmpty()) {
+                Toast.makeText(this, "Сначала выберите регион", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            loadWeatherForSelectedRegion();
         });
 
-        // Загружаем данные
+        // Загружаем растения
         loadAllPlants();
-        loadAllWeatherData();
+
+        // Загружаем регионы для выпадающего списка
+        loadRegionsForFilter();
     }
 
     private void updateAdminInfo() {
@@ -105,12 +127,116 @@ public class AdminDashboardActivity extends AppCompatActivity {
         }
     }
 
+
+    private void loadRegionsForFilter() {
+        apiService.getRegions().enqueue(new Callback<List<Region>>() {
+            @Override
+            public void onResponse(Call<List<Region>> call, Response<List<Region>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    allRegions = response.body();
+                    if (allRegions.isEmpty()) {
+                        tvWeatherStats.setText("Регионы не найдены");
+                        return;
+                    }
+
+                    // Настраиваем выпадающий список
+                    ArrayAdapter<Region> regionAdapter = new ArrayAdapter<>(
+                            AdminDashboardActivity.this,
+                            android.R.layout.simple_dropdown_item_1line,
+                            allRegions
+                    );
+                    actvRegionFilter.setAdapter(regionAdapter);
+
+                    // Обработчик выбора региона
+                    actvRegionFilter.setOnItemClickListener((parent, view, position, id) -> {
+                        Region region = (Region) parent.getItemAtPosition(position);
+                        selectedRegion = region.getName();
+                        tvWeatherStats.setText("Выбран: " + selectedRegion);
+
+                        // Загружаем погоду для выбранного региона
+                        loadWeatherForSelectedRegion();
+                    });
+
+                    // Устанавливаем первый регион по умолчанию
+                    if (!allRegions.isEmpty()) {
+                        selectedRegion = allRegions.get(0).getName();
+                        actvRegionFilter.setText(selectedRegion, false);
+                        tvWeatherStats.setText("Выбран: " + selectedRegion);
+
+                        // Загружаем погоду для первого региона
+                        loadWeatherForSelectedRegion();
+                    }
+                } else {
+                    tvWeatherStats.setText("Ошибка загрузки регионов: " + response.code());
+                    Log.e(TAG, "Ошибка загрузки регионов: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Region>> call, Throwable t) {
+                Log.e(TAG, "Ошибка загрузки регионов", t);
+                tvWeatherStats.setText("Ошибка сети: " + t.getMessage());
+            }
+        });
+    }
+
+    private void loadWeatherForSelectedRegion() {
+        if (selectedRegion.isEmpty()) {
+            Toast.makeText(this, "Выберите регион", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        tvNoWeather.setVisibility(View.GONE);
+        containerWeatherRows.removeAllViews();
+        selectedRegionWeather.clear();
+
+        tvWeatherInfo.setText("Загрузка данных для: " + selectedRegion);
+
+        // Используем НОВЫЙ эндпоинт для получения ВСЕХ записей
+        apiService.getAllWeatherForRegion(selectedRegion).enqueue(new Callback<WeatherResponse>() {
+            @Override
+            public void onResponse(Call<WeatherResponse> call, Response<WeatherResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    WeatherResponse weatherResponse = response.body();
+                    List<WeatherData> weatherList = weatherResponse.getWeather();
+
+                    if (weatherList != null && !weatherList.isEmpty()) {
+                        selectedRegionWeather.addAll(weatherList);
+
+                        // Сортируем по дате (сначала самые свежие)
+                        weatherList.sort((w1, w2) -> w2.getDate().compareTo(w1.getDate()));
+
+                        // Обновляем UI
+                        updateWeatherUI(weatherList);
+
+                        // Если тестовые данные, показываем сообщение
+                        if (weatherResponse.isTestData()) {
+                            Toast.makeText(AdminDashboardActivity.this,
+                                    "Используются тестовые данные",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        showNoWeather("Нет данных по региону: " + selectedRegion);
+                    }
+                } else {
+                    showNoWeather("Ошибка загрузки: " + response.code());
+                    Log.e(TAG, "Ошибка загрузки погоды для региона: " + selectedRegion + ", код: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<WeatherResponse> call, Throwable t) {
+                Log.e(TAG, "Ошибка сети для региона: " + selectedRegion, t);
+                showNoWeather("Ошибка сети: " + t.getMessage());
+            }
+        });
+    }
+
     private void loadAllPlants() {
         tvNoPlants.setVisibility(View.GONE);
         allPlants.clear();
         plantCategories.clear();
 
-        // Сначала загружаем категории
         apiService.getCategories().enqueue(new Callback<List<Category>>() {
             @Override
             public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
@@ -136,7 +262,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
     private void loadAllPlantsByCategories(List<Category> categories, int index) {
         if (index >= categories.size()) {
-            // Все категории загружены
             updatePlantsUI();
             return;
         }
@@ -149,13 +274,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     List<Crop> plants = response.body();
                     allPlants.addAll(plants);
 
-                    // Сохраняем категории для растений
                     for (Crop plant : plants) {
                         plantCategories.put(String.valueOf(plant.getId()), category.getName());
                     }
                 }
-
-                // Загружаем следующую категорию
                 loadAllPlantsByCategories(categories, index + 1);
             }
 
@@ -173,10 +295,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
             return;
         }
 
-        // Обновляем статистику
         tvPlantsCount.setText("Всего растений: " + allPlants.size());
 
-        // Подсчет по категориям
         Map<String, Integer> categoryCount = new HashMap<>();
         for (Crop plant : allPlants) {
             String catName = plantCategories.get(String.valueOf(plant.getId()));
@@ -185,7 +305,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
             }
         }
 
-        // Формируем текст статистики
         StringBuilder stats = new StringBuilder("Категории: ");
         int count = 0;
         for (Map.Entry<String, Integer> entry : categoryCount.entrySet()) {
@@ -198,7 +317,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
             tvPlantsStats.setText(stats.toString());
         }
 
-        // Отображаем растения в таблице
         for (Crop plant : allPlants) {
             addPlantRow(plant);
         }
@@ -221,20 +339,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
         MaterialButton btnEdit = rowView.findViewById(R.id.btnEditPlant);
         MaterialButton btnDelete = rowView.findViewById(R.id.btnDeletePlant);
 
-        // Заполняем данные
         tvId.setText(String.valueOf(plant.getId()));
         tvName.setText(plant.getName() != null ? plant.getName() : "-");
 
         String categoryName = plantCategories.get(String.valueOf(plant.getId()));
         tvCategory.setText(categoryName != null ? categoryName : "-");
 
-        // Температура мин
         tvTempMin.setText(plant.getMinTemp() != null ? plant.getMinTemp() + "°C" : "-");
-
-        // Температура макс
         tvTempMax.setText(plant.getMaxTemp() != null ? plant.getMaxTemp() + "°C" : "-");
 
-        // Влажность
         if (plant.getMinHumidity() != null && plant.getMaxHumidity() != null) {
             tvHumidity.setText(plant.getMinHumidity() + "-" + plant.getMaxHumidity() + "%");
         } else if (plant.getMinHumidity() != null) {
@@ -245,22 +358,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
             tvHumidity.setText("-");
         }
 
-        // Ветер
         tvWind.setText(plant.getMaxWind() != null ? plant.getMaxWind() + " м/с" : "-");
-
-        // Осадки
         tvPrecipitation.setText(plant.getNeededPrecipitation() != null ? plant.getNeededPrecipitation() + " мм" : "-");
-
-        // Глубина посева
         tvSowingDepth.setText(plant.getSowingDepth() != null ? plant.getSowingDepth() + " см" : "-");
 
-        // Кнопки действий
-        btnEdit.setOnClickListener(v -> showEditPlantDialog(plant));
         btnDelete.setOnClickListener(v -> showDeletePlantDialog(plant));
 
         containerPlantsRows.addView(rowView);
 
-        // Добавляем разделитель
         View divider = new View(this);
         divider.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 1));
@@ -268,112 +373,21 @@ public class AdminDashboardActivity extends AppCompatActivity {
         containerPlantsRows.addView(divider);
     }
 
-    private void loadAllWeatherData() {
-        tvNoWeather.setVisibility(View.GONE);
-        containerWeatherRows.removeAllViews();
-        regionWeatherMap.clear();
-        allRegions.clear();
-
-        // Загружаем регионы
-        apiService.getRegions().enqueue(new Callback<List<Region>>() {
-            @Override
-            public void onResponse(Call<List<Region>> call, Response<List<Region>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    allRegions = response.body();
-                    if (allRegions.isEmpty()) {
-                        showNoWeather("Регионы не найдены в БД");
-                        return;
-                    }
-                    loadWeatherForAllRegions(0);
-                } else {
-                    showNoWeather("Ошибка загрузки регионов: " + response.code());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Region>> call, Throwable t) {
-                Log.e(TAG, "Ошибка загрузки регионов", t);
-                showNoWeather("Ошибка сети: " + t.getMessage());
-            }
-        });
-    }
-
-    private void loadWeatherForAllRegions(int index) {
-        if (index >= allRegions.size()) {
-            // Все регионы загружены
-            updateWeatherUI();
+    private void updateWeatherUI(List<WeatherData> weatherList) {
+        if (weatherList.isEmpty()) {
+            showNoWeather("Нет данных по региону: " + selectedRegion);
             return;
         }
 
-        Region region = allRegions.get(index);
-        final String regionName = region.getName();
+        tvWeatherInfo.setText("Регион: " + selectedRegion + " | Записей: " + weatherList.size());
 
-        apiService.getWeatherForRegion(regionName).enqueue(new Callback<WeatherResponse>() {
-            @Override
-            public void onResponse(Call<WeatherResponse> call, Response<WeatherResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    WeatherResponse weatherResponse = response.body();
-                    List<WeatherData> weatherList = weatherResponse.getWeather();
-
-                    if (weatherList != null && !weatherList.isEmpty()) {
-                        // Сохраняем данные с привязкой к региону
-                        regionWeatherMap.put(regionName, weatherList);
-
-                        // Если тестовые данные, показываем сообщение
-                        if (weatherResponse.isTestData()) {
-                            Toast.makeText(AdminDashboardActivity.this,
-                                    "Для региона " + regionName + " используются тестовые данные",
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                } else {
-                    Log.e(TAG, "Ошибка загрузки погоды для региона: " + regionName + ", код: " + response.code());
-                }
-
-                // Загружаем следующий регион
-                loadWeatherForAllRegions(index + 1);
-            }
-
-            @Override
-            public void onFailure(Call<WeatherResponse> call, Throwable t) {
-                Log.e(TAG, "Ошибка сети для региона: " + regionName, t);
-                loadWeatherForAllRegions(index + 1);
-            }
-        });
-    }
-
-    private void updateWeatherUI() {
-        // Подсчитываем общее количество записей
-        int totalRecords = 0;
-        for (List<WeatherData> weatherList : regionWeatherMap.values()) {
-            totalRecords += weatherList.size();
-        }
-
-        if (totalRecords == 0) {
-            showNoWeather("Погодные данные не найдены");
-            return;
-        }
-
-        // Обновляем статистику
-        tvWeatherInfo.setText("Всего записей: " + totalRecords);
-
-        if (tvWeatherStats != null) {
-            tvWeatherStats.setText("Регионов: " + allRegions.size() + " | Данные: " + totalRecords + " зап.");
-        }
-
-        // Отображаем все записи
-        int rowNumber = 1;
-        for (Map.Entry<String, List<WeatherData>> entry : regionWeatherMap.entrySet()) {
-            String regionName = entry.getKey();
-            List<WeatherData> weatherList = entry.getValue();
-
-            for (WeatherData weather : weatherList) {
-                addWeatherRow(weather, regionName, rowNumber++);
-            }
+        // Отображаем все записи с правильными ID
+        for (int i = 0; i < weatherList.size(); i++) {
+            addWeatherRow(weatherList.get(i), i + 1); // i+1 для порядкового номера
         }
     }
 
-    private void addWeatherRow(WeatherData weather, String regionName, int rowNumber) {
+    private void addWeatherRow(WeatherData weather, int rowNumber) {
         if (containerWeatherRows == null) return;
 
         View rowView = LayoutInflater.from(this).inflate(R.layout.item_admin_weather_row, containerWeatherRows, false);
@@ -388,22 +402,31 @@ public class AdminDashboardActivity extends AppCompatActivity {
         TextView tvPrecipitation = rowView.findViewById(R.id.tvWeatherPrecipitation);
         MaterialButton btnDelete = rowView.findViewById(R.id.btnDeleteWeather);
 
-        // Заполняем данные
-        tvId.setText(String.valueOf(rowNumber));
-        tvRegion.setText(regionName != null ? regionName : "-");
+        if (weather.getId() != null) {
+            tvId.setText("ID: " + weather.getId());
+        } else {
+            tvId.setText("ID: -");
+        }
+
+        tvRegion.setText(selectedRegion);
         tvDate.setText(weather.getDate() != null ? weather.getDate() : "-");
         tvTemp.setText(weather.getTemperature() != null ? weather.getTemperature() : "-");
         tvWind.setText(weather.getWind() != null ? weather.getWind() : "-");
-        tvPressure.setText(weather.getPressure() != null ? weather.getPressure() + " гПа" : "-");
+        tvPressure.setText(weather.getPressure() != null ? weather.getPressure() : "-");
         tvHumidity.setText(weather.getHumidity() != null ? weather.getHumidity() : "-");
         tvPrecipitation.setText(weather.getPrecipitation() != null ? weather.getPrecipitation() : "-");
 
-        // Кнопки действий
-        btnDelete.setOnClickListener(v -> showDeleteWeatherDialog(weather, regionName));
+        // Обработчик удаления
+        btnDelete.setOnClickListener(v -> {
+            if (weather.getDate() != null) {
+                deleteWeatherRecord(weather.getDate(), selectedRegion);
+            } else {
+                Toast.makeText(this, "Дата не указана", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         containerWeatherRows.addView(rowView);
 
-        // Добавляем разделитель
         View divider = new View(this);
         divider.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 1));
@@ -411,38 +434,60 @@ public class AdminDashboardActivity extends AppCompatActivity {
         containerWeatherRows.addView(divider);
     }
 
-    // Диалоговые окна
-    private void showAddPlantDialog() {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Добавить растение")
-                .setMessage("Функция добавления растений будет реализована в следующем обновлении")
-                .setPositiveButton("OK", null)
-                .show();
-    }
+    // Метод для удаления записи погоды
+    private void deleteWeatherRecord(String date, String regionName) {
+        Log.d(TAG, "Удаление записи: " + date + ", регион: " + regionName);
 
-    private void showEditPlantDialog(Crop plant) {
-        String category = plantCategories.get(String.valueOf(plant.getId()));
-        String description = plant.getDescription();
-
+        // Показываем диалог подтверждения
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Редактировать растение")
-                .setMessage("Редактирование растения:\n\n" +
-                        "📌 Название: " + plant.getName() + "\n" +
-                        "🏷️ ID: " + plant.getId() + "\n" +
-                        "📁 Категория: " + (category != null ? category : "Неизвестно") + "\n" +
-                        "📝 Описание: " + (description != null && !description.isEmpty() ?
-                        description.substring(0, Math.min(100, description.length())) + "..." : "Нет описания") + "\n" +
-                        "🌡️ Температура: " +
-                        (plant.getMinTemp() != null ? plant.getMinTemp() + "°C" : "-") + " / " +
-                        (plant.getMaxTemp() != null ? plant.getMaxTemp() + "°C" : "-") + "\n" +
-                        "💧 Влажность: " +
-                        (plant.getMinHumidity() != null ? plant.getMinHumidity() + "%" : "-") + " / " +
-                        (plant.getMaxHumidity() != null ? plant.getMaxHumidity() + "%" : "-"))
-                .setPositiveButton("Редактировать", (dialog, which) -> {
-                    Toast.makeText(this, "Функция редактирования в разработке", Toast.LENGTH_SHORT).show();
+                .setTitle("Удаление данных")
+                .setMessage("Вы уверены, что хотите удалить данные за " + date + "?\n\n" +
+                        "🗺️ Регион: " + regionName)
+                .setPositiveButton("Удалить", (dialog, which) -> {
+                    performDeleteWeather(date, regionName);
                 })
                 .setNegativeButton("Отмена", null)
                 .show();
+    }
+
+    private void performDeleteWeather(String date, String regionName) {
+        // Показываем прогресс
+        Toast.makeText(this, "Удаление...", Toast.LENGTH_SHORT).show();
+
+        // Вызываем API удаления
+        apiService.deleteWeatherByDateRegion(date, regionName).enqueue(new Callback<DeleteResponse>() {
+            @Override
+            public void onResponse(Call<DeleteResponse> call, Response<DeleteResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    DeleteResponse deleteResponse = response.body();
+
+                    if (deleteResponse.isSuccess()) {
+                        // Обновляем весь список
+                        loadWeatherForSelectedRegion();
+
+                        Toast.makeText(AdminDashboardActivity.this,
+                                deleteResponse.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(AdminDashboardActivity.this,
+                                "Ошибка: " + deleteResponse.getError(),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(AdminDashboardActivity.this,
+                            "Ошибка сервера: " + response.code(),
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DeleteResponse> call, Throwable t) {
+                Toast.makeText(AdminDashboardActivity.this,
+                        "Ошибка сети: " + t.getMessage(),
+                        Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Ошибка удаления записи", t);
+            }
+        });
     }
 
     private void showDeletePlantDialog(Crop plant) {
@@ -453,30 +498,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .setMessage("Вы уверены, что хотите удалить растение?\n\n" +
                         "❌ Название: " + plant.getName() + "\n" +
                         "🏷️ ID: " + plant.getId() + "\n" +
-                        "📁 Категория: " + (category != null ? category : "Неизвестно") + "\n\n" +
-                        "⚠️ Это действие нельзя отменить!")
+                        "📁 Категория: " + (category != null ? category : "Неизвестно"))
                 .setPositiveButton("Удалить", (dialog, which) -> {
                     Toast.makeText(this,
                             "Удаление растения \"" + plant.getName() + "\" (ID: " + plant.getId() + ") в разработке",
-                            Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Отмена", null)
-                .show();
-    }
-
-    private void showDeleteWeatherDialog(WeatherData weather, String regionName) {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Удалить данные о погоде")
-                .setMessage("Вы уверены, что хотите удалить данные?\n\n" +
-                        "🗺️ Регион: " + regionName + "\n" +
-                        "📅 Дата: " + weather.getDate() + "\n" +
-                        "🌡️ Температура: " + weather.getTemperature() + "\n" +
-                        "💧 Влажность: " + weather.getHumidity() + "\n" +
-                        "💨 Ветер: " + weather.getWind() + "\n\n" +
-                        "⚠️ Это действие нельзя отменить!")
-                .setPositiveButton("Удалить", (dialog, which) -> {
-                    Toast.makeText(this,
-                            "Удаление данных за " + weather.getDate() + " (" + regionName + ") в разработке",
                             Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Отмена", null)
@@ -495,9 +520,25 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private void showNoWeather(String message) {
         tvNoWeather.setText(message);
         tvNoWeather.setVisibility(View.VISIBLE);
-        tvWeatherInfo.setText("Всего записей: 0");
-        if (tvWeatherStats != null) {
-            tvWeatherStats.setText("Нет данных");
+        tvWeatherInfo.setText("Регион: " + selectedRegion);
+    }
+
+    // В AdminDashboardActivity заменить методы:
+
+    private void showAddPlantDialog() {
+        // Вместо диалога открываем новую Activity
+        Intent intent = new Intent(this, AddPlantActivityAdmin.class);
+        startActivityForResult(intent, 1);
+    }
+
+    // Добавить метод для обработки результата
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            // Обновляем список растений после добавления/редактирования
+            containerPlantsRows.removeAllViews();
+            loadAllPlants();
         }
     }
 }

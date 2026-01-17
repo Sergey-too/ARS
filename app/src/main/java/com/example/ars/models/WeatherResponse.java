@@ -1,14 +1,13 @@
 package com.example.ars.models;
 
 import java.util.List;
-import java.util.Map;
 
 public class WeatherResponse {
     private String region;
     private List<WeatherData> weather;
     private boolean isTestData;
     private String message;
-    private int regionsCount;
+    private int count;
 
     // Геттеры и сеттеры
     public String getRegion() { return region; }
@@ -23,6 +22,6 @@ public class WeatherResponse {
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
 
-    public int getRegionsCount() { return regionsCount; }
-    public void setRegionsCount(int regionsCount) { this.regionsCount = regionsCount; }
+    public int getCount() { return count; }
+    public void setCount(int count) { this.count = count; }
 }

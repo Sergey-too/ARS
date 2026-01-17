@@ -1,6 +1,7 @@
 package com.example.ars;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -147,9 +148,20 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin.setEnabled(false);
         btnLogin.setText("Вход...");
 
+        // ПРОСТАЯ ПРОВЕРКА ДЛЯ ЛОКАЛЬНОГО АДМИНА
         if ("admin".equalsIgnoreCase(identifier.trim()) && "admin123".equals(password.trim())) {
+            // Сохраняем флаг админа ПЕРЕД переходом
+            SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("is_admin", true);
+            editor.putString("username", "admin");
+            editor.apply(); // ВАЖНО: apply() для немедленного сохранения
+
+            Log.d(TAG, "Локальный админ вошел. is_admin сохранен: true");
+
             Intent intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
             startActivity(intent);
+            finish();
             return;
         }
 
@@ -174,25 +186,48 @@ public class LoginActivity extends AppCompatActivity {
                         AuthResponse authResponse = response.body();
 
                         if (authResponse.isSuccess()) {
-                            // Сохраняем данные пользователя
+                            // Сохраняем данные
                             prefsHelper.saveToken(authResponse.getToken());
                             prefsHelper.saveUser(authResponse.getUser());
                             prefsHelper.setLoggedIn(true);
 
-                            Log.d(TAG, "Login successful, token saved");
+                            // ПРОСТО ПРОВЕРЯЕМ ПО ЛОГИНУ В АНДРОИДЕ
+                            String username = identifier.toLowerCase().trim();
 
-                            Toast.makeText(LoginActivity.this,
-                                    "Успешный вход!", Toast.LENGTH_SHORT).show();
+                            // Если логин содержит "admin" - считаем админом
+                            boolean isAdmin = username.contains("admin") ||
+                                    username.equals("administrator") ||
+                                    username.equals("администратор");
 
-                            // Переходим на главный экран
-                            Intent intent = new Intent(LoginActivity.this, PlantsActivity.class);
-                            startActivity(intent);
+                            // Сохраняем флаг админа В ДВАХ МЕСТАХ
+                            // 1. В SharedPreferencesHelper (если он используется)
+                            // 2. В обычных SharedPreferences (для простой проверки)
+
+                            SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
+                            SharedPreferences.Editor editor = prefs.edit();
+                            editor.putBoolean("is_admin", isAdmin);
+                            editor.putString("username", identifier);
+                            editor.putString("login_time", String.valueOf(System.currentTimeMillis()));
+                            editor.apply(); // ВАЖНО: apply() а не commit()
+
+                            Log.d(TAG, "Серверный логин. is_admin сохранен: " + isAdmin +
+                                    " для пользователя: " + identifier);
+                            Log.d(TAG, "Все настройки после сохранения: " + prefs.getAll());
+
+                            if (isAdmin) {
+                                // В админку
+                                Intent intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
+                                startActivity(intent);
+                            } else {
+                                // В основное приложение
+                                Intent intent = new Intent(LoginActivity.this, PlantsActivity.class);
+                                startActivity(intent);
+                            }
                             finish();
                         } else {
-                            String errorMsg = authResponse.getError() != null ?
-                                    authResponse.getError() : "Ошибка авторизации";
-                            Toast.makeText(LoginActivity.this, errorMsg, Toast.LENGTH_LONG).show();
-                            Log.e(TAG, "Login failed: " + errorMsg);
+                            Toast.makeText(LoginActivity.this,
+                                    "Ошибка авторизации: " + authResponse.getError(),
+                                    Toast.LENGTH_LONG).show();
                         }
                     } else {
                         String errorMsg = "Ошибка сервера: " + response.code();
@@ -234,8 +269,11 @@ public class LoginActivity extends AppCompatActivity {
                                 "1. Запущен ли сервер Spring\n" +
                                 "2. Правильный ли IP адрес (10.0.2.2 для эмулятора)\n" +
                                 "3. Открыт ли порт 8080";
+
+                        // Предлагаем локальный вход для админа
+                        errorMsg += "\n\nДля локального доступа используйте:\nЛогин: admin\nПароль: admin123";
                     } else if (t instanceof java.net.SocketTimeoutException) {
-                        errorMsg = "Таймаут подключения. Сервер не отвечает";
+                        errorMsg = "Таймаут подключения. Сервер не отвежает";
                     }
 
                     Toast.makeText(LoginActivity.this, errorMsg, Toast.LENGTH_LONG).show();
@@ -243,7 +281,6 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
     }
-
     @Override
     public void onBackPressed() {
         // При нажатии назад просто закрываем LoginActivity

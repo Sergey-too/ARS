@@ -1,9 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.ARS" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-    </style>
+    <!-- Замените текущую тему на Material -->
+    <style name="Theme.ARS" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Основные цвета -->
+        <item name="colorPrimary">@color/color_green_primary</item>
+        <item name="colorPrimaryVariant">@color/color_green_dark</item>
+        <item name="colorOnPrimary">@color/color_button_text_primary</item>
+        <item name="colorSecondary">@color/color_green_accent</item>
+        <item name="colorOnSecondary">@android:color/white</item>
 
-    <style name="Theme.ARS" parent="Base.Theme.ARS" />
+        <!-- Дополнительные настройки -->
+        <item name="android:windowBackground">@color/color_text_white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+
+        <!-- Для TextInputLayout -->
+        <item name="materialThemeOverlay">@style/ThemeOverlay.MaterialComponents</item>
+    </style>
 </resources>
