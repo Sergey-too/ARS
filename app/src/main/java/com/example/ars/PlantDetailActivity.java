@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Crop;
+import com.example.ars.utils.SharedPreferencesHelper;
 import com.squareup.picasso.Picasso;
 
 import retrofit2.Call;
@@ -46,7 +47,10 @@ public class PlantDetailActivity extends AppCompatActivity {
         // 3. Настройка кнопки назад
         setupBackButton();
 
-        // 4. Загружаем данные о растении
+        // 4. Настройка кнопки удаления (ДОБАВЬТЕ ЭТУ СТРОКУ)
+        setupDeleteButton();
+
+        // 5. Загружаем данные о растении
         loadPlantDetails();
     }
 
@@ -178,7 +182,7 @@ public class PlantDetailActivity extends AppCompatActivity {
 
         Picasso.get()
                 .load(url)
-                .placeholder(R.drawable.plant_placeholder)
+                .placeholder(R.drawable.ic_profile)
                 .error(R.drawable.ic_close)
                 .into(imageView, new com.squareup.picasso.Callback() {
                     @Override
@@ -327,6 +331,78 @@ public class PlantDetailActivity extends AppCompatActivity {
         if (tvRecommendations != null) {
             tvRecommendations.setText("Не удалось загрузить характеристики растения. Проверьте подключение к интернету.");
         }
+    }
+
+    private void setupDeleteButton() {
+        com.google.android.material.button.MaterialButton btnDelete = findViewById(R.id.btnDelete);
+        if (btnDelete == null) return;
+
+        btnDelete.setOnClickListener(v -> {
+            if (currentCrop == null || currentCrop.getId() == null) {
+                Toast.makeText(this, "Не удалось получить данные о растении", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Получаем текущего пользователя
+            com.example.ars.utils.SharedPreferencesHelper prefsHelper = new SharedPreferencesHelper(this);
+            com.example.ars.models.User currentUser = prefsHelper.getUser();
+
+            if (currentUser == null || currentUser.getId() == null) {
+                Toast.makeText(this, "Пользователь не авторизован", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            showDeleteConfirmationDialog(currentUser.getId(), currentCrop.getId());
+        });
+    }
+
+    private void showDeleteConfirmationDialog(int userId, int cropId) {
+        String plantName = currentCrop.getName() != null ? currentCrop.getName() : "это растение";
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Удаление растения")
+                .setMessage("Вы действительно хотите удалить \"" + plantName + "\" из своей коллекции?")
+                .setPositiveButton("Удалить", (dialog, which) -> deletePlantFromCollection(userId, cropId))
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    private void deletePlantFromCollection(int userId, int cropId) {
+        // Показываем прогресс
+        Toast.makeText(this, "Удаление...", Toast.LENGTH_SHORT).show();
+
+        apiService.deleteUserCrop(userId, cropId).enqueue(new Callback<java.util.Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<java.util.Map<String, Object>> call,
+                                   Response<java.util.Map<String, Object>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    java.util.Map<String, Object> result = response.body();
+                    Boolean success = (Boolean) result.get("success");
+
+                    if (success != null && success) {
+                        Toast.makeText(PlantDetailActivity.this,
+                                "Растение удалено из коллекции", Toast.LENGTH_SHORT).show();
+
+                        // Возвращаемся на предыдущий экран
+                        setResult(RESULT_OK);
+                        finish();
+                    } else {
+                        String error = (String) result.get("error");
+                        Toast.makeText(PlantDetailActivity.this,
+                                "Ошибка: " + error, Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(PlantDetailActivity.this,
+                            "Ошибка сервера: " + response.code(), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<java.util.Map<String, Object>> call, Throwable t) {
+                Toast.makeText(PlantDetailActivity.this,
+                        "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     // ==================== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ====================

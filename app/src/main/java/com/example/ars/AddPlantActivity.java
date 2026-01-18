@@ -38,9 +38,6 @@ import java.util.Map;
 
 public class AddPlantActivity extends AppCompatActivity {
 
-    private static final int PICK_IMAGE_REQUEST = 1;
-    private static final int CAMERA_REQUEST = 2;
-
     private ApiService apiService;
     private SharedPreferencesHelper prefsHelper;
 
@@ -48,13 +45,11 @@ public class AddPlantActivity extends AppCompatActivity {
     private List<Crop> cropsByCategory = new ArrayList<>();
     private List<Region> regions = new ArrayList<>();
 
-    private Integer selectedCategoryId = null;  // Храним ID выбранной категории
-    private String selectedCategoryName = null; // И название
+    private Integer selectedCategoryId = null;
+    private String selectedCategoryName = null;
     private Integer selectedCropId = null;
     private String selectedRegionName = null;
 
-    private Uri selectedImageUri;
-    private String uploadedImageUrl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,108 +59,18 @@ public class AddPlantActivity extends AppCompatActivity {
         prefsHelper = new SharedPreferencesHelper(this);
         apiService = RetrofitClient.getApiService();
 
-        // Кнопка назад
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> showExitDialog());
 
-        // Настройка выбора фото
-        setupPhotoSelection();
-
-        // Загружаем данные из БД
         loadCategories();
         loadRegions();
 
-        // Настраиваем слушатели
         setupDropdownListeners();
 
-        // Кнопка добавления растения
         MaterialButton btnAddPlant = findViewById(R.id.btnAddPlant);
         btnAddPlant.setOnClickListener(v -> addPlantToUser());
     }
 
-    private void setupPhotoSelection() {
-        CardView photoCard = findViewById(R.id.photoCard);
-        photoCard.setOnClickListener(v -> showImagePickerDialog());
-    }
-
-    private void showImagePickerDialog() {
-        String[] options = {"Камера", "Галерея", "Отмена"};
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Выберите источник фото");
-        builder.setItems(options, (dialog, which) -> {
-            if (which == 0) openCamera();
-            else if (which == 1) openGallery();
-        });
-        builder.show();
-    }
-
-    private void openCamera() {
-        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (cameraIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(cameraIntent, CAMERA_REQUEST);
-        } else {
-            Toast.makeText(this, "Камера недоступна", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void openGallery() {
-        Intent galleryIntent = new Intent(Intent.ACTION_PICK);
-        galleryIntent.setType("image/*");
-        startActivityForResult(galleryIntent, PICK_IMAGE_REQUEST);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) {
-            if (requestCode == PICK_IMAGE_REQUEST && data != null) {
-                selectedImageUri = data.getData();
-                showSelectedImage();
-                if (selectedCategoryName != null) {
-                    uploadCropImageToServer();
-                }
-            } else if (requestCode == CAMERA_REQUEST && data != null) {
-                Bundle extras = data.getExtras();
-                if (extras != null) {
-                    android.graphics.Bitmap photo = (android.graphics.Bitmap) extras.get("data");
-                    if (photo != null) {
-                        selectedImageUri = saveBitmapToFile(photo);
-                        showSelectedImage();
-                        if (selectedCategoryName != null) {
-                            uploadCropImageToServer();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private Uri saveBitmapToFile(android.graphics.Bitmap bitmap) {
-        File file = new File(getCacheDir(), "temp_plant_photo.jpg");
-        try {
-            java.io.FileOutputStream out = new java.io.FileOutputStream(file);
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out);
-            out.flush();
-            out.close();
-            return Uri.fromFile(file);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private void showSelectedImage() {
-        ImageView ivPlantPhoto = findViewById(R.id.ivPlantPhoto);
-        if (selectedImageUri != null) {
-            Picasso.get()
-                    .load(selectedImageUri)
-                    .placeholder(R.drawable.ic_add)
-                    .error(R.drawable.ic_plant_error)
-                    .into(ivPlantPhoto);
-        }
-    }
-
-    // ЗАГРУЗКА КАТЕГОРИЙ ИЗ БД
     private void loadCategories() {
         apiService.getCategories().enqueue(new Callback<List<Category>>() {
             @Override
@@ -188,7 +93,6 @@ public class AddPlantActivity extends AppCompatActivity {
         });
     }
 
-    // ЗАГРУЗКА РЕГИОНОВ ИЗ БД
     private void loadRegions() {
         apiService.getRegions().enqueue(new Callback<List<Region>>() {
             @Override
@@ -258,7 +162,6 @@ public class AddPlantActivity extends AppCompatActivity {
 
                 Log.d("CROP", "Выбрано растение: " + selectedCrop.getName() + " (ID: " + selectedCropId + ")");
 
-                // Показываем описание растения
                 if (selectedCrop.getDescription() != null && !selectedCrop.getDescription().isEmpty()) {
                     tvDescription.setText(selectedCrop.getDescription());
                 } else {
@@ -267,7 +170,6 @@ public class AddPlantActivity extends AppCompatActivity {
             }
         });
 
-        // При выборе региона
         actvRegion.setOnItemClickListener((parent, view, position, id) -> {
             if (position < regions.size()) {
                 selectedRegionName = regions.get(position).getName();
@@ -279,7 +181,6 @@ public class AddPlantActivity extends AppCompatActivity {
     private void loadCropsByCategoryName(String categoryName) {
         Log.d("CROP_LOAD", "Загрузка растений для категории: " + categoryName);
 
-        // Используйте правильный метод - getCropsByCategory, а не getCropsByCategoryName
         apiService.getCropsByCategory(categoryName).enqueue(new Callback<List<Crop>>() {
             @Override
             public void onResponse(Call<List<Crop>> call, Response<List<Crop>> response) {
@@ -314,100 +215,6 @@ public class AddPlantActivity extends AppCompatActivity {
                 this, android.R.layout.simple_dropdown_item_1line, cropNames);
         actvPlantName.setAdapter(nameAdapter);
     }
-    private String getCategoryFolder(String category) {
-        if (category == null) return "default";
-
-        switch(category.toLowerCase()) {
-            case "цветы":
-            case "flowers":
-                return "flowers";
-            case "фрукты":
-            case "fruits":
-                return "fruits";
-            case "овощи":
-            case "vegetables":
-                return "vegetables";
-            case "деревья":
-            case "woods":
-            case "trees":
-                return "woods";
-            default:
-                return "default";
-        }
-    }
-    private void uploadCropImageToServer() {
-        if (selectedImageUri == null) {
-            Toast.makeText(this, "Сначала выберите фото", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Получаем название категории для папки
-        String categoryFolder = "default";
-        if (selectedCategoryName != null) {
-            categoryFolder = getCategoryFolder(selectedCategoryName);
-        }
-
-        String filePath = getRealPathFromURI(selectedImageUri);
-        if (filePath == null) {
-            Toast.makeText(this, "Не удалось получить файл", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        File file = new File(filePath);
-        RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
-
-        // Используем оригинальное имя файла или генерируем новое
-        String fileName = "plant_" + System.currentTimeMillis() + ".jpg";
-        MultipartBody.Part body = MultipartBody.Part.createFormData("file", fileName, requestFile);
-
-        // Отправляем категорию для определения папки
-        RequestBody categoryBody = RequestBody.create(MediaType.parse("text/plain"), categoryFolder);
-
-        apiService.uploadCropImage(body, categoryBody).enqueue(new Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                if (response.isSuccessful()) {
-                    uploadedImageUrl = response.body();
-                    Toast.makeText(AddPlantActivity.this, "Фото загружено успешно", Toast.LENGTH_SHORT).show();
-                    // Обновляем изображение в UI
-                    loadPlantImageFromServer(uploadedImageUrl);
-                } else {
-                    Toast.makeText(AddPlantActivity.this,
-                            "Ошибка загрузки: " + response.code(), Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this,
-                        "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-    private void loadPlantImageFromServer(String imageUrl) {
-        ImageView imageView = findViewById(R.id.ivPlantPhoto);
-        if (imageUrl != null && !imageUrl.isEmpty()) {
-            String fullUrl = RetrofitClient.BASE_URL + imageUrl;
-            Picasso.get()
-                    .load(fullUrl)
-                    .placeholder(R.drawable.ic_plant_placeholder)
-                    .error(R.drawable.ic_plant_error)
-                    .into(imageView);
-        }
-    }
-
-    private String getRealPathFromURI(Uri contentUri) {
-        String[] proj = {MediaStore.Images.Media.DATA};
-        android.database.Cursor cursor = getContentResolver().query(contentUri, proj, null, null, null);
-        if (cursor != null) {
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-            cursor.moveToFirst();
-            String path = cursor.getString(column_index);
-            cursor.close();
-            return path;
-        }
-        return contentUri.getPath();
-    }
 
     private void addPlantToUser() {
         com.example.ars.models.User currentUser = prefsHelper.getUser();
@@ -426,7 +233,6 @@ public class AddPlantActivity extends AppCompatActivity {
             return;
         }
 
-        // Проверяем что регион выбран (для отображения, но не отправляем в БД)
         if (selectedRegionName == null) {
             Toast.makeText(this, "Выберите регион", Toast.LENGTH_SHORT).show();
             return;
@@ -436,7 +242,6 @@ public class AddPlantActivity extends AppCompatActivity {
                 ", cropId=" + selectedCropId + ", category=" + selectedCategoryName +
                 ", region=" + selectedRegionName);
 
-        // Создаем запрос (ТОЛЬКО обязательные поля)
         Map<String, Object> request = new HashMap<>();
         request.put("userId", currentUser.getId());
         request.put("cropId", selectedCropId);
@@ -463,7 +268,6 @@ public class AddPlantActivity extends AppCompatActivity {
                         Toast.makeText(AddPlantActivity.this, "Ошибка: " + error, Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    // Выводим больше информации об ошибке
                     try {
                         String errorBody = response.errorBody() != null ?
                                 response.errorBody().string() : "No error body";

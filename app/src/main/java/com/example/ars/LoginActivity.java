@@ -143,19 +143,29 @@ public class LoginActivity extends AppCompatActivity {
             performLogin(identifier, password);
         }
     }
+    private boolean isAdminCredentials(String identifier, String password) {
+        String username = identifier.toLowerCase().trim();
 
+        // Проверяем известные админские учетки
+        String[] adminLogins = {"admin", "administrator", "админ", "администратор"};
+        String adminPassword = "admin123"; // или любой другой пароль
+
+        for (String adminLogin : adminLogins) {
+            if (username.equals(adminLogin) && password.equals(adminPassword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     private void performLogin(String identifier, String password) {
         btnLogin.setEnabled(false);
         btnLogin.setText("Вход...");
 
         // ПРОСТАЯ ПРОВЕРКА ДЛЯ ЛОКАЛЬНОГО АДМИНА
-        if ("admin".equalsIgnoreCase(identifier.trim()) && "admin123".equals(password.trim())) {
-            // Сохраняем флаг админа ПЕРЕД переходом
-            SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putBoolean("is_admin", true);
-            editor.putString("username", "admin");
-            editor.apply(); // ВАЖНО: apply() для немедленного сохранения
+        if (isAdminCredentials(identifier, password)) {
+            // Генерируем токен для админа
+            generateAdminToken(identifier);
 
             Log.d(TAG, "Локальный админ вошел. is_admin сохранен: true");
 
@@ -286,6 +296,38 @@ public class LoginActivity extends AppCompatActivity {
         // При нажатии назад просто закрываем LoginActivity
         super.onBackPressed();
         finish();
+    }
+
+    private void generateAdminToken(String identifier) {
+        // Генерируем токен для админа
+        long timestamp = System.currentTimeMillis();
+        String adminToken = "token_" + identifier + "_admin_" + timestamp;
+
+        Log.d(TAG, "Сгенерирован токен админа: " + adminToken);
+
+        // Сохраняем токен и данные пользователя
+        prefsHelper.saveToken(adminToken);
+
+        // Создаем объект пользователя-админа
+        com.example.ars.models.User adminUser = new com.example.ars.models.User();
+        adminUser.setId(1); // ID админа
+        adminUser.setName("Администратор");
+        adminUser.setLogin(identifier);
+        adminUser.setEmail(identifier.contains("@") ? identifier : identifier + "@admin.local");
+
+        // Сохраняем пользователя
+        prefsHelper.saveUser(adminUser);
+        prefsHelper.setLoggedIn(true);
+
+        // Сохраняем флаг админа
+        SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("is_admin", true);
+        editor.putString("username", identifier);
+        editor.putString("user_role", "admin");
+        editor.apply();
+
+        Log.d(TAG, "Админ авторизован с токеном: " + adminToken);
     }
 
     @Override

@@ -4,100 +4,114 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/color_green_soft"
     tools:context=".PlantsActivity">
 
-    <!-- AppBar с поиском и меню -->
-    <com.google.android.material.appbar.AppBarLayout
+    <!-- Основной контент -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_gradient_green"
-        android:elevation="0dp"
-        app:layout_scrollFlags="noScroll">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <LinearLayout
+        <!-- AppBar с поиском и меню -->
+        <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="40dp">
+            android:background="@drawable/bg_gradient_green"
+            android:elevation="0dp">
 
-            <androidx.appcompat.widget.Toolbar
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="@android:color/transparent"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="10dp">
 
-                <!-- Заголовок -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <androidx.appcompat.widget.Toolbar
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    android:background="@android:color/transparent"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Мои растения"
+                        android:textColor="@color/color_text_white"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:layout_gravity="start|center_vertical" />
+
+                    <ImageView
+                        android:id="@+id/btnMenu"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:src="@drawable/ic_menu"
+                        app:tint="@color/color_text_white"
+                        android:background="?attr/selectableItemBackground"
+                        android:padding="8dp" />
+
+                </androidx.appcompat.widget.Toolbar>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/searchLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Мои растения"
-                    android:textColor="@color/color_text_white"
-                    android:textSize="24sp"
-                    android:textStyle="bold"
-                    android:layout_gravity="start|center_vertical" />
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:hint="Поиск растений"
+                    app:boxBackgroundColor="@color/color_surface_white"
+                    app:boxCornerRadiusBottomEnd="24dp"
+                    app:boxCornerRadiusBottomStart="24dp"
+                    app:boxCornerRadiusTopEnd="24dp"
+                    app:boxCornerRadiusTopStart="24dp"
+                    app:endIconMode="clear_text"
+                    app:endIconTint="@color/color_green_primary"
+                    app:startIconDrawable="@drawable/ic_search"
+                    app:startIconTint="@color/color_green_primary">
 
-                <!-- Кнопка меню (список) -->
-                <ImageView
-                    android:id="@+id/btnMenu"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_gravity="end|center_vertical"
-                    android:src="@drawable/ic_menu"
-                    app:tint="@color/color_text_white"
-                    android:background="?attr/selectableItemBackground"
-                    android:padding="8dp" />
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etSearch"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="10dp"
+                        android:paddingHorizontal="16dp"
+                        android:textColor="@color/color_text_dark"
+                        android:textSize="16sp" />
 
-            </androidx.appcompat.widget.Toolbar>
+                </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Поле поиска с скруглением -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/searchLayout"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
-            android:hint="Поиск растений"
-            app:boxBackgroundColor="@color/color_surface_white"
-            app:boxCornerRadiusBottomEnd="24dp"
-            app:boxCornerRadiusBottomStart="24dp"
-            app:boxCornerRadiusTopEnd="24dp"
-            app:boxCornerRadiusTopStart="24dp"
-            app:endIconMode="clear_text"
-            app:endIconTint="@color/color_green_primary"
-            app:startIconDrawable="@drawable/ic_search"
-            app:startIconTint="@color/color_green_primary">
+            </LinearLayout>
+        </com.google.android.material.appbar.AppBarLayout>
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSearch"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="16dp"
-                android:paddingHorizontal="16dp"
-                android:textColor="@color/color_text_dark"
-                android:textSize="16sp" />
-
-        </com.google.android.material.textfield.TextInputLayout>
+        <!-- RecyclerView для растений -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPlants"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:clipToPadding="false" />
 
     </LinearLayout>
 
-</com.google.android.material.appbar.AppBarLayout>
+    <!-- Кнопка добавления (поверх всего) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAdd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="24dp"
+        android:src="@drawable/ic_add"
+        app:backgroundTint="@color/color_blue_primary"
+        app:tint="@color/color_button_text_primary" />
 
-
-<androidx.recyclerview.widget.RecyclerView
-android:id="@+id/rvPlants"
-android:layout_width="match_parent"
-android:layout_height="match_parent"
-android:layout_marginTop="20dp"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp"
-    android:clipToPadding="false"
-    app:layout_behavior="@string/appbar_scrolling_view_behavior" />
-
-        <!-- Выдвижная панель меню (накладывается поверх) -->
+    <!-- Выдвижная панель меню (САМЫЙ ВЕРХНИЙ СЛОЙ) -->
     <FrameLayout
         android:id="@+id/sideMenuOverlay"
         android:layout_width="match_parent"
@@ -164,7 +178,6 @@ android:layout_marginTop="20dp"
                     android:layout_height="56dp"
                     android:layout_marginBottom="8dp"
                     android:text="Чат с нейросетью"
-
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
                     app:icon="@drawable/ic_profile"
@@ -180,7 +193,7 @@ android:layout_marginTop="20dp"
                     android:text="Прогноз погоды"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_notifications"
+                    app:icon="@drawable/ic_weather"
                     app:iconTint="@color/color_green_primary" />
 
                 <!-- Кнопка 3 -->
@@ -193,7 +206,7 @@ android:layout_marginTop="20dp"
                     android:text="Удалить все записи"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_settings"
+                    app:icon="@drawable/ic_close"
                     app:iconTint="@color/color_green_primary" />
 
                 <!-- Кнопка 4 -->
@@ -214,14 +227,4 @@ android:layout_marginTop="20dp"
 
     </FrameLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAdd"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="24dp"
-        android:src="@drawable/ic_add"
-        app:backgroundTint="@color/color_blue_primary"
-        app:tint="@color/color_button_text_primary" />
-
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -35,6 +35,7 @@ public class PlantsActivity extends AppCompatActivity {
     private SharedPreferencesHelper prefsHelper;
     private PlantsAdapter adapter;
     private List<UserCrop> userCrops = new ArrayList<>();
+    private List<UserCrop> originalPlants = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +64,8 @@ public class PlantsActivity extends AppCompatActivity {
         RecyclerView rvPlants = findViewById(R.id.rvPlants);
         rvPlants.setLayoutManager(new LinearLayoutManager(this));
 
+        setupSimpleSearch();
+
         adapter = new PlantsAdapter(userCrops);
         rvPlants.setAdapter(adapter);
 
@@ -81,6 +84,9 @@ public class PlantsActivity extends AppCompatActivity {
         Button btnLogout = findViewById(R.id.btnMenu4);
         btnLogout.setOnClickListener(v -> logout());
 
+        Button btnDeleteAll = findViewById(R.id.btnMenu3);
+        btnDeleteAll.setOnClickListener(v -> showDeleteAllConfirmationDialog());
+
         Button btnWeather = findViewById(R.id.btnMenu2);
         btnWeather.setOnClickListener(v -> {
             startActivity(new Intent(PlantsActivity.this, WeatherActivity.class));
@@ -90,19 +96,84 @@ public class PlantsActivity extends AppCompatActivity {
         fabAdd.setOnClickListener(v -> {
             startActivity(new Intent(PlantsActivity.this, AddPlantActivity.class));
         });
-
-        // Загружаем реальные данные
+        
         loadUserPlants();
+    }
+
+    private void showDeleteAllConfirmationDialog() {
+        if (userCrops.isEmpty()) {
+            Toast.makeText(this, "У вас нет растений для удаления", Toast.LENGTH_SHORT).show();
+            closeSideMenu();
+            return;
+        }
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Удаление всех растений")
+                .setMessage("Вы действительно хотите удалить ВСЕ растения из своей коллекции? (" +
+                        userCrops.size() + " растений)")
+                .setPositiveButton("Удалить все", (dialog, which) -> deleteAllPlants())
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+    private void setupSimpleSearch() {
+        com.google.android.material.textfield.TextInputEditText etSearch = findViewById(R.id.etSearch);
+        if (etSearch == null) return;
+
+        etSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                String searchText = s.toString().trim().toLowerCase();
+                searchByName(searchText);
+            }
+        });
+
+        com.google.android.material.textfield.TextInputLayout searchLayout = findViewById(R.id.searchLayout);
+        if (searchLayout != null) {
+            searchLayout.setEndIconOnClickListener(v -> {
+                etSearch.setText("");
+                adapter.updateData(originalPlants);
+            });
+        }
+    }
+
+    private void searchByName(String searchText) {
+        if (originalPlants.isEmpty()) {
+            originalPlants = new ArrayList<>(userCrops);
+        }
+
+        if (searchText.isEmpty()) {
+            adapter.updateData(originalPlants);
+            return;
+        }
+
+        List<UserCrop> searchResults = new ArrayList<>();
+
+        for (UserCrop userCrop : originalPlants) {
+            if (userCrop.getCrop() != null &&
+                    userCrop.getCrop().getName() != null) {
+
+                String plantName = userCrop.getCrop().getName().toLowerCase();
+                if (plantName.contains(searchText)) {
+                    searchResults.add(userCrop);
+                }
+            }
+        }
+
+        adapter.updateData(searchResults.isEmpty() ? originalPlants : searchResults);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Обновляем список при возвращении на экран
         loadUserPlants();
     }
 
-    // В методе loadUserPlants()
     private void loadUserPlants() {
         com.example.ars.models.User currentUser = prefsHelper.getUser();
         if (currentUser == null || currentUser.getId() == null) {
@@ -120,14 +191,9 @@ public class PlantsActivity extends AppCompatActivity {
                     userCrops = response.body();
                     Log.d("PlantsActivity", "Получено растений: " + userCrops.size());
 
-                    // ПРОВЕРКА данных
                     for (UserCrop userCrop : userCrops) {
-                        Log.d("PlantsActivity", "CropId: " + userCrop.getCropId());
-                        Log.d("PlantsActivity", "Crop object: " + (userCrop.getCrop() != null ? "NOT NULL" : "NULL"));
-
-                        if (userCrop.getCrop() != null) {
-                            Log.d("PlantsActivity", "  Name: " + userCrop.getCrop().getName());
-                            Log.d("PlantsActivity", "  Description: " + userCrop.getCrop().getDescription());
+                        if (userCrop.getCrop() == null) {
+                            loadCropDetails(userCrop.getCropId(), userCrop);
                         }
                     }
 
@@ -142,6 +208,83 @@ public class PlantsActivity extends AppCompatActivity {
             public void onFailure(Call<List<UserCrop>> call, Throwable t) {
                 Log.e("PlantsActivity", "Ошибка сети", t);
                 showEmptyState();
+            }
+        });
+    }
+
+    private void deleteAllPlants() {
+        com.example.ars.models.User currentUser = prefsHelper.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            Toast.makeText(this, "Ошибка: пользователь не найден", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int userId = currentUser.getId();
+
+        // Показываем прогресс
+        Toast.makeText(this, "Удаление всех растений...", Toast.LENGTH_SHORT).show();
+
+        // Используем endpoint для массового удаления
+        apiService.deleteAllUserCrops(userId).enqueue(new Callback<java.util.Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<java.util.Map<String, Object>> call,
+                                   Response<java.util.Map<String, Object>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    java.util.Map<String, Object> result = response.body();
+                    Boolean success = (Boolean) result.get("success");
+
+                    if (success != null && success) {
+                        runOnUiThread(() -> {
+                            userCrops.clear();
+                            adapter.updateData(userCrops);
+                            Toast.makeText(PlantsActivity.this,
+                                    "Все растения удалены", Toast.LENGTH_SHORT).show();
+                            closeSideMenu();
+                        });
+                    } else {
+                        String error = (String) result.get("error");
+                        runOnUiThread(() -> {
+                            Toast.makeText(PlantsActivity.this,
+                                    "Ошибка: " + error, Toast.LENGTH_SHORT).show();
+                            closeSideMenu();
+                        });
+                    }
+                } else {
+                    runOnUiThread(() -> {
+                        Toast.makeText(PlantsActivity.this,
+                                "Ошибка сервера", Toast.LENGTH_SHORT).show();
+                        closeSideMenu();
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(Call<java.util.Map<String, Object>> call, Throwable t) {
+                runOnUiThread(() -> {
+                    Toast.makeText(PlantsActivity.this,
+                            "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    closeSideMenu();
+                });
+            }
+        });
+    }
+    private void loadCropDetails(Integer cropId, UserCrop userCrop) {
+        apiService.getCropById(cropId).enqueue(new Callback<Crop>() {
+            @Override
+            public void onResponse(Call<Crop> call, Response<Crop> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Crop crop = response.body();
+                    userCrop.setCrop(crop);
+                    Log.d("PlantsActivity", "Загружено растение: " + crop.getName());
+
+                    // Обновляем RecyclerView
+                    runOnUiThread(() -> adapter.notifyDataSetChanged());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Crop> call, Throwable t) {
+                Log.e("PlantsActivity", "Ошибка загрузки растения " + cropId, t);
             }
         });
     }
@@ -217,7 +360,6 @@ public class PlantsActivity extends AppCompatActivity {
         isMenuOpen = false;
     }
 
-    // Создай отдельный файл PlantsAdapter.java или оставь как внутренний класс:
     class PlantsAdapter extends RecyclerView.Adapter<PlantsAdapter.ViewHolder> {
         private List<UserCrop> plants;
 
@@ -248,7 +390,6 @@ public class PlantsActivity extends AppCompatActivity {
 
             String plantName;
 
-            // 1. Пробуем получить имя из объекта Crop
             if (userCrop.getCrop() != null) {
                 Crop crop = userCrop.getCrop();
                 if (crop.getName() != null && !crop.getName().isEmpty()) {
@@ -263,10 +404,8 @@ public class PlantsActivity extends AppCompatActivity {
                 Log.d("PlantsAdapter", "❌ Crop объект NULL для cropId=" + cropId);
             }
 
-            // 3. УСТАНАВЛИВАЕМ ТЕКСТ!
             holder.textView.setText(plantName);
 
-            // 4. Также установите описание если есть
             if (holder.descriptionView != null && userCrop.getCrop() != null) {
                 String description = userCrop.getCrop().getDescription();
                 if (description != null && !description.isEmpty()) {

@@ -107,6 +107,14 @@ public interface ApiService {
     @DELETE("/api/crops/{id}")
     Call<Void> deleteCrop(@Path("id") Integer id);
 
+    @DELETE("/api/crops/user/{userId}/{cropId}")
+    Call<Map<String, Object>> deleteUserCrop(
+            @Path("userId") Integer userId,
+            @Path("cropId") Integer cropId);
+
+    @DELETE("/api/crops/user/all/{userId}")
+    Call<Map<String, Object>> deleteAllUserCrops(@Path("userId") Integer userId);
+
     // Вспомогательный класс для запроса входа
     class LoginRequest {
         private String identifier;
