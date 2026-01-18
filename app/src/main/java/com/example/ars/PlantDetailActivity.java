@@ -142,51 +142,60 @@ public class PlantDetailActivity extends AppCompatActivity {
             }
         }
     }
-
     private void updatePlantPhoto() {
         ImageView ivPlantPhoto = findViewById(R.id.ivPlantPhoto);
-        View photoPlaceholder = findViewById(R.id.photoPlaceholder);
 
         if (currentCrop.getPhotoPath() != null && !currentCrop.getPhotoPath().isEmpty()) {
-            // Формируем полный URL для фото
-            String photoUrl;
-            if (currentCrop.getPhotoPath().startsWith("http")) {
-                photoUrl = currentCrop.getPhotoPath();
-            } else {
-                photoUrl = RetrofitClient.BASE_URL + currentCrop.getPhotoPath();
+            String photoPath = currentCrop.getPhotoPath();
+
+            // Убираем начальный слэш если есть
+            if (photoPath.startsWith("/")) {
+                photoPath = photoPath.substring(1);
             }
 
-            Log.d("PlantDetail", "Загружаю фото: " + photoUrl);
+            // Пробуем разные URL
+            String[] urls = {
+                    RetrofitClient.BASE_URL + "/api/img/" + photoPath,          // Основной
+                    RetrofitClient.BASE_URL + "/api/images/" + photoPath,       // Альтернативный
+                    RetrofitClient.BASE_URL + "/uploads/" + photoPath           // Прямой доступ
+            };
 
-            // Загружаем фото с помощью Picasso
-            Picasso.get()
-                    .load(photoUrl)
-                    .placeholder(R.drawable.plant_placeholder) // Пока грузится
-                    .error(R.drawable.ic_close) // Если ошибка
-                    .fit()
-                    .centerCrop()
-                    .into(ivPlantPhoto);
+            Log.d("PlantDetail", "Пробую загрузить фото: " + photoPath);
 
-            // Скрываем плейсхолдер
-            if (photoPlaceholder != null) {
-                photoPlaceholder.setVisibility(View.GONE);
-            }
-        } else {
-            // Если фото нет, показываем плейсхолдер
-            if (photoPlaceholder != null) {
-                photoPlaceholder.setVisibility(View.VISIBLE);
-            }
-            // Можно установить дефолтное изображение
-            if (ivPlantPhoto != null) {
-                ivPlantPhoto.setImageResource(R.drawable.plant_placeholder);
-            }
+            // Используем цепочку попыток
+            loadImageWithFallback(ivPlantPhoto, urls, 0);
         }
     }
 
-    private void updatePlantDescription() {
-        // Если в layout нет блока с описанием, нужно его добавить
-        // Сейчас будем использовать блок заметок для описания
+    private void loadImageWithFallback(ImageView imageView, String[] urls, int index) {
+        if (index >= urls.length) {
+            Log.e("PlantDetail", "Все URL не сработали");
+            return;
+        }
 
+        String url = urls[index];
+        Log.d("PlantDetail", "Пробую URL [" + (index+1) + "]: " + url);
+
+        Picasso.get()
+                .load(url)
+                .placeholder(R.drawable.plant_placeholder)
+                .error(R.drawable.ic_close)
+                .into(imageView, new com.squareup.picasso.Callback() {
+                    @Override
+                    public void onSuccess() {
+                        Log.d("PlantDetail", "✓ УСПЕХ! URL [" + (index+1) + "] сработал");
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        Log.e("PlantDetail", "✗ URL [" + (index+1) + "] ошибка: " + e.getMessage());
+                        // Пробуем следующий URL
+                        loadImageWithFallback(imageView, urls, index + 1);
+                    }
+                });
+    }
+
+    private void updatePlantDescription() {
         TextView tvDescription = findViewById(R.id.tvDescription);
         if (tvDescription != null) {
             if (currentCrop.getDescription() != null && !currentCrop.getDescription().isEmpty()) {

@@ -18,7 +18,6 @@ public class Crop {
     private Boolean canDirectSow;
     private String photoPath;
 
-    // Геттеры и сеттеры для всех полей
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

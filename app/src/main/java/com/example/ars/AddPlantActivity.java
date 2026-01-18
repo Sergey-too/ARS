@@ -314,11 +314,37 @@ public class AddPlantActivity extends AppCompatActivity {
                 this, android.R.layout.simple_dropdown_item_1line, cropNames);
         actvPlantName.setAdapter(nameAdapter);
     }
+    private String getCategoryFolder(String category) {
+        if (category == null) return "default";
 
+        switch(category.toLowerCase()) {
+            case "цветы":
+            case "flowers":
+                return "flowers";
+            case "фрукты":
+            case "fruits":
+                return "fruits";
+            case "овощи":
+            case "vegetables":
+                return "vegetables";
+            case "деревья":
+            case "woods":
+            case "trees":
+                return "woods";
+            default:
+                return "default";
+        }
+    }
     private void uploadCropImageToServer() {
-        if (selectedImageUri == null || selectedCategoryName == null) {
-            Toast.makeText(this, "Сначала выберите фото и категорию", Toast.LENGTH_SHORT).show();
+        if (selectedImageUri == null) {
+            Toast.makeText(this, "Сначала выберите фото", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        // Получаем название категории для папки
+        String categoryFolder = "default";
+        if (selectedCategoryName != null) {
+            categoryFolder = getCategoryFolder(selectedCategoryName);
         }
 
         String filePath = getRealPathFromURI(selectedImageUri);
@@ -329,8 +355,13 @@ public class AddPlantActivity extends AppCompatActivity {
 
         File file = new File(filePath);
         RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
-        MultipartBody.Part body = MultipartBody.Part.createFormData("file", file.getName(), requestFile);
-        RequestBody categoryBody = RequestBody.create(MediaType.parse("text/plain"), selectedCategoryName);
+
+        // Используем оригинальное имя файла или генерируем новое
+        String fileName = "plant_" + System.currentTimeMillis() + ".jpg";
+        MultipartBody.Part body = MultipartBody.Part.createFormData("file", fileName, requestFile);
+
+        // Отправляем категорию для определения папки
+        RequestBody categoryBody = RequestBody.create(MediaType.parse("text/plain"), categoryFolder);
 
         apiService.uploadCropImage(body, categoryBody).enqueue(new Callback<String>() {
             @Override
@@ -338,19 +369,21 @@ public class AddPlantActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     uploadedImageUrl = response.body();
                     Toast.makeText(AddPlantActivity.this, "Фото загружено успешно", Toast.LENGTH_SHORT).show();
+                    // Обновляем изображение в UI
                     loadPlantImageFromServer(uploadedImageUrl);
                 } else {
-                    Toast.makeText(AddPlantActivity.this, "Ошибка загрузки: " + response.code(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AddPlantActivity.this,
+                            "Ошибка загрузки: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<String> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(AddPlantActivity.this,
+                        "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
-
     private void loadPlantImageFromServer(String imageUrl) {
         ImageView imageView = findViewById(R.id.ivPlantPhoto);
         if (imageUrl != null && !imageUrl.isEmpty()) {
@@ -407,13 +440,6 @@ public class AddPlantActivity extends AppCompatActivity {
         Map<String, Object> request = new HashMap<>();
         request.put("userId", currentUser.getId());
         request.put("cropId", selectedCropId);
-
-        // НЕ отправляем эти поля - их нет в таблице user_crops:
-        // request.put("region", selectedRegionName);
-        // request.put("description", description);
-        // if (uploadedImageUrl != null && !uploadedImageUrl.isEmpty()) {
-        //     request.put("photoUrl", uploadedImageUrl);
-        // }
 
         Log.d("ADD_PLANT", "Отправка запроса на /api/crops/user/add: " + request);
 

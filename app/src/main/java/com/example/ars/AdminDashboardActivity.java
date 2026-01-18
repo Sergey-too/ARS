@@ -371,6 +371,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 LinearLayout.LayoutParams.MATCH_PARENT, 1));
         divider.setBackgroundColor(getResources().getColor(R.color.color_divider));
         containerPlantsRows.addView(divider);
+
+
+        btnEdit.setOnClickListener(v -> {
+            Intent intent = new Intent(AdminDashboardActivity.this,
+                    EditPlantActivityAdmin.class);
+            intent.putExtra("CROP_ID", plant.getId());
+            startActivityForResult(intent, 2);
+        });
     }
 
     private void updateWeatherUI(List<WeatherData> weatherList) {

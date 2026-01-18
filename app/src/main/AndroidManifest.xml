@@ -61,6 +61,11 @@
             android:name=".AddPlantActivityAdmin"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".EditPlantActivityAdmin"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
