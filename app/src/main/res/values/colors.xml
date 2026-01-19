@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Голубая цветовая палитра -->
+    <color name="color_blue_primary">#2196F3</color>
+    <color name="color_blue_light">#64B5F6</color>
+    <color name="color_blue_dark">#1976D2</color>
+    <color name="color_blue_soft">#E3F2FD</color>
+    <color name="color_blue_accent">#03A9F4</color>
+
+    <!-- Градиентные цвета для фона -->
+    <color name="gradient_end">#4FC3F7</color>
+    <color name="gradient_middle">#29B6F6</color>
+    <color name="gradient_start">#0288D1</color>
+
+    <!-- Текст -->
+    <color name="color_text_white">#FFFFFF</color>
+    <color name="color_text_light">#E3F2FD</color>
+    <color name="color_text_dark">#1A237E</color>
+    <color name="color_text_gray">#757575</color>
+
+    <!-- UI элементы -->
+    <color name="color_surface_white">#FFFFFF</color>
+    <color name="color_surface_light">#F5F5F5</color>
+    <color name="color_divider">#E0E0E0</color>
+    <color name="color_shadow">#26000000</color>
+
+    <!-- Статус и акценты -->
+    <color name="color_success">#4CAF50</color>
+    <color name="color_error">#F44336</color>
+    <color name="color_warning">#FF9800</color>
+
+    <!-- Зеленая цветовая палитра -->
+    <color name="color_green_primary">#4CAF50</color>
+    <color name="color_green_light">#81C784</color>
+    <color name="color_green_dark">#388E3C</color>
+    <color name="color_green_soft">#E8F5E9</color>
+    <color name="color_green_accent">#69F0AE</color>
+
+    <!-- Градиентные цвета для фона (зеленый) -->
+    <color name="gradient_green_end">#66BB6A</color>
+    <color name="gradient_green_middle">#4CAF50</color>
+    <color name="gradient_green_start">#2E7D32</color>
+
+    <!-- Кнопки -->
+    <color name="color_button_green">@color/color_green_dark</color>
+    <color name="color_button_text_primary">#FFFFFF</color>
+
+    <!-- Поля ввода -->
+    <color name="color_input_border">#BDBDBD</color>
+    <color name="color_input_focus">@color/color_green_primary</color>
+</resources>

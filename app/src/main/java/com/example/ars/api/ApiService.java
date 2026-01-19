@@ -1,0 +1,136 @@
+package com.example.ars.api;
+
+import com.example.ars.models.AuthResponse;
+import com.example.ars.models.Category;
+import com.example.ars.models.Crop;
+import com.example.ars.models.DeleteResponse;
+import com.example.ars.models.Region;
+import com.example.ars.models.User;
+import com.example.ars.models.UserCrop;
+import com.example.ars.models.WeatherResponse;
+
+import java.util.List;
+import java.util.Map;
+
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.GET;
+import retrofit2.http.Header;
+import retrofit2.http.Multipart;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Part;
+import retrofit2.http.Path;
+import retrofit2.http.Query;
+
+public interface ApiService {
+
+    // Аутентификация
+    @POST("/api/auth/login")
+    Call<AuthResponse> login(@Body LoginRequest loginRequest);
+
+    @POST("/api/auth/register")
+    Call<AuthResponse> register(@Body User user);
+
+    @POST("/api/auth/logout")
+    Call<AuthResponse> logout(@Header("Authorization") String token);
+
+    @GET("/api/auth/profile")
+    Call<User> getProfile(@Header("Authorization") String token);
+
+    // Регионы и погода
+    @GET("/api/weather/regions")
+    Call<List<Region>> getRegions();
+
+    @GET("/api/weather/android/{regionName}")
+    Call<WeatherResponse> getWeatherForRegion(@Path("regionName") String regionName);
+
+    // НОВЫЙ МЕТОД: получить ВСЕ данные по региону для админки
+    @GET("/api/weather/admin/all/{regionName}")
+    Call<WeatherResponse> getAllWeatherForRegion(@Path("regionName") String regionName);
+
+    @GET("/api/regions/test")
+    Call<String> createTestRegions();
+
+    @GET("/api/weather/test-data")
+    Call<String> addTestWeatherData();
+
+    // 1. Получить все категории
+    @GET("/api/categories")
+    Call<List<Category>> getCategories();
+
+    // 2. Получить растения по названию категории (ОСНОВНОЙ метод)
+    @GET("/api/crops/by-category/{categoryName}")
+    Call<List<Crop>> getCropsByCategory(@Path("categoryName") String categoryName);
+
+    // 3. Получить растения пользователя
+    @GET("/api/crops/user/{userId}")
+    Call<List<UserCrop>> getUserCrops(@Path("userId") Integer userId);
+
+    // 4. Добавить растение пользователю
+    @POST("/api/crops/user/add")
+    Call<Map<String, Object>> addUserCrop(@Body Map<String, Object> request);
+
+    // 5. Загрузка фото растения
+    @Multipart
+    @POST("/api/files/upload/crop")
+    Call<String> uploadCropImage(
+            @Part MultipartBody.Part file,
+            @Part("category") RequestBody category
+    );
+
+    // 6. Получить растение по ID (для детальной страницы)
+    @GET("/api/crops/{id}")
+    Call<Crop> getCropById(@Path("id") Integer id);
+
+    // Удаление данных о погоде
+    @DELETE("/api/weather/delete/{id}")
+    Call<DeleteResponse> deleteWeatherById(@Path("id") Integer id);
+
+    @DELETE("/api/weather/delete-by-date-region")
+    Call<DeleteResponse> deleteWeatherByDateRegion(
+            @Query("date") String date,
+            @Query("regionName") String regionName);
+
+    // 7. Добавить новое растение
+    @POST("/api/crops")
+    Call<Crop> addCrop(@Body Crop crop);
+
+    // 8. Обновить растение
+    @PUT("/api/crops/{id}")
+    Call<Crop> updateCrop(@Path("id") Integer id, @Body Crop crop);
+
+    // 9. Удалить растение
+    @DELETE("/api/crops/{id}")
+    Call<Void> deleteCrop(@Path("id") Integer id);
+
+    @DELETE("/api/crops/user/{userId}/{cropId}")
+    Call<Map<String, Object>> deleteUserCrop(
+            @Path("userId") Integer userId,
+            @Path("cropId") Integer cropId);
+
+    @DELETE("/api/crops/user/all/{userId}")
+    Call<Map<String, Object>> deleteAllUserCrops(@Path("userId") Integer userId);
+
+    // Вспомогательный класс для запроса входа
+    class LoginRequest {
+        private String identifier;
+        private String password;
+
+        public LoginRequest(String identifier, String password) {
+            this.identifier = identifier;
+            this.password = password;
+        }
+
+        public String getIdentifier() {
+            return identifier;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+    }
+}

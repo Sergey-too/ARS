@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="horizontal"
+    android:paddingVertical="10dp">
+
+    <!-- ID (60dp) -->
+    <TextView
+        android:id="@+id/tvWeatherId"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="12dp"
+        android:paddingEnd="6dp"
+        android:text="ID"
+        android:textColor="@color/color_text_dark"
+        android:textSize="11sp"
+        android:gravity="center" />
+
+    <!-- Регион (140dp) -->
+    <TextView
+        android:id="@+id/tvWeatherRegion"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:text="Регион"
+        android:textColor="@color/color_text_dark"
+        android:textSize="11sp"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <!-- Дата (120dp) -->
+    <TextView
+        android:id="@+id/tvWeatherDate"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:text="Дата"
+        android:textColor="@color/color_text_dark"
+        android:textSize="11sp" />
+
+    <!-- Температура (100dp) -->
+    <TextView
+        android:id="@+id/tvWeatherTemp"
+        android:layout_width="70dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:text="Темп"
+        android:textColor="@color/color_blue_primary"
+        android:textSize="11sp"
+        android:gravity="center" />
+
+    <!-- Ветер (90dp) -->
+    <TextView
+        android:id="@+id/tvWeatherWind"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:text="Ветер"
+        android:textColor="@color/color_text_dark"
+        android:textSize="11sp"
+        android:gravity="center" />
+
+    <!-- Давление (120dp) -->
+    <TextView
+        android:id="@+id/tvWeatherPressure"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:text="Давл"
+        android:textColor="@color/color_text_dark"
+        android:textSize="11sp"
+        android:gravity="center" />
+
+    <!-- Влажность (100dp) -->
+    <TextView
+        android:id="@+id/tvWeatherHumidity"
+        android:layout_width="70dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:text="Влаж"
+        android:textColor="@color/color_text_dark"
+        android:textSize="11sp"
+        android:gravity="center" />
+
+    <!-- Осадки (100dp) -->
+    <TextView
+        android:id="@+id/tvWeatherPrecipitation"
+        android:layout_width="70dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:text="Осад"
+        android:textColor="@color/color_blue_primary"
+        android:textSize="11sp"
+        android:gravity="center" />
+
+    <!-- Кнопка удаления -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDeleteWeather"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="12dp"
+        android:text="Удл"
+        android:textAllCaps="false"
+        android:textSize="10sp"
+        android:textColor="@color/color_button_text_primary"
+        app:backgroundTint="@color/color_error"
+        app:cornerRadius="4dp"
+        app:icon="@drawable/ic_close"
+        app:iconSize="10dp"
+        app:iconPadding="0dp" />
+
+</LinearLayout>
