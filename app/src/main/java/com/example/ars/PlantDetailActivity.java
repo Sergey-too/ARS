@@ -31,10 +31,8 @@ public class PlantDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plant_detail);
 
-        // 1. Инициализация Retrofit
         apiService = RetrofitClient.getApiService();
 
-        // 2. Получаем ID растения из Intent
         cropId = getIntent().getIntExtra("crop_id", -1);
         if (cropId == -1) {
             Toast.makeText(this, "Ошибка: не указано растение", Toast.LENGTH_SHORT).show();
@@ -42,19 +40,12 @@ public class PlantDetailActivity extends AppCompatActivity {
             return;
         }
 
-        Log.d("PlantDetail", "Открываем детали растения ID: " + cropId);
-
-        // 3. Настройка кнопки назад
         setupBackButton();
 
-        // 4. Настройка кнопки удаления (ДОБАВЬТЕ ЭТУ СТРОКУ)
         setupDeleteButton();
 
-        // 5. Загружаем данные о растении
         loadPlantDetails();
     }
-
-    // ==================== МЕТОДЫ НАСТРОЙКИ UI ====================
 
     private void setupBackButton() {
         ImageView btnBack = findViewById(R.id.btnBack);
@@ -67,23 +58,17 @@ public class PlantDetailActivity extends AppCompatActivity {
         }
     }
 
-    // ==================== ЗАГРУЗКА ДАННЫХ ====================
-
     private void loadPlantDetails() {
         Log.d("PlantDetail", "Загружаю детали растения ID: " + cropId);
 
-        // Показываем заглушки пока грузятся данные
         showLoadingState();
 
-        // Вызываем API для получения данных о растении
         apiService.getCropById(cropId).enqueue(new Callback<Crop>() {
             @Override
             public void onResponse(Call<Crop> call, Response<Crop> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     currentCrop = response.body();
-                    Log.d("PlantDetail", "Получено растение: " + currentCrop.getName());
 
-                    // Обновляем UI с полученными данными
                     updateUI();
                 } else {
                     Log.e("PlantDetail", "Ошибка загрузки: " + response.code());
@@ -96,7 +81,6 @@ public class PlantDetailActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<Crop> call, Throwable t) {
-                Log.e("PlantDetail", "Ошибка сети: " + t.getMessage());
                 Toast.makeText(PlantDetailActivity.this,
                         "Ошибка сети: " + t.getMessage(),
                         Toast.LENGTH_SHORT).show();
@@ -105,10 +89,7 @@ public class PlantDetailActivity extends AppCompatActivity {
         });
     }
 
-    // ==================== ОБНОВЛЕНИЕ UI ====================
-
     private void showLoadingState() {
-        // Можно показать ProgressBar или изменить текст на "Загрузка..."
         TextView tvPlantName = findViewById(R.id.tvPlantName);
         if (tvPlantName != null) {
             tvPlantName.setText("Загрузка...");
@@ -118,16 +99,12 @@ public class PlantDetailActivity extends AppCompatActivity {
     private void updateUI() {
         if (currentCrop == null) return;
 
-        // 1. Обновляем название растения
         updatePlantName();
 
-        // 2. Обновляем фото растения
         updatePlantPhoto();
 
-        // 3. Обновляем описание растения
         updatePlantDescription();
 
-        // 4. Обновляем характеристики растения
         updatePlantCharacteristics();
     }
 
@@ -136,7 +113,6 @@ public class PlantDetailActivity extends AppCompatActivity {
         if (tvPlantName != null) {
             tvPlantName.setText(currentCrop.getName());
 
-            // Также можно установить заголовок в ActionBar
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setTitle(currentCrop.getName());
             }
@@ -148,21 +124,19 @@ public class PlantDetailActivity extends AppCompatActivity {
         if (currentCrop.getPhotoPath() != null && !currentCrop.getPhotoPath().isEmpty()) {
             String photoPath = currentCrop.getPhotoPath();
 
-            // Убираем начальный слэш если есть
             if (photoPath.startsWith("/")) {
                 photoPath = photoPath.substring(1);
             }
 
-            // Пробуем разные URL
+
             String[] urls = {
-                    RetrofitClient.BASE_URL + "/api/img/" + photoPath,          // Основной
-                    RetrofitClient.BASE_URL + "/api/images/" + photoPath,       // Альтернативный
-                    RetrofitClient.BASE_URL + "/uploads/" + photoPath           // Прямой доступ
+                    RetrofitClient.BASE_URL + "/api/img/" + photoPath,
+                    RetrofitClient.BASE_URL + "/api/images/" + photoPath,
+                    RetrofitClient.BASE_URL + "/uploads/" + photoPath
             };
 
             Log.d("PlantDetail", "Пробую загрузить фото: " + photoPath);
 
-            // Используем цепочку попыток
             loadImageWithFallback(ivPlantPhoto, urls, 0);
         }
     }
@@ -188,8 +162,6 @@ public class PlantDetailActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(Exception e) {
-                        Log.e("PlantDetail", "✗ URL [" + (index+1) + "] ошибка: " + e.getMessage());
-                        // Пробуем следующий URL
                         loadImageWithFallback(imageView, urls, index + 1);
                     }
                 });
@@ -212,16 +184,14 @@ public class PlantDetailActivity extends AppCompatActivity {
         if (tvRecommendations != null) {
             StringBuilder characteristics = new StringBuilder();
 
-            // 1. Категория
             if (currentCrop.getCategory() != null) {
-                characteristics.append("📁 Категория: ")
+                characteristics.append("Категория: ")
                         .append(currentCrop.getCategory())
                         .append("\n\n");
             }
 
-            // 2. Температурный режим
             if (currentCrop.getMinTemp() != null || currentCrop.getMaxTemp() != null) {
-                characteristics.append("🌡️ Температура: ");
+                characteristics.append("Температура: ");
                 if (currentCrop.getMinTemp() != null) {
                     characteristics.append("от ").append(currentCrop.getMinTemp()).append("°C");
                 }
@@ -232,9 +202,8 @@ public class PlantDetailActivity extends AppCompatActivity {
                 characteristics.append("\n\n");
             }
 
-            // 3. Влажность
             if (currentCrop.getMinHumidity() != null || currentCrop.getMaxHumidity() != null) {
-                characteristics.append("💧 Влажность: ");
+                characteristics.append("Влажность: ");
                 if (currentCrop.getMinHumidity() != null) {
                     characteristics.append("от ").append(currentCrop.getMinHumidity()).append("%");
                 }
@@ -245,42 +214,36 @@ public class PlantDetailActivity extends AppCompatActivity {
                 characteristics.append("\n\n");
             }
 
-            // 4. Ветер
             if (currentCrop.getMaxWind() != null) {
-                characteristics.append("💨 Максимальный ветер: ")
+                characteristics.append("Максимальный ветер: ")
                         .append(currentCrop.getMaxWind())
                         .append(" м/с\n\n");
             }
 
-            // 5. Осадки
             if (currentCrop.getNeededPrecipitation() != null) {
-                characteristics.append("🌧️ Требуемые осадки: ")
+                characteristics.append("Требуемые осадки: ")
                         .append(currentCrop.getNeededPrecipitation())
                         .append(" мм/месяц\n\n");
             }
 
-            // 6. Глубина посадки
             if (currentCrop.getSowingDepth() != null) {
-                characteristics.append("🕳️ Глубина посадки: ")
+                characteristics.append("Глубина посадки: ")
                         .append(currentCrop.getSowingDepth())
                         .append(" см\n\n");
             }
 
-            // 7. Дни до всходов
             if (currentCrop.getDaysToGermination() != null) {
-                characteristics.append("🌱 Дни до всходов: ")
+                characteristics.append("Дни до всходов: ")
                         .append(currentCrop.getDaysToGermination())
                         .append(" дней\n\n");
             }
 
-            // 8. Дни до урожая
             if (currentCrop.getDaysToHarvest() != null) {
-                characteristics.append("⏳ Дни до урожая: ")
+                characteristics.append("Дни до урожая: ")
                         .append(currentCrop.getDaysToHarvest())
                         .append(" дней\n\n");
             }
 
-            // 9. Методы посадки
             boolean hasPlantingInfo = false;
             StringBuilder plantingMethods = new StringBuilder();
 
@@ -296,16 +259,14 @@ public class PlantDetailActivity extends AppCompatActivity {
             }
 
             if (hasPlantingInfo) {
-                characteristics.append("🌿 Методы посадки: ")
+                characteristics.append("Методы посадки: ")
                         .append(plantingMethods.toString())
                         .append("\n\n");
             }
 
-            // Если есть характеристики, показываем их
             if (characteristics.length() > 0) {
                 tvRecommendations.setText(characteristics.toString());
 
-                // Показываем заголовок рекомендаций
                 TextView tvRecommendationsTitle = findViewById(R.id.tvRecommendationsTitle);
                 if (tvRecommendationsTitle != null) {
                     tvRecommendationsTitle.setText("Характеристики растения");
@@ -317,7 +278,6 @@ public class PlantDetailActivity extends AppCompatActivity {
     }
 
     private void showDefaultData() {
-        // Показываем данные по умолчанию если не удалось загрузить
         TextView tvPlantName = findViewById(R.id.tvPlantName);
         if (tvPlantName != null) {
             tvPlantName.setText("Растение #" + cropId);
@@ -339,7 +299,6 @@ public class PlantDetailActivity extends AppCompatActivity {
                 return;
             }
 
-            // Получаем текущего пользователя
             com.example.ars.utils.SharedPreferencesHelper prefsHelper = new SharedPreferencesHelper(this);
             com.example.ars.models.User currentUser = prefsHelper.getUser();
 
@@ -364,7 +323,6 @@ public class PlantDetailActivity extends AppCompatActivity {
     }
 
     private void deletePlantFromCollection(int userId, int cropId) {
-        // Показываем прогресс
         Toast.makeText(this, "Удаление...", Toast.LENGTH_SHORT).show();
 
         apiService.deleteUserCrop(userId, cropId).enqueue(new Callback<java.util.Map<String, Object>>() {
@@ -379,7 +337,6 @@ public class PlantDetailActivity extends AppCompatActivity {
                         Toast.makeText(PlantDetailActivity.this,
                                 "Растение удалено из коллекции", Toast.LENGTH_SHORT).show();
 
-                        // Возвращаемся на предыдущий экран
                         setResult(RESULT_OK);
                         finish();
                     } else {
@@ -401,11 +358,8 @@ public class PlantDetailActivity extends AppCompatActivity {
         });
     }
 
-    // ==================== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ====================
-
     @Override
     public boolean onSupportNavigateUp() {
-        // Обработка кнопки назад в ActionBar
         finish();
         return true;
     }

@@ -215,6 +215,18 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
+                    android:text="Участки"
+                    android:textColor="@color/color_text_dark"
+                    android:textSize="16sp"
+                    app:icon="@drawable/ic_logout"
+                    app:iconTint="@color/color_error" />
+
+                <!-- Кнопка 5 -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMenu5"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
                     android:text="Выйти"
                     android:textColor="@color/color_error"
                     android:textSize="16sp"

@@ -1,9 +1,7 @@
 package com.example.ars;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -12,29 +10,23 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
+import com.example.ars.models.Area;
 import com.example.ars.models.Category;
 import com.example.ars.models.Crop;
-import com.example.ars.models.Region;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.button.MaterialButton;
-import com.squareup.picasso.Picasso;
+import com.google.android.material.textfield.TextInputLayout;
 
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class AddPlantActivity extends AppCompatActivity {
 
@@ -43,13 +35,11 @@ public class AddPlantActivity extends AppCompatActivity {
 
     private List<Category> categories = new ArrayList<>();
     private List<Crop> cropsByCategory = new ArrayList<>();
-    private List<Region> regions = new ArrayList<>();
+    private List<Area> userAreas = new ArrayList<>();
 
-    private Integer selectedCategoryId = null;
-    private String selectedCategoryName = null;
     private Integer selectedCropId = null;
-    private String selectedRegionName = null;
-
+    private Integer selectedAreaId = null;
+    private String selectedCategoryName = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,12 +53,39 @@ public class AddPlantActivity extends AppCompatActivity {
         btnBack.setOnClickListener(v -> showExitDialog());
 
         loadCategories();
-        loadRegions();
+        loadUserAreas();
 
         setupDropdownListeners();
 
         MaterialButton btnAddPlant = findViewById(R.id.btnAddPlant);
         btnAddPlant.setOnClickListener(v -> addPlantToUser());
+    }
+
+    private void loadUserAreas() {
+        Integer userId = prefsHelper.getUser().getId();
+        apiService.getUserAreas(userId).enqueue(new Callback<List<Area>>() {
+            @Override
+            public void onResponse(Call<List<Area>> call, Response<List<Area>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    userAreas = response.body();
+                    updateAreaDropdown();
+                } else {
+                    Toast.makeText(AddPlantActivity.this, "Участки не найдены", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Area>> call, Throwable t) {
+                Toast.makeText(AddPlantActivity.this, "Ошибка загрузки участков", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void updateAreaDropdown() {
+        AutoCompleteTextView actvArea = findViewById(R.id.actvArea);
+        ArrayAdapter<Area> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, userAreas);
+        actvArea.setAdapter(adapter);
     }
 
     private void loadCategories() {
@@ -78,249 +95,109 @@ public class AddPlantActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     categories = response.body();
                     updateCategoryDropdown();
-                    Log.d("CATEGORIES", "Loaded " + categories.size() + " categories");
-                } else {
-                    Toast.makeText(AddPlantActivity.this,
-                            "Категории не найдены", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<List<Category>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this,
-                        "Ошибка загрузки категорий: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void loadRegions() {
-        apiService.getRegions().enqueue(new Callback<List<Region>>() {
-            @Override
-            public void onResponse(Call<List<Region>> call, Response<List<Region>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    regions = response.body();
-                    updateRegionDropdown();
-                } else {
-                    Toast.makeText(AddPlantActivity.this,
-                            "Регионы не найдены", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Region>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this,
-                        "Ошибка загрузки регионов: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(AddPlantActivity.this, "Ошибка загрузки категорий", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void updateCategoryDropdown() {
         AutoCompleteTextView actvPlantType = findViewById(R.id.actvPlantType);
-        List<String> categoryNames = new ArrayList<>();
-        for (Category category : categories) {
-            categoryNames.add(category.getName());
-        }
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_dropdown_item_1line, categoryNames);
-        actvPlantType.setAdapter(adapter);
-    }
+        List<String> names = new ArrayList<>();
+        for (Category c : categories) names.add(c.getName());
 
-    private void updateRegionDropdown() {
-        AutoCompleteTextView actvRegion = findViewById(R.id.actvRegion);
-        List<String> regionNames = new ArrayList<>();
-        for (Region region : regions) {
-            regionNames.add(region.getName());
-        }
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_dropdown_item_1line, regionNames);
-        actvRegion.setAdapter(adapter);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, names);
+        actvPlantType.setAdapter(adapter);
     }
 
     private void setupDropdownListeners() {
         AutoCompleteTextView actvPlantType = findViewById(R.id.actvPlantType);
         AutoCompleteTextView actvPlantName = findViewById(R.id.actvPlantName);
-        AutoCompleteTextView actvRegion = findViewById(R.id.actvRegion);
+        AutoCompleteTextView actvArea = findViewById(R.id.actvArea);
         TextView tvDescription = findViewById(R.id.tvPlantDescription);
 
         actvPlantType.setOnItemClickListener((parent, view, position, id) -> {
-            if (position < categories.size()) {
-                selectedCategoryName = categories.get(position).getName();
-
-                Log.d("CATEGORY", "Выбрана категория: " + selectedCategoryName);
-
-                actvPlantName.setText("");
-                tvDescription.setText("Выберите растение чтобы увидеть описание");
-
-                loadCropsByCategoryName(selectedCategoryName);
-            }
+            selectedCategoryName = categories.get(position).getName();
+            actvPlantName.setText("");
+            tvDescription.setText("Выберите растение чтобы увидеть описание");
+            loadCropsByCategoryName(selectedCategoryName);
         });
 
         actvPlantName.setOnItemClickListener((parent, view, position, id) -> {
-            if (position < cropsByCategory.size()) {
-                Crop selectedCrop = cropsByCategory.get(position);
-                selectedCropId = selectedCrop.getId();
-
-                Log.d("CROP", "Выбрано растение: " + selectedCrop.getName() + " (ID: " + selectedCropId + ")");
-
-                if (selectedCrop.getDescription() != null && !selectedCrop.getDescription().isEmpty()) {
-                    tvDescription.setText(selectedCrop.getDescription());
-                } else {
-                    tvDescription.setText("Описание отсутствует");
-                }
-            }
+            Crop selectedCrop = cropsByCategory.get(position);
+            selectedCropId = selectedCrop.getId();
+            tvDescription.setText(selectedCrop.getDescription() != null ?
+                    selectedCrop.getDescription() : "Описание отсутствует");
         });
 
-        actvRegion.setOnItemClickListener((parent, view, position, id) -> {
-            if (position < regions.size()) {
-                selectedRegionName = regions.get(position).getName();
-                Log.d("REGION", "Выбран регион: " + selectedRegionName);
-            }
+        actvArea.setOnItemClickListener((parent, view, position, id) -> {
+            selectedAreaId = userAreas.get(position).getId();
         });
     }
 
     private void loadCropsByCategoryName(String categoryName) {
-        Log.d("CROP_LOAD", "Загрузка растений для категории: " + categoryName);
-
         apiService.getCropsByCategory(categoryName).enqueue(new Callback<List<Crop>>() {
             @Override
             public void onResponse(Call<List<Crop>> call, Response<List<Crop>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     cropsByCategory = response.body();
-                    Log.d("CROP_LOAD", "Загружено " + cropsByCategory.size() + " растений");
                     updateCropNamesDropdown();
-                } else {
-                    Log.e("CROP_LOAD", "Ошибка: " + response.code());
-                    Toast.makeText(AddPlantActivity.this,
-                            "Растения не найдены", Toast.LENGTH_SHORT).show();
                 }
             }
-
-            @Override
-            public void onFailure(Call<List<Crop>> call, Throwable t) {
-                Log.e("CROP_LOAD", "Ошибка: " + t.getMessage());
-                Toast.makeText(AddPlantActivity.this,
-                        "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            @Override public void onFailure(Call<List<Crop>> call, Throwable t) {}
         });
     }
 
     private void updateCropNamesDropdown() {
         AutoCompleteTextView actvPlantName = findViewById(R.id.actvPlantName);
-        List<String> cropNames = new ArrayList<>();
-        for (Crop crop : cropsByCategory) {
-            cropNames.add(crop.getName());
-            Log.d("CROPS", "Crop: " + crop.getName() + " (ID: " + crop.getId() + ")");
-        }
-        ArrayAdapter<String> nameAdapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_dropdown_item_1line, cropNames);
-        actvPlantName.setAdapter(nameAdapter);
+        List<String> names = new ArrayList<>();
+        for (Crop c : cropsByCategory) names.add(c.getName());
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, names);
+        actvPlantName.setAdapter(adapter);
     }
 
     private void addPlantToUser() {
-        com.example.ars.models.User currentUser = prefsHelper.getUser();
-        if (currentUser == null || currentUser.getId() == null) {
-            Toast.makeText(this, "Пользователь не авторизован", Toast.LENGTH_SHORT).show();
+        if (selectedCropId == null || selectedAreaId == null) {
+            Toast.makeText(this, "Заполните все поля со звездочкой", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        if (selectedCategoryName == null) {
-            Toast.makeText(this, "Выберите категорию растения", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (selectedCropId == null) {
-            Toast.makeText(this, "Выберите растение", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (selectedRegionName == null) {
-            Toast.makeText(this, "Выберите регион", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Найти ID региона по имени
-        Integer regionId = findRegionIdByName(selectedRegionName);
-        if (regionId == null) {
-            Toast.makeText(this, "Ошибка: регион не найден", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        Log.d("ADD_PLANT", "Добавление растения: userId=" + currentUser.getId() +
-                ", cropId=" + selectedCropId + ", regionId=" + regionId);
 
         Map<String, Object> request = new HashMap<>();
-        request.put("userId", currentUser.getId());
+        request.put("userId", prefsHelper.getUser().getId());
         request.put("cropId", selectedCropId);
-        request.put("regionId", regionId);  // Добавляем regionId
-
-        Log.d("ADD_PLANT", "Отправка запроса: " + request);
+        request.put("areaId", selectedAreaId); // Теперь передаем ID участка
 
         apiService.addUserCrop(request).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
-                Log.d("ADD_PLANT", "Ответ от сервера: код " + response.code());
-
-                if (response.isSuccessful() && response.body() != null) {
-                    Map<String, Object> result = response.body();
-                    Log.d("ADD_PLANT", "Тело ответа: " + result);
-
-                    Boolean success = (Boolean) result.get("success");
-
-                    if (success != null && success) {
-                        Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(AddPlantActivity.this, PlantsActivity.class));
-                        finish();
-                    } else {
-                        String error = (String) result.get("error");
-                        Toast.makeText(AddPlantActivity.this, "Ошибка: " + error, Toast.LENGTH_SHORT).show();
-                    }
+                if (response.isSuccessful()) {
+                    Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
+                    finish();
                 } else {
-                    try {
-                        String errorBody = response.errorBody() != null ?
-                                response.errorBody().string() : "No error body";
-                        Log.e("ADD_PLANT", "Error body: " + errorBody);
-                        Log.e("ADD_PLANT", "Error code: " + response.code());
-                        Log.e("ADD_PLANT", "Error message: " + response.message());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    Toast.makeText(AddPlantActivity.this,
-                            "Ошибка сервера: " + response.code(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AddPlantActivity.this, "Ошибка добавления", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                Log.e("ADD_PLANT", "Network error: " + t.getMessage());
-                t.printStackTrace();
-                Toast.makeText(AddPlantActivity.this,
-                        "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(AddPlantActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private Integer findRegionIdByName(String regionName) {
-        for (Region region : regions) {
-            if (region.getName().equals(regionName)) {
-                return Math.toIntExact(region.getId());
-            }
-        }
-        return null;
-    }
     private void showExitDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Вернуться назад?")
-                .setMessage("Все несохраненные данные будут потеряны. Вы уверены?")
-                .setPositiveButton("Да", (dialog, which) -> {
-                    startActivity(new Intent(this, PlantsActivity.class));
-                    finish();
-                })
+                .setMessage("Все несохраненные данные будут потеряны.")
+                .setPositiveButton("Да", (dialog, which) -> finish())
                 .setNegativeButton("Нет", null)
                 .show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        showExitDialog();
     }
 }

@@ -63,43 +63,23 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         PlantingRecommendation rec = recommendations.get(position);
 
-        // ЛОГИРОВАНИЕ
-        Log.d("PLANTING_ADAPTER", "Позиция: " + position);
-        Log.d("PLANTING_ADAPTER", "Дата: " + rec.getDate());
-        Log.d("PLANTING_ADAPTER", "Растение: " + rec.getCropName());
-        Log.d("PLANTING_ADAPTER", "Температура: " + rec.getWeatherTemperature());
-        Log.d("PLANTING_ADAPTER", "Влажность: " + rec.getWeatherHumidity());
-        Log.d("PLANTING_ADAPTER", "Причина: " + rec.getReason());
-
-        // Форматируем дату
-        String formattedDate = formatDate(rec.getDate());
-        String dayOfWeek = getDayOfWeek(rec.getDate());
-
-        holder.tvDate.setText(formattedDate);
-        holder.tvDayOfWeek.setText(dayOfWeek);
+        holder.tvDate.setText(formatDate(rec.getDate()));
+        holder.tvDayOfWeek.setText(getDayOfWeek(rec.getDate()));
         holder.tvCropName.setText(rec.getCropName());
         holder.tvRegion.setText(rec.getRegionName());
+        holder.tvReason.setText(rec.getReason());
 
-        // Устанавливаем погоду и рекомендацию
-        if (rec.getWeatherTemperature() != null && rec.getWeatherHumidity() != null && rec.getWeatherWind() != null) {
-            String weatherText = "🌡️ " + rec.getWeatherTemperature() +
-                    "  💧 " + rec.getWeatherHumidity() +
-                    "  💨 " + rec.getWeatherWind();
-            holder.tvWeather.setText(weatherText);
-        } else {
-            holder.tvWeather.setText("Нет данных о погоде");
-        }
+        // Собираем строку погоды из атомарных чисел
+        String weatherText = String.format(Locale.getDefault(),
+                "🌡️ %.1f°/%.1f°  💧 %.0f%%  💨 %.1f м/с",
+                rec.getTempMin(), rec.getTempMax(), rec.getHumMax(), rec.getWindMax());
 
-        holder.tvReason.setText(rec.getReason() != null ? rec.getReason() : "Благоприятные условия");
+        holder.tvWeather.setText(weatherText);
 
-        // Устанавливаем статус
-        String status = rec.isGoodDay() ? "БЛАГОПРИЯТНЫЙ ДЕНЬ" : "НЕ РЕКОМЕНДУЕТСЯ";
-        int statusColor = rec.isGoodDay() ?
-                android.graphics.Color.parseColor("#4CAF50") : // Зеленый
-                android.graphics.Color.parseColor("#F44336");  // Красный
-
-        holder.tvStatus.setText(status);
-        holder.tvStatus.setBackgroundColor(statusColor);
+        holder.tvStatus.setText(rec.isGoodDay() ? "БЛАГОПРИЯТНЫЙ ДЕНЬ" : "НЕ РЕКОМЕНДУЕТСЯ");
+        holder.tvStatus.setBackgroundColor(rec.isGoodDay() ?
+                android.graphics.Color.parseColor("#4CAF50") :
+                android.graphics.Color.parseColor("#F44336"));
     }
 
     @Override

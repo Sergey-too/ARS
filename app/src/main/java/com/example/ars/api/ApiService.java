@@ -1,5 +1,6 @@
 package com.example.ars.api;
 
+import com.example.ars.models.Area;
 import com.example.ars.models.AuthResponse;
 import com.example.ars.models.Category;
 import com.example.ars.models.Crop;
@@ -114,6 +115,17 @@ public interface ApiService {
 
     @DELETE("/api/crops/user/all/{userId}")
     Call<Map<String, Object>> deleteAllUserCrops(@Path("userId") Integer userId);
+
+    @GET("/api/areas/user/{userId}")
+    Call<List<Area>> getUserAreas(@Path("userId") Integer userId);
+
+    @POST("/api/areas/add")
+    Call<Map<String, Object>> addArea(@Body Map<String, Object> request);
+
+    @PUT("/api/areas/update/{id}")
+    Call<Map<String, Object>> updateArea(@Path("id") Integer areaId, @Body Map<String, Object> request);
+    @DELETE("/api/areas/delete/{id}")
+    Call<Map<String, Object>> deleteArea(@Path("id") Integer areaId);
 
     // Вспомогательный класс для запроса входа
     class LoginRequest {

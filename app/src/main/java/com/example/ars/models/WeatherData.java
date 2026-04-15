@@ -1,37 +1,39 @@
 package com.example.ars.models;
 
+import com.google.gson.annotations.SerializedName;
+
 public class WeatherData {
-    private Integer id;
     private String date;
-    private String temperature;
-    private String wind;
+
+    @SerializedName("temperatureMin")
+    private Double tempMin;
+
+    @SerializedName("temperatureMax")
+    private Double tempMax;
+
+    @SerializedName("humidityMin")
+    private Double humMin;
+
+    @SerializedName("humidityMax")
+    private Double humMax;
+
+    @SerializedName("windMin")
+    private Double windMin;
+
+    @SerializedName("windMax")
+    private Double windMax;
+
+    private Double precipitation;
     private String pressure;
-    private String humidity;
-    private String precipitation;
-    private String condition;
 
-    // Геттеры и сеттеры
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-
+    // Геттеры
     public String getDate() { return date; }
-    public void setDate(String date) { this.date = date; }
-
-    public String getTemperature() { return temperature; }
-    public void setTemperature(String temperature) { this.temperature = temperature; }
-
-    public String getWind() { return wind; }
-    public void setWind(String wind) { this.wind = wind; }
-
+    public Double getTempMin() { return tempMin != null ? tempMin : 0.0; }
+    public Double getTempMax() { return tempMax != null ? tempMax : 0.0; }
+    public Double getHumMin() { return humMin != null ? humMin : 0.0; }
+    public Double getHumMax() { return humMax != null ? humMax : 0.0; }
+    public Double getWindMin() { return windMin != null ? windMin : 0.0; }
+    public Double getWindMax() { return windMax != null ? windMax : 0.0; }
+    public Double getPrecipitation() { return precipitation != null ? precipitation : 0.0; }
     public String getPressure() { return pressure; }
-    public void setPressure(String pressure) { this.pressure = pressure; }
-
-    public String getHumidity() { return humidity; }
-    public void setHumidity(String humidity) { this.humidity = humidity; }
-
-    public String getPrecipitation() { return precipitation; }
-    public void setPrecipitation(String precipitation) { this.precipitation = precipitation; }
-
-    public String getCondition() { return condition; }
-    public void setCondition(String condition) { this.condition = condition; }
 }

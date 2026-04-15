@@ -1,4 +1,3 @@
-// RetrofitClient.java - исправленная версия
 package com.example.ars.api;
 
 import android.util.Log;
@@ -14,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 public class RetrofitClient {
     private static final String TAG = "RetrofitClient";
     //public static final String BASE_URL = "http://10.0.2.2:8080"; // Для эмулятора
-    public static final String BASE_URL = "http://192.168.0.110:8080"; // Для телефона
+    public static final String BASE_URL = "http://192.168.0.195:8080"; // Для телефона
 
 
     private static Retrofit retrofit = null;
@@ -29,20 +28,16 @@ public class RetrofitClient {
         if (retrofit == null) {
             Log.d(TAG, "Creating new Retrofit instance");
 
-            // Логирование HTTP запросов
             HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
             loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
 
             OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
 
-            // Добавляем логирование
             httpClient.addInterceptor(loggingInterceptor);
 
-            // Добавляем интерцептор для авторизации
             httpClient.addInterceptor(chain -> {
                 Request original = chain.request();
 
-                // Добавляем токен если есть
                 String token = null;
                 if (prefsHelper != null) {
                     token = prefsHelper.getToken();
@@ -61,13 +56,10 @@ public class RetrofitClient {
 
                 return chain.proceed(requestBuilder.build());
             });
-
-            // Таймауты
             httpClient.connectTimeout(30, TimeUnit.SECONDS);
             httpClient.readTimeout(30, TimeUnit.SECONDS);
             httpClient.writeTimeout(30, TimeUnit.SECONDS);
 
-            // Создаем Retrofit
             retrofit = new Retrofit.Builder()
                     .baseUrl(BASE_URL)
                     .client(httpClient.build())

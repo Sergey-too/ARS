@@ -430,21 +430,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
         TextView tvPrecipitation = rowView.findViewById(R.id.tvWeatherPrecipitation);
         MaterialButton btnDelete = rowView.findViewById(R.id.btnDeleteWeather);
 
-        if (weather.getId() != null) {
-            tvId.setText("ID: " + weather.getId());
-        } else {
-            tvId.setText("ID: -");
-        }
-
         tvRegion.setText(selectedRegion);
-        tvDate.setText(weather.getDate() != null ? weather.getDate() : "-");
-        tvTemp.setText(weather.getTemperature() != null ? weather.getTemperature() : "-");
-        tvWind.setText(weather.getWind() != null ? weather.getWind() : "-");
-        tvPressure.setText(weather.getPressure() != null ? weather.getPressure() : "-");
-        tvHumidity.setText(weather.getHumidity() != null ? weather.getHumidity() : "-");
-        tvPrecipitation.setText(weather.getPrecipitation() != null ? weather.getPrecipitation() : "-");
+//        tvDate.setText(weather.getDate() != null ? weather.getDate() : "-");
+//        tvTemp.setText(weather.getTemperature() != null ? weather.getTemperature() : "-");
+//        tvWind.setText(weather.getWind() != null ? weather.getWind() : "-");
+//        tvPressure.setText(weather.getPressure() != null ? weather.getPressure() : "-");
+//        tvHumidity.setText(weather.getHumidity() != null ? weather.getHumidity() : "-");
+//        tvPrecipitation.setText(weather.getPrecipitation() != null ? weather.getPrecipitation() : "-");
 
-        // Обработчик удаления
+
         btnDelete.setOnClickListener(v -> {
             if (weather.getDate() != null) {
                 deleteWeatherRecord(weather.getDate(), selectedRegion);

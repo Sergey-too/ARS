@@ -70,6 +70,10 @@
         <activity
             android:name=".PlantingRecommendationActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".AreasActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

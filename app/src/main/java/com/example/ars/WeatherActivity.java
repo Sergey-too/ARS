@@ -35,23 +35,19 @@ public class WeatherActivity extends AppCompatActivity {
 
         apiService = RetrofitClient.getApiService();
 
-        // Кнопка назад
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> {
             startActivity(new Intent(WeatherActivity.this, PlantsActivity.class));
             finish();
         });
 
-        // Загружаем регионы ТОЛЬКО из БД
         loadRegions();
 
-        // Кнопка обновления
         MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
         btnRefresh.setOnClickListener(v -> {
             loadWeatherForRegion(selectedRegion);
         });
 
-        // Загружаем погоду для выбранного региона
         loadWeatherForRegion(selectedRegion);
     }
 
@@ -62,14 +58,11 @@ public class WeatherActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
                     updateRegionDropdown(response.body());
                 } else {
-                    // Если регионов нет в БД, сообщаем пользователю
                     Toast.makeText(WeatherActivity.this,
                             "Регионы не найдены в базе данных", Toast.LENGTH_SHORT).show();
-                    Log.e("API", "Регионы не найдены в БД");
 
-                    // Скрываем или показываем сообщение
                     TextView tvRegionInfo = findViewById(R.id.tvRegionInfo);
-                    tvRegionInfo.setText("Регионы не загружены");
+                    if (tvRegionInfo != null) tvRegionInfo.setText("Регионы не загружены");
                 }
             }
 
@@ -85,7 +78,6 @@ public class WeatherActivity extends AppCompatActivity {
     private void updateRegionDropdown(List<Region> regions) {
         AutoCompleteTextView actvRegion = findViewById(R.id.actvRegion);
 
-        // УДАЛИЛ статичные регионы - используем только из БД
         ArrayAdapter<Region> regionAdapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_dropdown_item_1line,
@@ -100,21 +92,17 @@ public class WeatherActivity extends AppCompatActivity {
             loadWeatherForRegion(selectedRegion);
         });
 
-        // Устанавливаем начальное значение из БД
         if (!regions.isEmpty()) {
             actvRegion.setText(regions.get(0).getName(), false);
             selectedRegion = regions.get(0).getName();
             updateRegionInfo();
-            // Автоматически грузим погоду для первого региона
             loadWeatherForRegion(selectedRegion);
         }
     }
 
-    // УДАЛИЛ метод setupRegionDropdown() - он был с тестовыми данными
-
     private void updateRegionInfo() {
         TextView tvRegionInfo = findViewById(R.id.tvRegionInfo);
-        tvRegionInfo.setText("Выбран регион: " + selectedRegion);
+        if (tvRegionInfo != null) tvRegionInfo.setText("Выбран регион: " + selectedRegion);
     }
 
     private void loadWeatherForRegion(String region) {
@@ -147,17 +135,17 @@ public class WeatherActivity extends AppCompatActivity {
     private void updateWeatherUI(WeatherResponse response) {
         List<WeatherData> weatherList = response.getWeather();
 
-        // Обновляем дату последнего обновления
         SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
         String currentTime = sdf.format(new Date());
 
         TextView tvUpdated = findViewById(R.id.tvUpdated);
-        tvUpdated.setText("Данные обновлены: " + currentTime);
+        if (tvUpdated != null) tvUpdated.setText("Данные обновлены: " + currentTime);
 
-        // Обновляем данные в таблице (первые 6 записей)
-        for (int i = 0; i < Math.min(6, weatherList.size()); i++) {
-            WeatherData weather = weatherList.get(i);
-            updateWeatherRow(i + 1, weather);
+        if (weatherList != null) {
+            for (int i = 0; i < Math.min(6, weatherList.size()); i++) {
+                WeatherData weather = weatherList.get(i);
+                updateWeatherRow(i + 1, weather);
+            }
         }
     }
 
@@ -176,11 +164,38 @@ public class WeatherActivity extends AppCompatActivity {
         TextView tvHumidity = findViewById(humidityId);
         TextView tvPrecip = findViewById(precipId);
 
+        // 1. Дата
         if (tvDate != null) tvDate.setText(weather.getDate());
-        if (tvTemp != null) tvTemp.setText(weather.getTemperature());
-        if (tvWind != null) tvWind.setText(weather.getWind());
+
+        // 2. Температура
+        if (tvTemp != null) {
+            String tempRange = String.format(Locale.getDefault(), "%.1f..%.1f°C",
+                    weather.getTempMin(), weather.getTempMax());
+            tvTemp.setText(tempRange);
+        }
+
+        // 3. Ветер
+        if (tvWind != null) {
+            String windRange = String.format(Locale.getDefault(), "%.1f..%.1f м/с",
+                    weather.getWindMin(), weather.getWindMax());
+            tvWind.setText(windRange);
+        }
+
+        // 4. Давление
         if (tvPressure != null) tvPressure.setText(weather.getPressure());
-        if (tvHumidity != null) tvHumidity.setText(weather.getHumidity());
-        if (tvPrecip != null) tvPrecip.setText(weather.getPrecipitation());
+
+        // 5. Влажность
+        if (humidityId != 0 && tvHumidity != null) {
+            String humRange = String.format(Locale.getDefault(), "%.0f..%.0f%%",
+                    weather.getHumMin(), weather.getHumMax());
+            tvHumidity.setText(humRange);
+        }
+
+        // 6. Осадки
+        if (precipId != 0 && tvPrecip != null) {
+            String precip = String.format(Locale.getDefault(), "%.1f мм",
+                    weather.getPrecipitation());
+            tvPrecip.setText(precip);
+        }
     }
 }

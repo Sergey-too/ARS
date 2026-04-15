@@ -42,7 +42,6 @@ public class PlantsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plants);
 
-        // Инициализация
         prefsHelper = new SharedPreferencesHelper(this);
         apiService = RetrofitClient.getApiService();
 
@@ -60,7 +59,6 @@ public class PlantsActivity extends AppCompatActivity {
             sideMenu.setTranslationX(menuWidth);
         });
 
-        // Настройка RecyclerView
         RecyclerView rvPlants = findViewById(R.id.rvPlants);
         rvPlants.setLayoutManager(new LinearLayoutManager(this));
 
@@ -87,8 +85,13 @@ public class PlantsActivity extends AppCompatActivity {
             startActivity(new Intent(PlantsActivity.this, PlantingRecommendationActivity.class));
         });
 
-        Button btnLogout = findViewById(R.id.btnMenu4);
+        Button btnLogout = findViewById(R.id.btnMenu5);
         btnLogout.setOnClickListener(v -> logout());
+
+        Button btnAreasList = findViewById(R.id.btnMenu4);
+        btnAreasList.setOnClickListener(v -> {
+            startActivity(new Intent(PlantsActivity.this, AreasActivity.class));
+        });
 
         Button btnDeleteAll = findViewById(R.id.btnMenu3);
         btnDeleteAll.setOnClickListener(v -> showDeleteAllConfirmationDialog());
@@ -227,10 +230,8 @@ public class PlantsActivity extends AppCompatActivity {
 
         int userId = currentUser.getId();
 
-        // Показываем прогресс
         Toast.makeText(this, "Удаление всех растений...", Toast.LENGTH_SHORT).show();
 
-        // Используем endpoint для массового удаления
         apiService.deleteAllUserCrops(userId).enqueue(new Callback<java.util.Map<String, Object>>() {
             @Override
             public void onResponse(Call<java.util.Map<String, Object>> call,
@@ -304,12 +305,10 @@ public class PlantsActivity extends AppCompatActivity {
     }
 
     private void showEmptyState() {
-        // Если нет растений, создаем пустой список
         userCrops.clear();
         adapter.updateData(userCrops);
     }
 
-    // Метод выхода из аккаунта
     private void logout() {
         new android.app.AlertDialog.Builder(this)
                 .setTitle("Выход")
@@ -400,14 +399,11 @@ public class PlantsActivity extends AppCompatActivity {
                 Crop crop = userCrop.getCrop();
                 if (crop.getName() != null && !crop.getName().isEmpty()) {
                     plantName = crop.getName();
-                    Log.d("PlantsAdapter", "✅ Имя из crop объекта: " + plantName);
                 } else {
                     plantName = "Неизвестное растение";
-                    Log.d("PlantsAdapter", "⚠️ Crop есть, но имя пустое");
                 }
             } else {
                 plantName = "Неизвестное растение";
-                Log.d("PlantsAdapter", "❌ Crop объект NULL для cropId=" + cropId);
             }
 
             holder.textView.setText(plantName);
@@ -438,7 +434,7 @@ public class PlantsActivity extends AppCompatActivity {
             ViewHolder(View itemView) {
                 super(itemView);
                 textView = itemView.findViewById(R.id.tvPlantName);
-                descriptionView = itemView.findViewById(R.id.tvPlantDescription); // если есть в layout
+                descriptionView = itemView.findViewById(R.id.tvPlantDescription);
             }
         }
     }
