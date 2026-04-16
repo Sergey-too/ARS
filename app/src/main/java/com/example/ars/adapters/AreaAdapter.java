@@ -10,7 +10,7 @@ import com.example.ars.R;
 import com.example.ars.models.Area;
 import java.util.List;
 
-public class AreaAdapter extends RecyclerView.Adapter<AreaAdapter.AreaViewHolder> {
+public class AreaAdapter extends RecyclerView.Adapter<AreaAdapter.ViewHolder> {
 
     private List<Area> areas;
     private OnAreaClickListener listener;
@@ -31,31 +31,35 @@ public class AreaAdapter extends RecyclerView.Adapter<AreaAdapter.AreaViewHolder
 
     @NonNull
     @Override
-    public AreaViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
-        return new AreaViewHolder(v);
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_plant, parent, false);
+        return new ViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull AreaViewHolder holder, int position) {
-        Area area = areas.get(position);
-        holder.tvName.setText(area.getName());
-        holder.tvRegion.setText(area.getRegion() != null ? area.getRegion().getName() : "Регион не указан");
-        holder.itemView.setOnClickListener(v -> listener.onAreaClick(area));
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        Area area = areas.get(position); // исправлено: используем список areas
+
+        holder.tvAreaName.setText(area.getName());
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onAreaClick(area);
+            }
+        });
     }
 
     @Override
-    public int getItemCount() { return areas.size(); }
+    public int getItemCount() {
+        return areas != null ? areas.size() : 0;
+    }
 
-    static class AreaViewHolder extends RecyclerView.ViewHolder {
-        TextView tvName, tvRegion;
-        public AreaViewHolder(@NonNull View itemView) {
+    class ViewHolder extends RecyclerView.ViewHolder {
+        TextView tvAreaName;
+        ViewHolder(View itemView) {
             super(itemView);
-            tvName = itemView.findViewById(android.R.id.text1);
-            tvRegion = itemView.findViewById(android.R.id.text2);
-            // Немного стилизуем программно, если нет своей разметки item_area
-            tvName.setTextSize(18);
-            tvName.setPadding(0, 8, 0, 4);
+            tvAreaName = itemView.findViewById(R.id.tvPlantName);
         }
     }
 }

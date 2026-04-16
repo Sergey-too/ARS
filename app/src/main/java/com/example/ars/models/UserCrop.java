@@ -11,16 +11,15 @@ public class UserCrop {
     @SerializedName("cropId")
     private Integer cropId;
 
-    @SerializedName("regionId")
-    private Integer regionId;
+    // МЕНЯЕМ regionId на areaId
+    @SerializedName("areaId")
+    private Integer areaId;
 
     @SerializedName("crop")
     private Crop crop;
+    @SerializedName("area")
+    private Area area;
 
-    @SerializedName("region")
-    private Region region;
-
-    // Геттеры и сеттеры
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -30,12 +29,12 @@ public class UserCrop {
     public Integer getCropId() { return cropId; }
     public void setCropId(Integer cropId) { this.cropId = cropId; }
 
-    public Integer getRegionId() { return regionId; }
-    public void setRegionId(Integer regionId) { this.regionId = regionId; }
+    public Integer getAreaId() { return areaId; }
+    public void setAreaId(Integer areaId) { this.areaId = areaId; }
 
     public Crop getCrop() { return crop; }
     public void setCrop(Crop crop) { this.crop = crop; }
 
-    public Region getRegion() { return region; }
-    public void setRegion(Region region) { this.region = region; }
+    public Area getArea() { return area; }
+    public void setArea(Area area) { this.area = area; }
 }

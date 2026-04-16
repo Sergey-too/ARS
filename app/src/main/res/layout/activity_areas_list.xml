@@ -108,7 +108,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="24dp"
         android:src="@drawable/ic_add"
-        app:backgroundTint="@color/color_green_primary"
+        app:backgroundTint="@color/color_blue_primary"
         app:tint="@color/color_text_white"
         app:elevation="6dp" />
 

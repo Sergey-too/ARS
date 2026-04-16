@@ -33,6 +33,8 @@ public class AddPlantActivity extends AppCompatActivity {
     private ApiService apiService;
     private SharedPreferencesHelper prefsHelper;
 
+    private TextInputLayout tilCategory, tilCrop, tilArea;
+
     private List<Category> categories = new ArrayList<>();
     private List<Crop> cropsByCategory = new ArrayList<>();
     private List<Area> userAreas = new ArrayList<>();
@@ -59,6 +61,10 @@ public class AddPlantActivity extends AppCompatActivity {
 
         MaterialButton btnAddPlant = findViewById(R.id.btnAddPlant);
         btnAddPlant.setOnClickListener(v -> addPlantToUser());
+
+        tilCategory = findViewById(R.id.tilPlantType);
+        tilCrop = findViewById(R.id.tilPlantName);
+        tilArea = findViewById(R.id.tilArea);
     }
 
     private void loadUserAreas() {
@@ -104,7 +110,6 @@ public class AddPlantActivity extends AppCompatActivity {
             }
         });
     }
-
     private void updateCategoryDropdown() {
         AutoCompleteTextView actvPlantType = findViewById(R.id.actvPlantType);
         List<String> names = new ArrayList<>();
@@ -114,7 +119,6 @@ public class AddPlantActivity extends AppCompatActivity {
                 android.R.layout.simple_dropdown_item_1line, names);
         actvPlantType.setAdapter(adapter);
     }
-
     private void setupDropdownListeners() {
         AutoCompleteTextView actvPlantType = findViewById(R.id.actvPlantType);
         AutoCompleteTextView actvPlantName = findViewById(R.id.actvPlantName);
@@ -123,12 +127,24 @@ public class AddPlantActivity extends AppCompatActivity {
 
         actvPlantType.setOnItemClickListener((parent, view, position, id) -> {
             selectedCategoryName = categories.get(position).getName();
+            tilCategory.setError(null);
+
             actvPlantName.setText("");
-            tvDescription.setText("Выберите растение чтобы увидеть описание");
+            selectedCropId = null;
+
             loadCropsByCategoryName(selectedCategoryName);
         });
 
+        actvPlantName.setOnTouchListener((v, event) -> {
+            if (selectedCategoryName == null) {
+                tilCategory.setError("Сначала выберите категорию");
+                return true;
+            }
+            return false;
+        });
+
         actvPlantName.setOnItemClickListener((parent, view, position, id) -> {
+            tilCrop.setError(null);
             Crop selectedCrop = cropsByCategory.get(position);
             selectedCropId = selectedCrop.getId();
             tvDescription.setText(selectedCrop.getDescription() != null ?
@@ -136,10 +152,10 @@ public class AddPlantActivity extends AppCompatActivity {
         });
 
         actvArea.setOnItemClickListener((parent, view, position, id) -> {
+            tilArea.setError(null);
             selectedAreaId = userAreas.get(position).getId();
         });
     }
-
     private void loadCropsByCategoryName(String categoryName) {
         apiService.getCropsByCategory(categoryName).enqueue(new Callback<List<Crop>>() {
             @Override
@@ -164,30 +180,46 @@ public class AddPlantActivity extends AppCompatActivity {
     }
 
     private void addPlantToUser() {
+        tilCategory.setError(null);
+        tilCrop.setError(null);
+        tilArea.setError(null);
+
+        if (selectedCategoryName == null) {
+            tilCategory.setError("Обязательное поле");
+            return;
+        }
+        if (selectedCropId == null) {
+            tilCrop.setError("Обязательное поле");
+            return;
+        }
+        if (selectedAreaId == null) {
+            tilArea.setError("Обязательное поле");
+            return;
+        }
+
         if (selectedCropId == null || selectedAreaId == null) {
-            Toast.makeText(this, "Заполните все поля со звездочкой", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Заполните все поля", Toast.LENGTH_SHORT).show();
             return;
         }
 
         Map<String, Object> request = new HashMap<>();
         request.put("userId", prefsHelper.getUser().getId());
         request.put("cropId", selectedCropId);
-        request.put("areaId", selectedAreaId); // Теперь передаем ID участка
+        request.put("areaId", selectedAreaId);
 
         apiService.addUserCrop(request).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
                 if (response.isSuccessful()) {
-                    Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AddPlantActivity.this, "Добавлено!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    Toast.makeText(AddPlantActivity.this, "Ошибка добавления", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AddPlantActivity.this, "Ошибка: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
-
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+                Toast.makeText(AddPlantActivity.this, "Сеть недоступна", Toast.LENGTH_SHORT).show();
             }
         });
     }

@@ -186,18 +186,18 @@ public class PlantsActivity extends AppCompatActivity {
     private void loadUserPlants() {
         com.example.ars.models.User currentUser = prefsHelper.getUser();
         if (currentUser == null || currentUser.getId() == null) {
-            Log.e("PlantsActivity", "Пользователь не найден");
             showEmptyState();
             return;
         }
-
-        Log.d("PlantsActivity", "Загружаю растения для user ID: " + currentUser.getId());
 
         apiService.getUserCrops(currentUser.getId()).enqueue(new Callback<List<UserCrop>>() {
             @Override
             public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     userCrops = response.body();
+
+                    originalPlants = new ArrayList<>(userCrops);
+
                     Log.d("PlantsActivity", "Получено растений: " + userCrops.size());
 
                     for (UserCrop userCrop : userCrops) {

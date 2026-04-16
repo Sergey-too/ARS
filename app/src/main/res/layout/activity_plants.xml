@@ -88,7 +88,6 @@
             </LinearLayout>
         </com.google.android.material.appbar.AppBarLayout>
 
-        <!-- RecyclerView для растений -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvPlants"
             android:layout_width="match_parent"
@@ -100,7 +99,6 @@
 
     </LinearLayout>
 
-    <!-- Кнопка добавления (поверх всего) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAdd"
         android:layout_width="wrap_content"
@@ -111,7 +109,6 @@
         app:backgroundTint="@color/color_blue_primary"
         app:tint="@color/color_button_text_primary" />
 
-    <!-- Выдвижная панель меню (САМЫЙ ВЕРХНИЙ СЛОЙ) -->
     <FrameLayout
         android:id="@+id/sideMenuOverlay"
         android:layout_width="match_parent"
@@ -121,7 +118,6 @@
         android:clickable="true"
         android:focusable="true">
 
-        <!-- Само меню (70% экрана справа) -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/sideMenu"
             android:layout_width="0dp"
@@ -131,7 +127,6 @@
             android:elevation="16dp"
             android:visibility="visible">
 
-            <!-- Заголовок меню -->
             <TextView
                 android:id="@+id/tvMenuTitle"
                 android:layout_width="wrap_content"
@@ -145,7 +140,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Кнопка закрытия -->
             <ImageView
                 android:id="@+id/btnCloseMenu"
                 android:layout_width="40dp"
@@ -159,7 +153,6 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Список кнопок меню -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -218,8 +211,7 @@
                     android:text="Участки"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_logout"
-                    app:iconTint="@color/color_error" />
+                    app:icon="@drawable/ic_area"/>
 
                 <!-- Кнопка 5 -->
                 <com.google.android.material.button.MaterialButton

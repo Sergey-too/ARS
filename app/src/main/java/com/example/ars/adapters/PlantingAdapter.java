@@ -1,5 +1,6 @@
-package com.example.ars;
+package com.example.ars.adapters;
 
+import android.graphics.Color;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,6 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.ars.R;
 import com.example.ars.models.PlantingRecommendation;
 
 import java.text.ParseException;
@@ -33,20 +35,16 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
         Log.d("PLANTING_ADAPTER", "updateData вызван: " +
                 (newRecommendations != null ? newRecommendations.size() : "null") + " элементов");
 
-        // Очищаем старый список
         this.recommendations.clear();
 
-        // Добавляем новые данные
         if (newRecommendations != null) {
             this.recommendations.addAll(newRecommendations);
         }
 
         Log.d("PLANTING_ADAPTER", "Теперь в адаптере: " + this.recommendations.size() + " элементов");
 
-        // Уведомляем об изменениях
         notifyDataSetChanged();
 
-        // Проверяем, что уведомление сработало
         Log.d("PLANTING_ADAPTER", "notifyDataSetChanged вызван, getItemCount=" + getItemCount());
     }
 
@@ -65,21 +63,27 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
 
         holder.tvDate.setText(formatDate(rec.getDate()));
         holder.tvDayOfWeek.setText(getDayOfWeek(rec.getDate()));
+
         holder.tvCropName.setText(rec.getCropName());
         holder.tvRegion.setText(rec.getRegionName());
+
+        String weatherInfo = String.format(Locale.getDefault(),
+                "🌡️ %.1f..%.1f°C  💧 %.0f%%  💨 %.1f м/с",
+                rec.getTempMin(),
+                rec.getTempMax(),
+                rec.getHumMin(),
+                rec.getWindMax());
+        holder.tvWeather.setText(weatherInfo);
+
         holder.tvReason.setText(rec.getReason());
 
-        // Собираем строку погоды из атомарных чисел
-        String weatherText = String.format(Locale.getDefault(),
-                "🌡️ %.1f°/%.1f°  💧 %.0f%%  💨 %.1f м/с",
-                rec.getTempMin(), rec.getTempMax(), rec.getHumMax(), rec.getWindMax());
-
-        holder.tvWeather.setText(weatherText);
-
-        holder.tvStatus.setText(rec.isGoodDay() ? "БЛАГОПРИЯТНЫЙ ДЕНЬ" : "НЕ РЕКОМЕНДУЕТСЯ");
-        holder.tvStatus.setBackgroundColor(rec.isGoodDay() ?
-                android.graphics.Color.parseColor("#4CAF50") :
-                android.graphics.Color.parseColor("#F44336"));
+        if (rec.isGoodDay()) {
+            holder.tvStatus.setText("БЛАГОПРИЯТНЫЙ ДЕНЬ");
+            holder.tvStatus.setBackgroundColor(Color.parseColor("#4CAF50"));
+        } else {
+            holder.tvStatus.setText("НЕБЛАГОПРИЯТНЫЙ ДЕНЬ");
+            holder.tvStatus.setBackgroundColor(Color.parseColor("#E53935"));
+        }
     }
 
     @Override
