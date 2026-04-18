@@ -93,6 +93,11 @@ public class PlantsActivity extends AppCompatActivity {
             startActivity(new Intent(PlantsActivity.this, WeatherStatsActivity.class));
         });
 
+        Button btnCompatibillity = findViewById(R.id.btnMenu7);
+        btnCompatibillity.setOnClickListener(v -> {
+            startActivity(new Intent(PlantsActivity.this, CompatibilityActivity.class));
+        });
+
         Button btnAreasList = findViewById(R.id.btnMenu4);
         btnAreasList.setOnClickListener(v -> {
             startActivity(new Intent(PlantsActivity.this, AreasActivity.class));

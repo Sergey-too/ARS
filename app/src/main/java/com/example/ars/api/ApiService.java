@@ -3,6 +3,7 @@ package com.example.ars.api;
 import com.example.ars.models.Area;
 import com.example.ars.models.AuthResponse;
 import com.example.ars.models.Category;
+import com.example.ars.models.CompatibilityDTO;
 import com.example.ars.models.Crop;
 import com.example.ars.models.DeleteResponse;
 import com.example.ars.models.Region;
@@ -132,6 +133,9 @@ public interface ApiService {
     Call<List<WeatherComparisonDTO>> getWeatherComparison(@Path("regionId") Long regionId);
     @GET("/api/weather/regions")
     Call<List<Region>> getAllRegions();
+
+    @GET("api/crops/compatibility")
+    Call<List<CompatibilityDTO>> getCompatibilityMatrix();
 
     // Вспомогательный класс для запроса входа
     class LoginRequest {
