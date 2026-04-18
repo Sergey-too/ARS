@@ -213,6 +213,17 @@
                     android:textSize="16sp"
                     app:icon="@drawable/ic_area"/>
 
+                <!-- Кнопка 4 -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMenu6"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="Аналитика"
+                    android:textColor="@color/color_text_dark"
+                    android:textSize="16sp"
+                    app:icon="@drawable/ic_chart_line"/>
+
                 <!-- Кнопка 5 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu5"

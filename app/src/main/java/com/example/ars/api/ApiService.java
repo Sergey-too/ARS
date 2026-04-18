@@ -8,6 +8,7 @@ import com.example.ars.models.DeleteResponse;
 import com.example.ars.models.Region;
 import com.example.ars.models.User;
 import com.example.ars.models.UserCrop;
+import com.example.ars.models.WeatherComparisonDTO;
 import com.example.ars.models.WeatherResponse;
 
 import java.util.List;
@@ -63,7 +64,7 @@ public interface ApiService {
     @GET("/api/categories")
     Call<List<Category>> getCategories();
 
-    // 2. Получить растения по названию категории (ОСНОВНОЙ метод)
+    // 2. Получить растения по названию категории
     @GET("/api/crops/by-category/{categoryName}")
     Call<List<Crop>> getCropsByCategory(@Path("categoryName") String categoryName);
 
@@ -126,6 +127,11 @@ public interface ApiService {
     Call<Map<String, Object>> updateArea(@Path("id") Integer areaId, @Body Map<String, Object> request);
     @DELETE("/api/areas/delete/{id}")
     Call<Map<String, Object>> deleteArea(@Path("id") Integer areaId);
+
+    @GET("/api/weather/compare/{regionId}")
+    Call<List<WeatherComparisonDTO>> getWeatherComparison(@Path("regionId") Long regionId);
+    @GET("/api/weather/regions")
+    Call<List<Region>> getAllRegions();
 
     // Вспомогательный класс для запроса входа
     class LoginRequest {

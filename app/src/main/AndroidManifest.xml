@@ -74,6 +74,10 @@
         <activity
             android:name=".AreasActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".WeatherStatsActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

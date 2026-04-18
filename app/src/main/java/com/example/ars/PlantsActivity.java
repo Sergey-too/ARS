@@ -88,6 +88,11 @@ public class PlantsActivity extends AppCompatActivity {
         Button btnLogout = findViewById(R.id.btnMenu5);
         btnLogout.setOnClickListener(v -> logout());
 
+        Button btnWeatherStats = findViewById(R.id.btnMenu6);
+        btnWeatherStats.setOnClickListener(v -> {
+            startActivity(new Intent(PlantsActivity.this, WeatherStatsActivity.class));
+        });
+
         Button btnAreasList = findViewById(R.id.btnMenu4);
         btnAreasList.setOnClickListener(v -> {
             startActivity(new Intent(PlantsActivity.this, AreasActivity.class));

@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 public class RetrofitClient {
     private static final String TAG = "RetrofitClient";
     //public static final String BASE_URL = "http://10.0.2.2:8080"; // Для эмулятора
-    public static final String BASE_URL = "http://192.168.0.195:8080"; // Для телефона
+    public static final String BASE_URL = "http://192.168.100.10:8080"; // Для телефона
 
 
     private static Retrofit retrofit = null;
