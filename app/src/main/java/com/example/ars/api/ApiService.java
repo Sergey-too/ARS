@@ -7,6 +7,7 @@ import com.example.ars.models.CompatibilityDTO;
 import com.example.ars.models.Crop;
 import com.example.ars.models.DeleteResponse;
 import com.example.ars.models.Region;
+import com.example.ars.models.SupportRequest;
 import com.example.ars.models.User;
 import com.example.ars.models.UserCrop;
 import com.example.ars.models.WeatherComparisonDTO;
@@ -137,7 +138,18 @@ public interface ApiService {
     @GET("api/crops/compatibility")
     Call<List<CompatibilityDTO>> getCompatibilityMatrix();
 
-    // Вспомогательный класс для запроса входа
+    @GET("api/support/user/{userId}")
+    Call<List<SupportRequest>> getUserRequests(@Path("userId") Integer userId);
+
+    @POST("api/support")
+    Call<SupportRequest> createSupportRequest(@Body SupportRequest request);
+
+    @PUT("api/support/{id}")
+    Call<SupportRequest> updateSupportRequest(@Path("id") Integer id, @Body SupportRequest request);
+
+    @DELETE("api/support/{id}")
+    Call<Void> deleteSupportRequest(@Path("id") Integer id);
+
     class LoginRequest {
         private String identifier;
         private String password;

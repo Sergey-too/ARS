@@ -82,6 +82,10 @@
         <activity
             android:name=".CompatibilityActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".SupportListActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

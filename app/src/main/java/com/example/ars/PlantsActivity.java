@@ -103,6 +103,11 @@ public class PlantsActivity extends AppCompatActivity {
             startActivity(new Intent(PlantsActivity.this, AreasActivity.class));
         });
 
+        Button btnSupport = findViewById(R.id.btnMenu8);
+        btnSupport.setOnClickListener(v -> {
+            startActivity(new Intent(PlantsActivity.this, SupportListActivity.class));
+        });
+
         Button btnDeleteAll = findViewById(R.id.btnMenu3);
         btnDeleteAll.setOnClickListener(v -> showDeleteAllConfirmationDialog());
 
