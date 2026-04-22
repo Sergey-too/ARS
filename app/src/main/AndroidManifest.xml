@@ -89,6 +89,10 @@
         <activity
             android:name=".PlantsListActivityAdmin"
             android:exported="false" />
+
+        <activity
+            android:name=".UsersListActivityAdmin"
+            android:exported="false" />
     </application>
 
 </manifest>

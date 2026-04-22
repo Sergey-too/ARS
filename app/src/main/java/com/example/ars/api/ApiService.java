@@ -153,6 +153,18 @@ public interface ApiService {
     @GET("api/crops")
     Call<List<Crop>> getAllCrops();
 
+    @GET("api/users")
+    Call<List<User>> getAllUsers();
+
+    @PUT("api/users/{id}/toggle-admin")
+    Call<Void> toggleAdmin(@Path("id") int userId);
+
+    @PUT("api/users/{id}/toggle-ban")
+    Call<Void> toggleBan(@Path("id") int userId);
+
+    @PUT("api/users/{id}")
+    Call<Void> updateUser(@Path("id") int userId, @Body User user);
+
     class LoginRequest {
         private String identifier;
         private String password;
