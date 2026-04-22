@@ -1,600 +1,158 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_gradient_blue"
-    android:fillViewport="true"
-    tools:context=".AdminDashboardActivity">
+    android:background="@drawable/bg_gradient_blue">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
+    <ImageView
+        android:id="@+id/btnLogout"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:padding="12dp"
+        android:src="@drawable/ic_logout"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/color_error" />
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:layout_marginTop="60dp"
+        android:text="Админ-панель"
+        android:textColor="@color/color_text_white"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
-            android:id="@+id/btnLogout"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:src="@drawable/ic_logout"
-            app:tint="@color/color_error"
-            android:background="?attr/selectableItemBackground"
-            android:padding="12dp"
-            tools:ignore="MissingConstraints" />
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_margin="12dp"
+        android:columnCount="2"
+        android:rowCount="3"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle">
 
-        <!-- Верхний заголовок -->
-        <LinearLayout
-            android:id="@+id/topSection"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="40dp"
-            android:gravity="center"
-            android:orientation="vertical"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <ImageView
-                android:layout_width="70dp"
-                android:layout_height="70dp"
-                android:layout_marginBottom="12dp"
-                android:src="@drawable/ic_info"
-                app:tint="@color/color_text_white" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Панель администрации"
-                android:textColor="@color/color_text_white"
-                android:textSize="28sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvAdminInfo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Управление данными системы"
-                android:textColor="@color/color_text_light"
-                android:textSize="14sp" />
-        </LinearLayout>
-
-        <!-- Блок управления растениями -->
         <androidx.cardview.widget.CardView
-            android:id="@+id/cardPlants"
+            android:id="@+id/btnNavPlants"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            app:cardBackgroundColor="@color/color_surface_white"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="8dp"
-            app:contentPadding="20dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/topSection"
-            app:layout_constraintWidth_percent="0.95">
-
-            <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp">
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <!-- Заголовок блока растений -->
-                <TextView
-                    android:id="@+id/tvPlantsTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Управление растениями"
-                    android:textColor="@color/color_green_dark"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <!-- Информация о количестве растений -->
-                <TextView
-                    android:id="@+id/tvPlantsCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Всего растений: загрузка..."
-                    android:textColor="@color/color_text_gray"
-                    android:textSize="14sp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvPlantsTitle" />
-
-
-                <TextView
-                    android:id="@+id/tvPlantsStats"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Загрузка статистики..."
-                    android:textColor="@color/color_text_gray"
-                    android:textSize="12sp"
-                    android:maxLines="2"
-                    android:ellipsize="end"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvPlantsCount" />
-
-                <!-- Кнопка добавления нового растения -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAddPlant"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="Добавить растение"
-                    android:textAllCaps="false"
-                    android:textColor="@color/color_button_text_primary"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/color_green_primary"
-                    app:cornerRadius="8dp"
-                    app:icon="@drawable/ic_add"
-                    app:iconTint="@color/color_button_text_primary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvPlantsCount" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRefreshPlants"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="Обновить"
-                    android:textAllCaps="false"
-                    android:textColor="@color/color_button_text_primary"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/color_green_primary"
-                    app:cornerRadius="8dp"
-                    app:icon="@drawable/ic_refresh"
-                    app:iconTint="@color/color_button_text_primary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/btnAddPlant" />
-
-                <!-- Таблица растений -->
-                <HorizontalScrollView
-                    android:id="@+id/scrollPlantsTable"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:scrollbars="none"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/btnRefreshPlants">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <!-- Шапка таблицы растений -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@color/color_green_soft"
-                            android:orientation="horizontal"
-                            android:paddingVertical="10dp">
-
-                            <!-- ID -->
-                            <TextView
-                                android:layout_width="50dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="12dp"
-                                android:paddingEnd="6dp"
-                                android:text="ID"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Название -->
-                            <TextView
-                                android:layout_width="130dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Название"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Категория -->
-                            <TextView
-                                android:layout_width="90dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Категория"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Темп min -->
-                            <TextView
-                                android:layout_width="60dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Мин °C"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Темп max -->
-                            <TextView
-                                android:layout_width="60dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Макс °C"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Влажность -->
-                            <TextView
-                                android:layout_width="70dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Влажн"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Ветер -->
-                            <TextView
-                                android:layout_width="50dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Ветер"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Осадки -->
-                            <TextView
-                                android:layout_width="50dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Осадки"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Глубина -->
-                            <TextView
-                                android:layout_width="50dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Глубина"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Действия -->
-                            <TextView
-                                android:layout_width="90dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="12dp"
-                                android:text="Действия"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                        </LinearLayout>
-
-                        <!-- Контейнер для строк растений (будет заполняться динамически) -->
-                        <LinearLayout
-                            android:id="@+id/containerPlantsRows"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical" />
-
-                    </LinearLayout>
-                </HorizontalScrollView>
-
-                <!-- Сообщение при пустом списке -->
-                <TextView
-                    android:id="@+id/tvNoPlants"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="Растения не найдены"
-                    android:textColor="@color/color_text_gray"
-                    android:textSize="16sp"
-                    android:textStyle="italic"
-                    android:visibility="gone"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvPlantsCount" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_plant" app:tint="@color/color_green_dark"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Растения" android:textColor="@color/color_text_dark" android:textStyle="bold"/>
+            </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Блок управления погодой -->
         <androidx.cardview.widget.CardView
-            android:id="@+id/cardWeather"
+            android:id="@+id/btnNavUsers"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="40dp"
-            app:cardBackgroundColor="@color/color_surface_white"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="8dp"
-            app:contentPadding="20dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardPlants"
-            app:layout_constraintWidth_percent="0.95">
-
-            <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp">
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <!-- Заголовок блока погоды -->
-                <TextView
-                    android:id="@+id/tvWeatherTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Управление погодными данными"
-                    android:textColor="@color/color_blue_dark"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <!-- Информация о погодных данных -->
-                <TextView
-                    android:id="@+id/tvWeatherInfo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Всего записей: загрузка..."
-                    android:textColor="@color/color_text_gray"
-                    android:textSize="14sp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvWeatherTitle" />
-
-                <TextView
-                    android:id="@+id/tvWeatherStats"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Загрузка статистики..."
-                    android:textColor="@color/color_text_gray"
-                    android:textSize="12sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvWeatherInfo" />
-
-                <!-- Кнопки управления погодой -->
-                <LinearLayout
-                    android:id="@+id/weatherButtons"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvWeatherInfo">
-
-                    <!-- Кнопка обновления данных -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnRefreshWeather"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="Обновить"
-                        android:textAllCaps="false"
-                        android:textColor="@color/color_button_text_primary"
-                        android:textSize="14sp"
-                        app:backgroundTint="@color/color_blue_primary"
-                        app:cornerRadius="8dp"
-                        app:icon="@drawable/ic_refresh"
-                        app:iconTint="@color/color_button_text_primary" />
-
-                </LinearLayout>
-
-                <!-- Выбор региона для фильтрации -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilRegionFilter"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Фильтр по региону"
-                    app:boxStrokeColor="@color/color_input_border"
-                    app:boxStrokeWidthFocused="2dp"
-                    app:endIconMode="dropdown_menu"
-                    app:endIconTint="@color/color_blue_primary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/weatherButtons">
-
-                    <AutoCompleteTextView
-                        android:id="@+id/actvRegionFilter"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="14dp"
-                        android:textColor="@color/color_text_dark"
-                        android:textSize="16sp"
-                        android:inputType="none"
-                        android:completionHint="Выберите регион"
-                        android:completionThreshold="1" />
-
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- Таблица погодных данных -->
-                <HorizontalScrollView
-                    android:id="@+id/scrollWeatherTable"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:scrollbars="none"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilRegionFilter">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <!-- Шапка таблицы погоды -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@color/color_blue_soft"
-                            android:orientation="horizontal"
-                            android:paddingVertical="10dp">
-
-                            <!-- ID -->
-                            <TextView
-                                android:layout_width="50dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="12dp"
-                                android:paddingEnd="6dp"
-                                android:text="ID"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Регион -->
-                            <TextView
-                                android:layout_width="100dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Регион"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Дата -->
-                            <TextView
-                                android:layout_width="80dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Дата"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Температура -->
-                            <TextView
-                                android:layout_width="70dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Темп"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Ветер -->
-                            <TextView
-                                android:layout_width="60dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Ветер"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Давление -->
-                            <TextView
-                                android:layout_width="80dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Давл"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Влажность -->
-                            <TextView
-                                android:layout_width="70dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Влаж"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Осадки -->
-                            <TextView
-                                android:layout_width="70dp"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="6dp"
-                                android:text="Осад"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Действия -->
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="6dp"
-                                android:paddingEnd="12dp"
-                                android:text="Удалить"
-                                android:textColor="@color/color_text_dark"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                        </LinearLayout>
-
-                        <!-- Контейнер для строк погоды (будет заполняться динамически) -->
-                        <LinearLayout
-                            android:id="@+id/containerWeatherRows"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical" />
-
-                    </LinearLayout>
-                </HorizontalScrollView>
-
-                <!-- Прогресс-бар загрузки -->
-                <ProgressBar
-                    android:id="@+id/progressWeather"
-                    style="?android:attr/progressBarStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone"
-                    app:layout_constraintBottom_toBottomOf="@+id/scrollWeatherTable"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="@+id/scrollWeatherTable" />
-
-                <!-- Сообщение при пустом списке -->
-                <TextView
-                    android:id="@+id/tvNoWeather"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="Погодные данные не найдены"
-                    android:textColor="@color/color_text_gray"
-                    android:textSize="16sp"
-                    android:textStyle="italic"
-                    android:visibility="gone"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/weatherButtons" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_profile" app:tint="@color/color_blue_primary"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Пользователи" android:textColor="@color/color_text_dark" android:textStyle="bold"/>
+            </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</ScrollView>
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btnNavRegions"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_location" app:tint="@color/color_blue_primary"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Регионы" android:textColor="@color/color_text_dark" android:textStyle="bold"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btnNavWeather"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_weather" app:tint="@color/color_blue_primary"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Погода" android:textColor="@color/color_text_dark" android:textStyle="bold"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btnNavCategories"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_menu" app:tint="@color/color_blue_primary"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Категории" android:textColor="@color/color_text_dark" android:textStyle="bold"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/btnNavFeedback"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_plant_error" app:tint="@color/color_error"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Жалобы" android:textColor="@color/color_text_dark" android:textStyle="bold"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </GridLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

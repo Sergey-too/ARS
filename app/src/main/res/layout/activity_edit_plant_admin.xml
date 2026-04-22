@@ -36,7 +36,7 @@
                 android:id="@+id/tvTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Редактирование растения"
+                android:text="Параметры растения"
                 android:textColor="@color/color_text_white"
                 android:textSize="28sp"
                 android:textStyle="bold" />

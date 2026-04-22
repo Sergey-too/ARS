@@ -150,6 +150,9 @@ public interface ApiService {
     @DELETE("api/support/{id}")
     Call<Void> deleteSupportRequest(@Path("id") Integer id);
 
+    @GET("api/crops")
+    Call<List<Crop>> getAllCrops();
+
     class LoginRequest {
         private String identifier;
         private String password;

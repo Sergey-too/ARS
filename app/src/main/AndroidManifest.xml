@@ -17,7 +17,6 @@
         android:fullBackupContent="@xml/backup_rules"
         tools:targetApi="31">
 
-        <!-- LoginActivity - стартовая -->
         <activity
             android:name=".LoginActivity"
             android:exported="true">
@@ -85,6 +84,10 @@
 
         <activity
             android:name=".SupportListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".PlantsListActivityAdmin"
             android:exported="false" />
     </application>
 
