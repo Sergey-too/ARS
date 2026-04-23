@@ -93,6 +93,10 @@
         <activity
             android:name=".UsersListActivityAdmin"
             android:exported="false" />
+
+        <activity
+            android:name=".RegionsAdminActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

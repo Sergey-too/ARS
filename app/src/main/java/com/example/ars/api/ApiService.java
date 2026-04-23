@@ -165,6 +165,12 @@ public interface ApiService {
     @PUT("api/users/{id}")
     Call<Void> updateUser(@Path("id") int userId, @Body User user);
 
+    @POST("api/regions")
+    Call<Region> createRegion(@Body Region region);
+
+    @PUT("api/regions/{id}")
+    Call<Region> updateRegion(@Path("id") Long id, @Body Region region);
+
     class LoginRequest {
         private String identifier;
         private String password;

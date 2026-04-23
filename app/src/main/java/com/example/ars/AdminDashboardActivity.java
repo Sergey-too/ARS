@@ -11,6 +11,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
     CardView btnPlants;
     CardView btnUsers;
+    CardView btnRegions;
+
 
 
     @SuppressLint({"WrongViewCast", "SetTextI18n"})
@@ -21,6 +23,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         btnPlants = findViewById(R.id.btnNavPlants);
         btnUsers = findViewById(R.id.btnNavUsers);
+        btnRegions = findViewById(R.id.btnNavRegions);
 
         btnPlants.setOnClickListener(v -> {
             Intent intent = new Intent(this, PlantsListActivityAdmin.class);
@@ -29,6 +32,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         btnUsers.setOnClickListener(v -> {
             Intent intent = new Intent(this, UsersListActivityAdmin.class);
+            startActivity(intent);
+        });
+
+        btnRegions.setOnClickListener(v -> {
+            Intent intent = new Intent(this, RegionsAdminActivity.class);
             startActivity(intent);
         });
     }
