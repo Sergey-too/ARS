@@ -10,11 +10,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Area;
 import com.example.ars.models.Category;
 import com.example.ars.models.Crop;
+import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputLayout;
@@ -34,14 +36,38 @@ public class AddPlantActivity extends AppCompatActivity {
     private SharedPreferencesHelper prefsHelper;
 
     private TextInputLayout tilCategory, tilCrop, tilArea;
+    private AutoCompleteTextView actvPlantName;
+    private TextView tvDescription;
 
     private List<Category> categories = new ArrayList<>();
-    private List<Crop> cropsByCategory = new ArrayList<>();
     private List<Area> userAreas = new ArrayList<>();
 
+    // Вспомогательный класс для объединения списков
+    private class PlantListItem {
+        Integer id;
+        String name;
+        String description;
+        boolean isIndividual;
+
+        PlantListItem(Integer id, String name, String description, boolean isIndividual) {
+            this.id = id;
+            this.name = name;
+            this.description = description;
+            this.isIndividual = isIndividual;
+        }
+
+        @Override
+        public String toString() {
+            return isIndividual ? name + " (Моё)" : name;
+        }
+    }
+
+    private List<PlantListItem> combinedPlantList = new ArrayList<>();
+
     private Integer selectedCropId = null;
+    private Integer selectedIndividualCropId = null;
     private Integer selectedAreaId = null;
-    private String selectedCategoryName = null;
+    private Integer selectedCategoryId = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,13 +77,15 @@ public class AddPlantActivity extends AppCompatActivity {
         prefsHelper = new SharedPreferencesHelper(this);
         apiService = RetrofitClient.getApiService();
 
-        ImageView btnBack = findViewById(R.id.btnBack);
-        btnBack.setOnClickListener(v -> showExitDialog());
-
+        initViews();
         loadCategories();
         loadUserAreas();
-
         setupDropdownListeners();
+    }
+
+    private void initViews() {
+        ImageView btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> showExitDialog());
 
         MaterialButton btnAddPlant = findViewById(R.id.btnAddPlant);
         btnAddPlant.setOnClickListener(v -> addPlantToUser());
@@ -65,32 +93,26 @@ public class AddPlantActivity extends AppCompatActivity {
         tilCategory = findViewById(R.id.tilPlantType);
         tilCrop = findViewById(R.id.tilPlantName);
         tilArea = findViewById(R.id.tilArea);
+        actvPlantName = findViewById(R.id.actvPlantName);
+        tvDescription = findViewById(R.id.tvPlantDescription);
     }
 
     private void loadUserAreas() {
-        Integer userId = prefsHelper.getUser().getId();
-        apiService.getUserAreas(userId).enqueue(new Callback<List<Area>>() {
+        apiService.getUserAreas(prefsHelper.getUser().getId()).enqueue(new Callback<List<Area>>() {
             @Override
             public void onResponse(Call<List<Area>> call, Response<List<Area>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     userAreas = response.body();
                     updateAreaDropdown();
-                } else {
-                    Toast.makeText(AddPlantActivity.this, "Участки не найдены", Toast.LENGTH_SHORT).show();
                 }
             }
-
-            @Override
-            public void onFailure(Call<List<Area>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this, "Ошибка загрузки участков", Toast.LENGTH_SHORT).show();
-            }
+            @Override public void onFailure(Call<List<Area>> call, Throwable t) {}
         });
     }
 
     private void updateAreaDropdown() {
         AutoCompleteTextView actvArea = findViewById(R.id.actvArea);
-        ArrayAdapter<Area> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_dropdown_item_1line, userAreas);
+        ArrayAdapter<Area> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, userAreas);
         actvArea.setAdapter(adapter);
     }
 
@@ -103,52 +125,54 @@ public class AddPlantActivity extends AppCompatActivity {
                     updateCategoryDropdown();
                 }
             }
-
-            @Override
-            public void onFailure(Call<List<Category>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this, "Ошибка загрузки категорий", Toast.LENGTH_SHORT).show();
-            }
+            @Override public void onFailure(Call<List<Category>> call, Throwable t) {}
         });
     }
+
     private void updateCategoryDropdown() {
         AutoCompleteTextView actvPlantType = findViewById(R.id.actvPlantType);
-        List<String> names = new ArrayList<>();
-        for (Category c : categories) names.add(c.getName());
-
+        List<String> categoryNames = new ArrayList<>();
+        for (Category c : categories) {
+            categoryNames.add(c.getName());
+        }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_dropdown_item_1line, names);
+                android.R.layout.simple_dropdown_item_1line, categoryNames);
         actvPlantType.setAdapter(adapter);
     }
+
     private void setupDropdownListeners() {
         AutoCompleteTextView actvPlantType = findViewById(R.id.actvPlantType);
-        AutoCompleteTextView actvPlantName = findViewById(R.id.actvPlantName);
         AutoCompleteTextView actvArea = findViewById(R.id.actvArea);
-        TextView tvDescription = findViewById(R.id.tvPlantDescription);
 
         actvPlantType.setOnItemClickListener((parent, view, position, id) -> {
-            selectedCategoryName = categories.get(position).getName();
+            // Берем объект из оригинального списка по позиции
+            Category selected = categories.get(position);
+            selectedCategoryId = selected.getId().intValue(); // Безопасное приведение
             tilCategory.setError(null);
 
             actvPlantName.setText("");
             selectedCropId = null;
+            selectedIndividualCropId = null;
+            tvDescription.setText("Выберите растение...");
 
-            loadCropsByCategoryName(selectedCategoryName);
+            loadCombinedCrops(selected.getName(), selectedCategoryId);
         });
 
-        actvPlantName.setOnTouchListener((v, event) -> {
-            if (selectedCategoryName == null) {
-                tilCategory.setError("Сначала выберите категорию");
-                return true;
-            }
-            return false;
-        });
-
+        // Слушатель для выбора растения (уже был правильным, но проверьте)
         actvPlantName.setOnItemClickListener((parent, view, position, id) -> {
             tilCrop.setError(null);
-            Crop selectedCrop = cropsByCategory.get(position);
-            selectedCropId = selectedCrop.getId();
-            tvDescription.setText(selectedCrop.getDescription() != null ?
-                    selectedCrop.getDescription() : "Описание отсутствует");
+            PlantListItem selected = combinedPlantList.get(position);
+
+            if (selected.isIndividual) {
+                selectedIndividualCropId = selected.id;
+                selectedCropId = null;
+            } else {
+                selectedCropId = selected.id;
+                selectedIndividualCropId = null;
+            }
+
+            tvDescription.setText(selected.description != null ?
+                    selected.description : "Описание отсутствует");
         });
 
         actvArea.setOnItemClickListener((parent, view, position, id) -> {
@@ -156,70 +180,94 @@ public class AddPlantActivity extends AppCompatActivity {
             selectedAreaId = userAreas.get(position).getId();
         });
     }
-    private void loadCropsByCategoryName(String categoryName) {
+
+    private void loadCombinedCrops(String categoryName, Integer categoryId) {
+        combinedPlantList.clear();
+
+        // 1. Загружаем системные растения
         apiService.getCropsByCategory(categoryName).enqueue(new Callback<List<Crop>>() {
             @Override
             public void onResponse(Call<List<Crop>> call, Response<List<Crop>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    cropsByCategory = response.body();
-                    updateCropNamesDropdown();
+                    for (Crop c : response.body()) {
+                        combinedPlantList.add(new PlantListItem(c.getId(), c.getName(), c.getDescription(), false));
+                    }
                 }
+                // 2. Загружаем личные растения (синхронно после системных для порядка)
+                loadIndividualCrops(categoryId);
             }
-            @Override public void onFailure(Call<List<Crop>> call, Throwable t) {}
+            @Override public void onFailure(Call<List<Crop>> call, Throwable t) { loadIndividualCrops(categoryId); }
         });
     }
 
-    private void updateCropNamesDropdown() {
-        AutoCompleteTextView actvPlantName = findViewById(R.id.actvPlantName);
-        List<String> names = new ArrayList<>();
-        for (Crop c : cropsByCategory) names.add(c.getName());
+    private void loadIndividualCrops(Integer categoryId) {
+        apiService.getIndividualUserCrops(prefsHelper.getUser().getId()).enqueue(new Callback<List<IndividualUserCrop>>() {
+            @Override
+            public void onResponse(Call<List<IndividualUserCrop>> call, Response<List<IndividualUserCrop>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    for (IndividualUserCrop ic : response.body()) {
+                        // Фильтруем по категории, если она совпадает
+                        if (ic.getCategoryId().equals(categoryId)) {
+                            combinedPlantList.add(new PlantListItem(ic.getId(), ic.getName(), ic.getDescription(), true));
+                        }
+                    }
+                }
+                updatePlantDropdown();
+            }
+            @Override public void onFailure(Call<List<IndividualUserCrop>> call, Throwable t) { updatePlantDropdown(); }
+        });
+    }
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_dropdown_item_1line, names);
+    private void updatePlantDropdown() {
+        ArrayAdapter<PlantListItem> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, combinedPlantList);
         actvPlantName.setAdapter(adapter);
     }
 
     private void addPlantToUser() {
-        tilCategory.setError(null);
-        tilCrop.setError(null);
-        tilArea.setError(null);
-
-        if (selectedCategoryName == null) {
-            tilCategory.setError("Обязательное поле");
-            return;
-        }
-        if (selectedCropId == null) {
-            tilCrop.setError("Обязательное поле");
-            return;
-        }
+        // Валидация перед отправкой
         if (selectedAreaId == null) {
-            tilArea.setError("Обязательное поле");
+            tilArea.setError("Выберите участок");
             return;
         }
-
-        if (selectedCropId == null || selectedAreaId == null) {
-            Toast.makeText(this, "Заполните все поля", Toast.LENGTH_SHORT).show();
+        if (selectedCropId == null && selectedIndividualCropId == null) {
+            tilCrop.setError("Выберите растение");
             return;
         }
 
         Map<String, Object> request = new HashMap<>();
         request.put("userId", prefsHelper.getUser().getId());
-        request.put("cropId", selectedCropId);
         request.put("areaId", selectedAreaId);
+
+        // ВАЖНО: Проверяем, что именно отправляем, чтобы не провоцировать 500 ошибку
+        if (selectedCropId != null) {
+            request.put("cropId", selectedCropId);
+            // Если сервер падает от наличия ключа со значением null, не добавляйте его вообще
+            // request.put("individualCropId", null);
+        } else {
+            request.put("individualCropId", selectedIndividualCropId);
+            // request.put("cropId", null);
+        }
 
         apiService.addUserCrop(request).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
                 if (response.isSuccessful()) {
-                    Toast.makeText(AddPlantActivity.this, "Добавлено!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    Toast.makeText(AddPlantActivity.this, "Ошибка: " + response.code(), Toast.LENGTH_SHORT).show();
+                    // Если ошибка 500, попробуем прочитать лог ошибки
+                    try {
+                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Unknown error";
+                        Log.e("API_ERROR", "Code: " + response.code() + " Body: " + errorBody);
+                    } catch (Exception e) { e.printStackTrace(); }
+
+                    Toast.makeText(AddPlantActivity.this, "Ошибка сервера (500). Проверьте логи бэкенда.", Toast.LENGTH_LONG).show();
                 }
             }
+
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this, "Сеть недоступна", Toast.LENGTH_SHORT).show();
+                Toast.makeText(AddPlantActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }

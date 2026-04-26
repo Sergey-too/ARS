@@ -39,7 +39,7 @@ public class AreaAdapter extends RecyclerView.Adapter<AreaAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Area area = areas.get(position); // исправлено: используем список areas
+        Area area = areas.get(position);
 
         holder.tvAreaName.setText(area.getName());
 

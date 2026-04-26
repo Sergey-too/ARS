@@ -97,6 +97,14 @@
         <activity
             android:name=".RegionsAdminActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".UserCropsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AddPlantActivityUser"
+            android:exported="false" />
     </application>
 
 </manifest>

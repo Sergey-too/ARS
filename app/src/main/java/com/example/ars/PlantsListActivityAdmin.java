@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.ars.adapters.PlantAdapter;
+import com.example.ars.adapters.AdminPlantAdapter;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Category;
@@ -35,7 +35,9 @@ import retrofit2.Response;
 public class PlantsListActivityAdmin extends AppCompatActivity {
 
     private ApiService apiService;
-    private PlantAdapter adapter;
+    // Оставляем ТОЛЬКО AdminPlantAdapter
+    private AdminPlantAdapter adapter;
+    // Список всех растений из БД
     private List<Crop> allPlants = new ArrayList<>();
     private AutoCompleteTextView actvCategoryFilter;
     private ProgressBar progressBar;
@@ -49,7 +51,6 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         setContentView(R.layout.activity_admin_plants);
 
         apiService = RetrofitClient.getApiService();
-
         progressBar = findViewById(R.id.progressBar);
 
         ImageView btnBack = findViewById(R.id.btnBack);
@@ -58,7 +59,8 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         RecyclerView rvPlants = findViewById(R.id.rvPlants);
         rvPlants.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new PlantAdapter(new ArrayList<>(), plant -> {
+        // Инициализируем наш новый AdminPlantAdapter
+        adapter = new AdminPlantAdapter(new ArrayList<>(), plant -> {
             Intent intent = new Intent(this, EditPlantActivityAdmin.class);
             intent.putExtra("CROP_ID", plant.getId());
             startActivityForResult(intent, 100);
@@ -69,7 +71,6 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         btnSortAlpha.setOnClickListener(v -> {
             isAscending = !isAscending;
             applyFilters();
-
             Toast.makeText(this, isAscending ? "Сортировка: А-Я" : "Сортировка: Я-А", Toast.LENGTH_SHORT).show();
         });
 
@@ -86,41 +87,35 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
 
     private void setupSearch() {
         TextInputEditText etSearch = findViewById(R.id.etSearch);
-        etSearch.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                applyFilters();
-            }
-        });
-    }
-
-    private void filter(String text) {
-        List<Crop> filteredList = new ArrayList<>();
-        for (Crop item : allPlants) {
-            if (item.getName().toLowerCase().contains(text.toLowerCase())) {
-                filteredList.add(item);
-            }
+        if (etSearch != null) {
+            etSearch.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(Editable s) {
+                    applyFilters();
+                }
+            });
         }
-        adapter.updateData(filteredList);
     }
 
     private void loadPlants() {
-        progressBar.setVisibility(View.VISIBLE);
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         apiService.getAllCrops().enqueue(new Callback<List<Crop>>() {
             @Override
             public void onResponse(Call<List<Crop>> call, Response<List<Crop>> response) {
-                progressBar.setVisibility(View.GONE);
+                if (progressBar != null) progressBar.setVisibility(View.GONE);
                 if (response.isSuccessful() && response.body() != null) {
                     allPlants = response.body();
-                    adapter.updateData(allPlants);
+                    // Заполняем адаптер только общими растениями
+                    adapter.updateData(new ArrayList<>(allPlants));
+                    applyFilters(); // Применяем текущие фильтры, если они были
                 }
             }
 
             @Override
             public void onFailure(Call<List<Crop>> call, Throwable t) {
-                progressBar.setVisibility(View.GONE);
+                if (progressBar != null) progressBar.setVisibility(View.GONE);
                 Toast.makeText(PlantsListActivityAdmin.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
             }
         });
@@ -153,6 +148,7 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
             @Override public void onFailure(Call<List<Category>> call, Throwable t) {}
         });
     }
+
     private void applyFilters() {
         String searchText = "";
         TextInputEditText etSearch = findViewById(R.id.etSearch);
@@ -166,15 +162,17 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
             boolean matchesSearch = item.getName() != null &&
                     item.getName().toLowerCase().contains(searchText);
 
+            String itemCatName = (item.getCategory() != null) ? item.getCategory().toString() : "";
+
             boolean matchesCategory = currentCategory.equals("Все категории") ||
-                    (item.getCategory() != null && item.getCategory().equals(currentCategory));
+                    itemCatName.equals(currentCategory);
 
             if (matchesSearch && matchesCategory) {
                 filteredList.add(item);
             }
         }
 
-        java.util.Collections.sort(filteredList, (o1, o2) -> {
+        Collections.sort(filteredList, (o1, o2) -> {
             if (o1.getName() == null || o2.getName() == null) return 0;
             int res = o1.getName().compareToIgnoreCase(o2.getName());
             return isAscending ? res : -res;
@@ -186,6 +184,8 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) loadPlants();
+        if (resultCode == RESULT_OK) {
+            loadPlants();
+        }
     }
 }

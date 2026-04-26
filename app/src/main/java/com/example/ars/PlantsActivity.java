@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.ars.adapters.UserPlantAdapter;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Crop;
@@ -33,7 +34,7 @@ public class PlantsActivity extends AppCompatActivity {
     private boolean isMenuOpen = false;
     private ApiService apiService;
     private SharedPreferencesHelper prefsHelper;
-    private PlantsAdapter adapter;
+    private UserPlantAdapter adapter; // Исправленный внешний адаптер
     private List<UserCrop> userCrops = new ArrayList<>();
     private List<UserCrop> originalPlants = new ArrayList<>();
 
@@ -48,14 +49,13 @@ public class PlantsActivity extends AppCompatActivity {
         sideMenuOverlay = findViewById(R.id.sideMenuOverlay);
         sideMenu = findViewById(R.id.sideMenu);
 
+        // Настройка ширины и позиции меню
         sideMenu.post(() -> {
             int screenWidth = getResources().getDisplayMetrics().widthPixels;
             int menuWidth = (int) (screenWidth * 0.7);
-
             android.view.ViewGroup.LayoutParams params = sideMenu.getLayoutParams();
             params.width = menuWidth;
             sideMenu.setLayoutParams(params);
-
             sideMenu.setTranslationX(menuWidth);
         });
 
@@ -64,9 +64,15 @@ public class PlantsActivity extends AppCompatActivity {
 
         setupSimpleSearch();
 
-        adapter = new PlantsAdapter(userCrops);
+        // Инициализация адаптера с обработкой клика
+        adapter = new UserPlantAdapter(userCrops, selectedCrop -> {
+            Intent intent = new Intent(this, PlantDetailActivity.class);
+            intent.putExtra("crop_id", selectedCrop.getCropId());
+            startActivity(intent);
+        });
         rvPlants.setAdapter(adapter);
 
+        // Кнопки управления меню
         ImageView btnMenu = findViewById(R.id.btnMenu);
         btnMenu.setOnClickListener(v -> openSideMenu());
 
@@ -75,14 +81,26 @@ public class PlantsActivity extends AppCompatActivity {
 
         sideMenuOverlay.setOnClickListener(v -> closeSideMenu());
 
-        setupMenuButton(R.id.btnMenu1, "Дата");
-        setupMenuButton(R.id.btnMenu2, "Прогноз погоды");
-        setupMenuButton(R.id.btnMenu3, "Удаление");
-
+        // ТВОИ КНОПКИ МЕНЮ (Все 9 штук)
         Button btnPlantingRecommendations = findViewById(R.id.btnMenu1);
         btnPlantingRecommendations.setOnClickListener(v -> {
             closeSideMenu();
-            startActivity(new Intent(PlantsActivity.this, PlantingRecommendationActivity.class));
+            startActivity(new Intent(this, PlantingRecommendationActivity.class));
+        });
+
+        Button btnWeather = findViewById(R.id.btnMenu2);
+        btnWeather.setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, WeatherActivity.class));
+        });
+
+        Button btnDeleteAll = findViewById(R.id.btnMenu3);
+        btnDeleteAll.setOnClickListener(v -> showDeleteAllConfirmationDialog());
+
+        Button btnAreasList = findViewById(R.id.btnMenu4);
+        btnAreasList.setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, AreasActivity.class));
         });
 
         Button btnLogout = findViewById(R.id.btnMenu5);
@@ -90,367 +108,161 @@ public class PlantsActivity extends AppCompatActivity {
 
         Button btnWeatherStats = findViewById(R.id.btnMenu6);
         btnWeatherStats.setOnClickListener(v -> {
-            startActivity(new Intent(PlantsActivity.this, WeatherStatsActivity.class));
+            closeSideMenu();
+            startActivity(new Intent(this, WeatherStatsActivity.class));
         });
 
         Button btnCompatibillity = findViewById(R.id.btnMenu7);
         btnCompatibillity.setOnClickListener(v -> {
-            startActivity(new Intent(PlantsActivity.this, CompatibilityActivity.class));
-        });
-
-        Button btnAreasList = findViewById(R.id.btnMenu4);
-        btnAreasList.setOnClickListener(v -> {
-            startActivity(new Intent(PlantsActivity.this, AreasActivity.class));
+            closeSideMenu();
+            startActivity(new Intent(this, CompatibilityActivity.class));
         });
 
         Button btnSupport = findViewById(R.id.btnMenu8);
         btnSupport.setOnClickListener(v -> {
-            startActivity(new Intent(PlantsActivity.this, SupportListActivity.class));
+            closeSideMenu();
+            startActivity(new Intent(this, SupportListActivity.class));
         });
 
-        Button btnDeleteAll = findViewById(R.id.btnMenu3);
-        btnDeleteAll.setOnClickListener(v -> showDeleteAllConfirmationDialog());
-
-        Button btnWeather = findViewById(R.id.btnMenu2);
-        btnWeather.setOnClickListener(v -> {
-            startActivity(new Intent(PlantsActivity.this, WeatherActivity.class));
+        Button btnUsersCrops = findViewById(R.id.btnMenu9);
+        btnUsersCrops.setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, UserCropsActivity.class));
         });
 
         FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
         fabAdd.setOnClickListener(v -> {
-            startActivity(new Intent(PlantsActivity.this, AddPlantActivity.class));
+            startActivity(new Intent(this, AddPlantActivity.class));
         });
-        
+
         loadUserPlants();
     }
 
-    private void showDeleteAllConfirmationDialog() {
-        if (userCrops.isEmpty()) {
-            Toast.makeText(this, "У вас нет растений для удаления", Toast.LENGTH_SHORT).show();
-            closeSideMenu();
-            return;
-        }
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Удаление всех растений")
-                .setMessage("Вы действительно хотите удалить ВСЕ растения из своей коллекции? (" +
-                        userCrops.size() + " растений)")
-                .setPositiveButton("Удалить все", (dialog, which) -> deleteAllPlants())
-                .setNegativeButton("Отмена", null)
-                .show();
-    }
     private void setupSimpleSearch() {
         com.google.android.material.textfield.TextInputEditText etSearch = findViewById(R.id.etSearch);
         if (etSearch == null) return;
 
         etSearch.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(android.text.Editable s) {
-                String searchText = s.toString().trim().toLowerCase();
-                searchByName(searchText);
+                searchByName(s.toString().trim().toLowerCase());
             }
         });
-
-        com.google.android.material.textfield.TextInputLayout searchLayout = findViewById(R.id.searchLayout);
-        if (searchLayout != null) {
-            searchLayout.setEndIconOnClickListener(v -> {
-                etSearch.setText("");
-                adapter.updateData(originalPlants);
-            });
-        }
     }
 
     private void searchByName(String searchText) {
-        if (originalPlants.isEmpty()) {
-            originalPlants = new ArrayList<>(userCrops);
-        }
-
         if (searchText.isEmpty()) {
             adapter.updateData(originalPlants);
             return;
         }
-
-        List<UserCrop> searchResults = new ArrayList<>();
-
-        for (UserCrop userCrop : originalPlants) {
-            if (userCrop.getCrop() != null &&
-                    userCrop.getCrop().getName() != null) {
-
-                String plantName = userCrop.getCrop().getName().toLowerCase();
-                if (plantName.contains(searchText)) {
-                    searchResults.add(userCrop);
+        List<UserCrop> results = new ArrayList<>();
+        for (UserCrop uc : originalPlants) {
+            if (uc.getCrop() != null && uc.getCrop().getName() != null) {
+                if (uc.getCrop().getName().toLowerCase().contains(searchText)) {
+                    results.add(uc);
                 }
             }
         }
-
-        adapter.updateData(searchResults.isEmpty() ? originalPlants : searchResults);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        loadUserPlants();
+        adapter.updateData(results);
     }
 
     private void loadUserPlants() {
         com.example.ars.models.User currentUser = prefsHelper.getUser();
-        if (currentUser == null || currentUser.getId() == null) {
-            showEmptyState();
-            return;
-        }
+        if (currentUser == null || currentUser.getId() == null) return;
 
         apiService.getUserCrops(currentUser.getId()).enqueue(new Callback<List<UserCrop>>() {
             @Override
             public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     userCrops = response.body();
-
                     originalPlants = new ArrayList<>(userCrops);
 
-                    Log.d("PlantsActivity", "Получено растений: " + userCrops.size());
-
-                    for (UserCrop userCrop : userCrops) {
-                        if (userCrop.getCrop() == null) {
-                            loadCropDetails(userCrop.getCropId(), userCrop);
+                    // Если Crop внутри null, подгружаем детали отдельно
+                    for (UserCrop uc : userCrops) {
+                        if (uc.getCrop() == null) {
+                            loadCropDetails(uc.getCropId(), uc);
                         }
                     }
-
-                    updatePlantsList(userCrops);
-                } else {
-                    Log.e("PlantsActivity", "Ошибка загрузки: " + response.code());
-                    showEmptyState();
+                    adapter.updateData(userCrops);
                 }
             }
-
-            @Override
-            public void onFailure(Call<List<UserCrop>> call, Throwable t) {
+            @Override public void onFailure(Call<List<UserCrop>> call, Throwable t) {
                 Log.e("PlantsActivity", "Ошибка сети", t);
-                showEmptyState();
             }
         });
     }
 
-    private void deleteAllPlants() {
-        com.example.ars.models.User currentUser = prefsHelper.getUser();
-        if (currentUser == null || currentUser.getId() == null) {
-            Toast.makeText(this, "Ошибка: пользователь не найден", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int userId = currentUser.getId();
-
-        Toast.makeText(this, "Удаление всех растений...", Toast.LENGTH_SHORT).show();
-
-        apiService.deleteAllUserCrops(userId).enqueue(new Callback<java.util.Map<String, Object>>() {
-            @Override
-            public void onResponse(Call<java.util.Map<String, Object>> call,
-                                   Response<java.util.Map<String, Object>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    java.util.Map<String, Object> result = response.body();
-                    Boolean success = (Boolean) result.get("success");
-
-                    if (success != null && success) {
-                        runOnUiThread(() -> {
-                            userCrops.clear();
-                            adapter.updateData(userCrops);
-                            Toast.makeText(PlantsActivity.this,
-                                    "Все растения удалены", Toast.LENGTH_SHORT).show();
-                            closeSideMenu();
-                        });
-                    } else {
-                        String error = (String) result.get("error");
-                        runOnUiThread(() -> {
-                            Toast.makeText(PlantsActivity.this,
-                                    "Ошибка: " + error, Toast.LENGTH_SHORT).show();
-                            closeSideMenu();
-                        });
-                    }
-                } else {
-                    runOnUiThread(() -> {
-                        Toast.makeText(PlantsActivity.this,
-                                "Ошибка сервера", Toast.LENGTH_SHORT).show();
-                        closeSideMenu();
-                    });
-                }
-            }
-
-            @Override
-            public void onFailure(Call<java.util.Map<String, Object>> call, Throwable t) {
-                runOnUiThread(() -> {
-                    Toast.makeText(PlantsActivity.this,
-                            "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                    closeSideMenu();
-                });
-            }
-        });
-    }
     private void loadCropDetails(Integer cropId, UserCrop userCrop) {
         apiService.getCropById(cropId).enqueue(new Callback<Crop>() {
             @Override
             public void onResponse(Call<Crop> call, Response<Crop> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Crop crop = response.body();
-                    userCrop.setCrop(crop);
-                    Log.d("PlantsActivity", "Загружено растение: " + crop.getName());
-
-                    // Обновляем RecyclerView
+                    userCrop.setCrop(response.body());
                     runOnUiThread(() -> adapter.notifyDataSetChanged());
                 }
             }
-
-            @Override
-            public void onFailure(Call<Crop> call, Throwable t) {
-                Log.e("PlantsActivity", "Ошибка загрузки растения " + cropId, t);
-            }
+            @Override public void onFailure(Call<Crop> call, Throwable t) {}
         });
     }
-    private void updatePlantsList(List<UserCrop> userCrops) {
-        if (userCrops == null || userCrops.isEmpty()) {
-            showEmptyState();
+
+    private void showDeleteAllConfirmationDialog() {
+        if (userCrops.isEmpty()) {
+            Toast.makeText(this, "Нет растений для удаления", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        adapter.updateData(userCrops);
-    }
-
-    private void showEmptyState() {
-        userCrops.clear();
-        adapter.updateData(userCrops);
-    }
-
-    private void logout() {
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("Выход")
-                .setMessage("Вы действительно хотите выйти из аккаунта?")
-                .setPositiveButton("Выйти", (dialog, which) -> performLogout())
-                .setNegativeButton("Отмена", null)
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Удаление")
+                .setMessage("Удалить все растения?")
+                .setPositiveButton("Да", (d, w) -> deleteAllPlants())
+                .setNegativeButton("Нет", null)
                 .show();
     }
 
-    private void performLogout() {
+    private void deleteAllPlants() {
+        int userId = prefsHelper.getUser().getId();
+        apiService.deleteAllUserCrops(userId).enqueue(new Callback<java.util.Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<java.util.Map<String, Object>> call, Response<java.util.Map<String, Object>> response) {
+                if (response.isSuccessful()) {
+                    userCrops.clear();
+                    originalPlants.clear();
+                    adapter.updateData(userCrops);
+                    closeSideMenu();
+                    Toast.makeText(PlantsActivity.this, "Удалено", Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override public void onFailure(Call<java.util.Map<String, Object>> call, Throwable t) {}
+        });
+    }
+
+    private void logout() {
         prefsHelper.clearAll();
-        Toast.makeText(this, "Вы вышли из аккаунта", Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }
 
-    private void setupMenuButton(int buttonId, String action) {
-        Button button = findViewById(buttonId);
-        if (button != null) {
-            button.setOnClickListener(v -> closeSideMenu());
-        }
-    }
-
     private void openSideMenu() {
-        if (isMenuOpen) return;
-
-        FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
-        fabAdd.setVisibility(View.GONE);
-
-        sideMenuOverlay.setVisibility(View.VISIBLE);
-        sideMenuOverlay.setAlpha(0f);
-        sideMenuOverlay.animate().alpha(1f).setDuration(300).start();
-        sideMenu.animate().translationX(0).setDuration(300).start();
-
         isMenuOpen = true;
+        findViewById(R.id.fabAdd).setVisibility(View.GONE);
+        sideMenuOverlay.setVisibility(View.VISIBLE);
+        sideMenuOverlay.animate().alpha(1f).setDuration(300);
+        sideMenu.animate().translationX(0).setDuration(300);
     }
 
     private void closeSideMenu() {
-        if (!isMenuOpen) return;
-
-        FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
-        fabAdd.setVisibility(View.VISIBLE);
-
-        sideMenuOverlay.animate().alpha(0f).setDuration(300).withEndAction(() -> {
-            sideMenuOverlay.setVisibility(View.GONE);
-        }).start();
-
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int menuWidth = (int) (screenWidth * 0.7);
-        sideMenu.animate().translationX(menuWidth).setDuration(300).start();
-
         isMenuOpen = false;
+        findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
+        sideMenuOverlay.animate().alpha(0f).setDuration(300).withEndAction(() -> sideMenuOverlay.setVisibility(View.GONE));
+        sideMenu.animate().translationX(sideMenu.getWidth()).setDuration(300);
     }
 
-    class PlantsAdapter extends RecyclerView.Adapter<PlantsAdapter.ViewHolder> {
-        private List<UserCrop> plants;
-
-        PlantsAdapter(List<UserCrop> plants) {
-            this.plants = plants;
-        }
-
-        public void updateData(List<UserCrop> newPlants) {
-            this.plants = newPlants;
-            notifyDataSetChanged();
-        }
-
-        @Override
-        public ViewHolder onCreateViewHolder(android.view.ViewGroup parent, int viewType) {
-            View view = getLayoutInflater().inflate(R.layout.item_plant, parent, false);
-            return new ViewHolder(view);
-        }
-
-        @Override
-        public int getItemCount() {
-            return plants.size();
-        }
-
-        @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
-            UserCrop userCrop = plants.get(position);
-            int cropId = userCrop.getCropId();
-
-            String plantName;
-
-            if (userCrop.getCrop() != null) {
-                Crop crop = userCrop.getCrop();
-                if (crop.getName() != null && !crop.getName().isEmpty()) {
-                    plantName = crop.getName();
-                } else {
-                    plantName = "Неизвестное растение";
-                }
-            } else {
-                plantName = "Неизвестное растение";
-            }
-
-            holder.textView.setText(plantName);
-
-            if (holder.descriptionView != null && userCrop.getCrop() != null) {
-                String description = userCrop.getCrop().getDescription();
-                if (description != null && !description.isEmpty()) {
-                    holder.descriptionView.setText(description);
-                    holder.descriptionView.setVisibility(View.VISIBLE);
-                } else {
-                    holder.descriptionView.setVisibility(View.GONE);
-                }
-            }
-
-            holder.itemView.setOnClickListener(v -> {
-                Log.d("PlantsAdapter", "Клик по растению: " + plantName + " (ID: " + cropId + ")");
-
-                Intent intent = new Intent(PlantsActivity.this, PlantDetailActivity.class);
-                intent.putExtra("crop_id", cropId);
-                PlantsActivity.this.startActivity(intent);
-            });
-        }
-
-        class ViewHolder extends RecyclerView.ViewHolder {
-            android.widget.TextView textView;
-            android.widget.TextView descriptionView;
-
-            ViewHolder(View itemView) {
-                super(itemView);
-                textView = itemView.findViewById(R.id.tvPlantName);
-                descriptionView = itemView.findViewById(R.id.tvPlantDescription);
-            }
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadUserPlants();
     }
 }

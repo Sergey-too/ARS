@@ -8,6 +8,7 @@ public class UserCrop {
     @SerializedName("userId")
     private Integer userId;
 
+    private Integer individualCropId;
     @SerializedName("cropId")
     private Integer cropId;
 

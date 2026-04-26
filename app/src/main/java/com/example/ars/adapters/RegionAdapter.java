@@ -57,7 +57,6 @@ public class RegionAdapter extends RecyclerView.Adapter<RegionAdapter.RegionView
         public RegionViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tvRegionName);
-            btnEdit = itemView.findViewById(R.id.btnEditRegion);
         }
     }
 }

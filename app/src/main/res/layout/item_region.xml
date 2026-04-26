@@ -22,12 +22,5 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <ImageView
-            android:id="@+id/btnEditRegion"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_edit"
-            app:tint="@color/color_green_primary" />
-
     </LinearLayout>
 </androidx.cardview.widget.CardView>

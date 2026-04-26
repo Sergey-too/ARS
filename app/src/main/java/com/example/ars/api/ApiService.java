@@ -6,6 +6,7 @@ import com.example.ars.models.Category;
 import com.example.ars.models.CompatibilityDTO;
 import com.example.ars.models.Crop;
 import com.example.ars.models.DeleteResponse;
+import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.models.Region;
 import com.example.ars.models.SupportRequest;
 import com.example.ars.models.User;
@@ -170,6 +171,21 @@ public interface ApiService {
 
     @PUT("api/regions/{id}")
     Call<Region> updateRegion(@Path("id") Long id, @Body Region region);
+
+    @GET("api/my-crops/user/{userId}")
+    Call<List<IndividualUserCrop>> getIndividualUserCrops(@Path("userId") Integer userId);
+
+    @GET("api/my-crops/{id}")
+    Call<IndividualUserCrop> getUserCropById(@Path("id") Integer id);
+
+    @POST("api/my-crops")
+    Call<IndividualUserCrop> createUserCrop(@Body IndividualUserCrop crop);
+
+    @PUT("api/my-crops/{id}")
+    Call<IndividualUserCrop> updateUserCrop(@Path("id") Integer id, @Body IndividualUserCrop crop);
+
+    @DELETE("api/my-crops/{id}")
+    Call<Void> deleteUserCrop(@Path("id") Integer id);
 
     class LoginRequest {
         private String identifier;
