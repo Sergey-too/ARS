@@ -1,4 +1,4 @@
-package com.example.ars.adapters;
+package com.example.ars.adapters; //растения добавленные пользователем
 
 import android.view.LayoutInflater;
 import android.view.View;

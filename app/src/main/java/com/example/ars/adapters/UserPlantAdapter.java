@@ -11,6 +11,7 @@ import com.example.ars.models.UserCrop;
 import java.util.List;
 
 public class UserPlantAdapter extends RecyclerView.Adapter<UserPlantAdapter.ViewHolder> {
+
     private List<UserCrop> userCrops;
     private OnUserPlantClickListener listener;
 
@@ -37,13 +38,16 @@ public class UserPlantAdapter extends RecyclerView.Adapter<UserPlantAdapter.View
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        UserCrop userCrop = userCrops.get(position);
-        if (userCrop.getCrop() != null) {
-            holder.tvName.setText(userCrop.getCrop().getName());
-        } else {
-            holder.tvName.setText("Неизвестное растение");
-        }
-        holder.itemView.setOnClickListener(v -> listener.onPlantClick(userCrop));
+        UserCrop item = userCrops.get(position);
+
+        // Логика выбора Имени
+        String name = (item.getCrop() != null) ? item.getCrop().getName() : item.getName();
+
+        holder.tvName.setText(name != null ? name : "Без названия");
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onPlantClick(item);
+        });
     }
 
     @Override

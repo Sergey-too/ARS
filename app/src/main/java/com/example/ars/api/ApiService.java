@@ -187,6 +187,8 @@ public interface ApiService {
     @DELETE("api/my-crops/{id}")
     Call<Void> deleteUserCrop(@Path("id") Integer id);
 
+    @GET("api/my-crops/user/{userId}")
+    Call<List<UserCrop>> getIndividualCrops(@Path("userId") int userId);
     class LoginRequest {
         private String identifier;
         private String password;

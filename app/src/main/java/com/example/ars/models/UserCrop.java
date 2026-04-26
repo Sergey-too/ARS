@@ -9,17 +9,24 @@ public class UserCrop {
     private Integer userId;
 
     private Integer individualCropId;
+
     @SerializedName("cropId")
     private Integer cropId;
 
-    // МЕНЯЕМ regionId на areaId
     @SerializedName("areaId")
     private Integer areaId;
 
     @SerializedName("crop")
     private Crop crop;
+
     @SerializedName("area")
     private Area area;
+
+    @SerializedName("name")
+    private String name;
+
+    @SerializedName("description")
+    private String description;
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -38,4 +45,7 @@ public class UserCrop {
 
     public Area getArea() { return area; }
     public void setArea(Area area) { this.area = area; }
+
+    public String getName() { return name; }
+    public String getDescription() { return description; }
 }

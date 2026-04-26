@@ -65,4 +65,7 @@ public class Crop {
 
     public String getPhotoPath() { return photoPath; }
     public void setPhotoPath(String photoPath) { this.photoPath = photoPath; }
+
+
+
 }
