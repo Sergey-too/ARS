@@ -64,12 +64,51 @@ public class RegionsAdminActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        // В адаптер передаем слушатель клика для редактирования
-        adapter = new RegionAdapter(regionList, this::showRegionDialog);
+        adapter = new RegionAdapter(regionList, new RegionAdapter.OnRegionClickListener() {
+            @Override
+            public void onRegionClick(Region region) {
+                showRegionDialog(region);
+            }
+
+            @Override
+            public void onRegionLongClick(Region region) {
+                showDeleteConfirmation(region);
+            }
+        });
         rvRegions.setLayoutManager(new LinearLayoutManager(this));
         rvRegions.setAdapter(adapter);
     }
 
+    private void showDeleteConfirmation(Region region) {
+        new AlertDialog.Builder(this)
+                .setTitle("Удаление")
+                .setMessage("Вы уверены, что хотите удалить регион " + region.getName() + "?")
+                .setPositiveButton("Удалить", (dialog, which) -> deleteRegion(region))
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    private void deleteRegion(Region region) {
+        apiService.deleteRegion(region.getId()).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(RegionsAdminActivity.this, "Регион удален", Toast.LENGTH_SHORT).show();
+                    loadRegions();
+                } else if (response.code() == 500 || response.code() == 409) {
+                    Toast.makeText(RegionsAdminActivity.this,
+                            "Нельзя удалить: к региону привязаны данные", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(RegionsAdminActivity.this, "Ошибка удаления", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(RegionsAdminActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
     private void loadRegions() {
         apiService.getRegions().enqueue(new Callback<List<Region>>() {
             @Override

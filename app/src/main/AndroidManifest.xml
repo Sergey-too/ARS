@@ -105,6 +105,10 @@
         <activity
             android:name=".AddPlantActivityUser"
             android:exported="false" />
+
+        <activity
+            android:name=".CategoriesAdminActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

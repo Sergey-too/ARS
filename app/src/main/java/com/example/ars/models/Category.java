@@ -12,6 +12,9 @@ public class Category {
         this.name = name;
     }
 
+    public Category(String name) {
+    }
+
     // Геттеры и сеттеры
     public Long getId() {
         return id;

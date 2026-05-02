@@ -12,6 +12,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     CardView btnPlants;
     CardView btnUsers;
     CardView btnRegions;
+    CardView btnNavCategories;
 
 
 
@@ -24,6 +25,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnPlants = findViewById(R.id.btnNavPlants);
         btnUsers = findViewById(R.id.btnNavUsers);
         btnRegions = findViewById(R.id.btnNavRegions);
+        btnNavCategories = findViewById(R.id.btnNavCategories);
 
         btnPlants.setOnClickListener(v -> {
             Intent intent = new Intent(this, PlantsListActivityAdmin.class);
@@ -37,6 +39,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         btnRegions.setOnClickListener(v -> {
             Intent intent = new Intent(this, RegionsAdminActivity.class);
+            startActivity(intent);
+        });
+
+        btnNavCategories.setOnClickListener(v -> {
+            Intent intent = new Intent(this, CategoriesAdminActivity.class);
             startActivity(intent);
         });
     }

@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 public class RetrofitClient {
     private static final String TAG = "RetrofitClient";
     //public static final String BASE_URL = "http://10.0.2.2:8080"; // Для эмулятора
-    public static final String BASE_URL = "http://192.168.0.195:8080"; // Для телефона
+    public static final String BASE_URL = "http://192.168.100.15:8080"; // Для телефона
 
 
     private static Retrofit retrofit = null;
@@ -21,12 +21,10 @@ public class RetrofitClient {
 
     public static void initialize(SharedPreferencesHelper helper) {
         prefsHelper = helper;
-        Log.d(TAG, "RetrofitClient initialized");
     }
 
     public static ApiService getApiService() {
         if (retrofit == null) {
-            Log.d(TAG, "Creating new Retrofit instance");
 
             HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
             loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
@@ -41,14 +39,12 @@ public class RetrofitClient {
                 String token = null;
                 if (prefsHelper != null) {
                     token = prefsHelper.getToken();
-                    Log.d(TAG, "Current token: " + (token != null ? "present" : "null"));
                 }
 
                 Request.Builder requestBuilder = original.newBuilder();
 
                 if (token != null && !token.isEmpty()) {
                     requestBuilder.header("Authorization", "Bearer " + token);
-                    Log.d(TAG, "Added Authorization header");
                 }
 
                 requestBuilder.header("Content-Type", "application/json");
@@ -66,7 +62,6 @@ public class RetrofitClient {
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
 
-            Log.d(TAG, "Retrofit instance created with base URL: " + BASE_URL);
         }
 
         return retrofit.create(ApiService.class);

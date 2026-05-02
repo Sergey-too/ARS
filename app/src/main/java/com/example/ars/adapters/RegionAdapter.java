@@ -21,7 +21,9 @@ public class RegionAdapter extends RecyclerView.Adapter<RegionAdapter.RegionView
 
     public interface OnRegionClickListener {
         void onRegionClick(Region region);
+        void onRegionLongClick(Region region);
     }
+
 
     public RegionAdapter(List<Region> regions, OnRegionClickListener listener) {
         this.regions = regions;
@@ -42,7 +44,11 @@ public class RegionAdapter extends RecyclerView.Adapter<RegionAdapter.RegionView
         holder.tvName.setText(region.getName());
 
         holder.itemView.setOnClickListener(v -> listener.onRegionClick(region));
-        holder.btnEdit.setOnClickListener(v -> listener.onRegionClick(region));
+        holder.itemView.setOnLongClickListener(v -> {
+                    listener.onRegionLongClick(region);
+                    return true;
+                });
+        holder.itemView.setOnClickListener(v -> listener.onRegionClick(region));
     }
 
     @Override

@@ -189,6 +189,18 @@ public interface ApiService {
 
     @GET("api/my-crops/user/{userId}")
     Call<List<UserCrop>> getIndividualCrops(@Path("userId") int userId);
+
+    @DELETE("api/regions/{id}")
+    Call<Void> deleteRegion(@Path("id") Long id);
+
+    @POST("/api/categories")
+    Call<Category> createCategory(@Body Category category);
+
+    @PUT("/api/categories/{id}")
+    Call<Category> updateCategory(@Path("id") Integer id, @Body Category category);
+
+    @DELETE("/api/categories/{id}")
+    Call<Void> deleteCategory(@Path("id") Integer id);
     class LoginRequest {
         private String identifier;
         private String password;
