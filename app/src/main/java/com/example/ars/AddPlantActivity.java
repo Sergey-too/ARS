@@ -42,28 +42,35 @@ public class AddPlantActivity extends AppCompatActivity {
     private List<Category> categories = new ArrayList<>();
     private List<Area> userAreas = new ArrayList<>();
 
-    // Вспомогательный класс для объединения списков
     private class PlantListItem {
         Integer id;
         String name;
+        String variety;
         String description;
         boolean isIndividual;
 
-        PlantListItem(Integer id, String name, String description, boolean isIndividual) {
+        PlantListItem(Integer id, String name, String variety, String description, boolean isIndividual) {
             this.id = id;
             this.name = name;
+            this.variety = variety;
             this.description = description;
             this.isIndividual = isIndividual;
         }
 
         @Override
         public String toString() {
-            return isIndividual ? name + " (Моё)" : name;
+            String displayName = name;
+            if (variety != null && !variety.isEmpty()) {
+                displayName += " (" + variety + ")";
+            }
+            if (isIndividual) {
+                displayName += " [Моё]";
+            }
+            return displayName;
         }
     }
 
     private List<PlantListItem> combinedPlantList = new ArrayList<>();
-
     private Integer selectedCropId = null;
     private Integer selectedIndividualCropId = null;
     private Integer selectedAreaId = null;
@@ -145,9 +152,8 @@ public class AddPlantActivity extends AppCompatActivity {
         AutoCompleteTextView actvArea = findViewById(R.id.actvArea);
 
         actvPlantType.setOnItemClickListener((parent, view, position, id) -> {
-            // Берем объект из оригинального списка по позиции
             Category selected = categories.get(position);
-            selectedCategoryId = selected.getId().intValue(); // Безопасное приведение
+            selectedCategoryId = selected.getId().intValue();
             tilCategory.setError(null);
 
             actvPlantName.setText("");
@@ -158,10 +164,10 @@ public class AddPlantActivity extends AppCompatActivity {
             loadCombinedCrops(selected.getName(), selectedCategoryId);
         });
 
-        // Слушатель для выбора растения (уже был правильным, но проверьте)
         actvPlantName.setOnItemClickListener((parent, view, position, id) -> {
             tilCrop.setError(null);
-            PlantListItem selected = combinedPlantList.get(position);
+            // Получаем объект напрямую из адаптера, чтобы избежать проблем при фильтрации списка
+            PlantListItem selected = (PlantListItem) parent.getItemAtPosition(position);
 
             if (selected.isIndividual) {
                 selectedIndividualCropId = selected.id;
@@ -184,16 +190,14 @@ public class AddPlantActivity extends AppCompatActivity {
     private void loadCombinedCrops(String categoryName, Integer categoryId) {
         combinedPlantList.clear();
 
-        // 1. Загружаем системные растения
         apiService.getCropsByCategory(categoryName).enqueue(new Callback<List<Crop>>() {
             @Override
             public void onResponse(Call<List<Crop>> call, Response<List<Crop>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     for (Crop c : response.body()) {
-                        combinedPlantList.add(new PlantListItem(c.getId(), c.getName(), c.getDescription(), false));
+                        combinedPlantList.add(new PlantListItem(c.getId(), c.getName(), c.getVariety(), c.getDescription(), false));
                     }
                 }
-                // 2. Загружаем личные растения (синхронно после системных для порядка)
                 loadIndividualCrops(categoryId);
             }
             @Override public void onFailure(Call<List<Crop>> call, Throwable t) { loadIndividualCrops(categoryId); }
@@ -206,9 +210,8 @@ public class AddPlantActivity extends AppCompatActivity {
             public void onResponse(Call<List<IndividualUserCrop>> call, Response<List<IndividualUserCrop>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     for (IndividualUserCrop ic : response.body()) {
-                        // Фильтруем по категории, если она совпадает
-                        if (ic.getCategoryId().equals(categoryId)) {
-                            combinedPlantList.add(new PlantListItem(ic.getId(), ic.getName(), ic.getDescription(), true));
+                        if (ic.getCategoryId() != null && ic.getCategoryId().equals(categoryId)) {
+                            combinedPlantList.add(new PlantListItem(ic.getId(), ic.getName(), ic.getVariety(), ic.getDescription(), true));
                         }
                     }
                 }
@@ -224,7 +227,6 @@ public class AddPlantActivity extends AppCompatActivity {
     }
 
     private void addPlantToUser() {
-        // Валидация перед отправкой
         if (selectedAreaId == null) {
             tilArea.setError("Выберите участок");
             return;
@@ -238,14 +240,10 @@ public class AddPlantActivity extends AppCompatActivity {
         request.put("userId", prefsHelper.getUser().getId());
         request.put("areaId", selectedAreaId);
 
-        // ВАЖНО: Проверяем, что именно отправляем, чтобы не провоцировать 500 ошибку
         if (selectedCropId != null) {
             request.put("cropId", selectedCropId);
-            // Если сервер падает от наличия ключа со значением null, не добавляйте его вообще
-            // request.put("individualCropId", null);
         } else {
             request.put("individualCropId", selectedIndividualCropId);
-            // request.put("cropId", null);
         }
 
         apiService.addUserCrop(request).enqueue(new Callback<Map<String, Object>>() {
@@ -255,19 +253,11 @@ public class AddPlantActivity extends AppCompatActivity {
                     Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    // Если ошибка 500, попробуем прочитать лог ошибки
-                    try {
-                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Unknown error";
-                        Log.e("API_ERROR", "Code: " + response.code() + " Body: " + errorBody);
-                    } catch (Exception e) { e.printStackTrace(); }
-
-                    Toast.makeText(AddPlantActivity.this, "Ошибка сервера (500). Проверьте логи бэкенда.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(AddPlantActivity.this, "Ошибка сервера", Toast.LENGTH_SHORT).show();
                 }
             }
-
-            @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                Toast.makeText(AddPlantActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                Toast.makeText(AddPlantActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
             }
         });
     }

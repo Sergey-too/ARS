@@ -26,6 +26,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnUsers = findViewById(R.id.btnNavUsers);
         btnRegions = findViewById(R.id.btnNavRegions);
         btnNavCategories = findViewById(R.id.btnNavCategories);
+        findViewById(R.id.btnLogout).setOnClickListener(v -> finish());
 
         btnPlants.setOnClickListener(v -> {
             Intent intent = new Intent(this, PlantsListActivityAdmin.class);

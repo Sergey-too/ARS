@@ -35,15 +35,13 @@ import retrofit2.Response;
 public class PlantsListActivityAdmin extends AppCompatActivity {
 
     private ApiService apiService;
-    // Оставляем ТОЛЬКО AdminPlantAdapter
     private AdminPlantAdapter adapter;
-    // Список всех растений из БД
     private List<Crop> allPlants = new ArrayList<>();
     private AutoCompleteTextView actvCategoryFilter;
     private ProgressBar progressBar;
     private String currentCategory = "Все категории";
     private boolean isAscending = true;
-    private List<Category> allCategories = new ArrayList<>();
+    private TextInputEditText etSearch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +50,8 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
 
         apiService = RetrofitClient.getApiService();
         progressBar = findViewById(R.id.progressBar);
+        etSearch = findViewById(R.id.etSearch);
+        actvCategoryFilter = findViewById(R.id.actvCategoryFilter);
 
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
@@ -59,7 +59,7 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         RecyclerView rvPlants = findViewById(R.id.rvPlants);
         rvPlants.setLayoutManager(new LinearLayoutManager(this));
 
-        // Инициализируем наш новый AdminPlantAdapter
+        // Инициализация адаптера
         adapter = new AdminPlantAdapter(new ArrayList<>(), plant -> {
             Intent intent = new Intent(this, EditPlantActivityAdmin.class);
             intent.putExtra("CROP_ID", plant.getId());
@@ -67,32 +67,31 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         });
         rvPlants.setAdapter(adapter);
 
+        // Кнопка сортировки
         MaterialButton btnSortAlpha = findViewById(R.id.btnSortAlpha);
         btnSortAlpha.setOnClickListener(v -> {
             isAscending = !isAscending;
             applyFilters();
-            Toast.makeText(this, isAscending ? "Сортировка: А-Я" : "Сортировка: Я-А", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, isAscending ? "А-Я" : "Я-А", Toast.LENGTH_SHORT).show();
         });
 
-        setupSearch();
-        loadCategories();
-
+        // FAB добавления
         FloatingActionButton fabAdd = findViewById(R.id.fabAddPlant);
         fabAdd.setOnClickListener(v -> {
             startActivityForResult(new Intent(this, AddPlantActivityAdmin.class), 100);
         });
 
-        loadPlants();
+        setupSearch();
+        loadCategories();
+        loadPlants(); // Загружаем данные
     }
 
     private void setupSearch() {
-        TextInputEditText etSearch = findViewById(R.id.etSearch);
         if (etSearch != null) {
             etSearch.addTextChangedListener(new TextWatcher() {
                 @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                 @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                @Override
-                public void afterTextChanged(Editable s) {
+                @Override public void afterTextChanged(Editable s) {
                     applyFilters();
                 }
             });
@@ -107,31 +106,25 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
                 if (progressBar != null) progressBar.setVisibility(View.GONE);
                 if (response.isSuccessful() && response.body() != null) {
                     allPlants = response.body();
-                    // Заполняем адаптер только общими растениями
-                    adapter.updateData(new ArrayList<>(allPlants));
-                    applyFilters(); // Применяем текущие фильтры, если они были
+                    applyFilters();
                 }
             }
-
             @Override
             public void onFailure(Call<List<Crop>> call, Throwable t) {
                 if (progressBar != null) progressBar.setVisibility(View.GONE);
-                Toast.makeText(PlantsListActivityAdmin.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+                Toast.makeText(PlantsListActivityAdmin.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void loadCategories() {
-        actvCategoryFilter = findViewById(R.id.actvCategoryFilter);
         apiService.getCategories().enqueue(new Callback<List<Category>>() {
             @Override
             public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    allCategories = response.body();
-
                     List<String> catNames = new ArrayList<>();
                     catNames.add("Все категории");
-                    for (Category c : allCategories) catNames.add(c.getName());
+                    for (Category c : response.body()) catNames.add(c.getName());
 
                     ArrayAdapter<String> catAdapter = new ArrayAdapter<>(
                             PlantsListActivityAdmin.this,
@@ -150,22 +143,20 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
     }
 
     private void applyFilters() {
-        String searchText = "";
-        TextInputEditText etSearch = findViewById(R.id.etSearch);
-        if (etSearch != null && etSearch.getText() != null) {
-            searchText = etSearch.getText().toString().toLowerCase().trim();
-        }
-
+        String query = (etSearch.getText() != null) ? etSearch.getText().toString().toLowerCase().trim() : "";
         List<Crop> filteredList = new ArrayList<>();
 
         for (Crop item : allPlants) {
-            boolean matchesSearch = item.getName() != null &&
-                    item.getName().toLowerCase().contains(searchText);
+            // Безопасное получение данных (защита от null)
+            String name = (item.getName() != null) ? item.getName().toLowerCase() : "";
+            String variety = (item.getVariety() != null) ? item.getVariety().toLowerCase() : "";
+            String category = (item.getCategory() != null) ? item.getCategory() : "";
 
-            String itemCatName = (item.getCategory() != null) ? item.getCategory().toString() : "";
+            // Фильтр по поиску (имя или сорт)
+            boolean matchesSearch = name.contains(query) || variety.contains(query);
 
-            boolean matchesCategory = currentCategory.equals("Все категории") ||
-                    itemCatName.equals(currentCategory);
+            // Фильтр по категории
+            boolean matchesCategory = currentCategory.equals("Все категории") || category.equals(currentCategory);
 
             if (matchesSearch && matchesCategory) {
                 filteredList.add(item);
@@ -173,8 +164,9 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         }
 
         Collections.sort(filteredList, (o1, o2) -> {
-            if (o1.getName() == null || o2.getName() == null) return 0;
-            int res = o1.getName().compareToIgnoreCase(o2.getName());
+            String n1 = (o1.getName() != null) ? o1.getName() : "";
+            String n2 = (o2.getName() != null) ? o2.getName() : "";
+            int res = n1.compareToIgnoreCase(n2);
             return isAscending ? res : -res;
         });
 

@@ -61,45 +61,38 @@ public class CompatibilityActivity extends AppCompatActivity {
     }
 
     private void setupTable(List<CompatibilityDTO> data) {
-        // 1. Получаем список уникальных названий для осей
         List<String> crops = data.stream()
                 .map(CompatibilityDTO::getCrop1)
                 .distinct()
-                .sorted() // Сортируем, чтобы оси совпадали с сеткой
+                .sorted()
                 .collect(Collectors.toList());
 
         int n = crops.size();
 
-        // 2. Очищаем старые заголовки (если есть)
         containerTopNames.removeAllViews();
         containerLeftNames.removeAllViews();
 
-        // 3. Создаем заголовки
-        int cellSize = (int) (51 * getResources().getDisplayMetrics().density); // 50dp + margin
+        int cellSize = (int) (51 * getResources().getDisplayMetrics().density);
 
         for (String name : crops) {
-            // Верхние названия
             TextView tvTop = new TextView(this);
             tvTop.setText(name);
             tvTop.setGravity(Gravity.CENTER);
-            tvTop.setLayoutParams(new LinearLayout.LayoutParams(cellSize, 240)); // 240 - высота шапки
+            tvTop.setLayoutParams(new LinearLayout.LayoutParams(cellSize, 240));
             tvTop.setRotation(-90);
             containerTopNames.addView(tvTop);
 
-            // Левые названия
             TextView tvLeft = new TextView(this);
             tvLeft.setText(name);
             tvLeft.setGravity(Gravity.CENTER_VERTICAL);
             tvLeft.setPadding(10, 0, 0, 0);
-            tvLeft.setLayoutParams(new LinearLayout.LayoutParams(240, cellSize)); // 240 - ширина боковины
+            tvLeft.setLayoutParams(new LinearLayout.LayoutParams(240, cellSize));
             containerLeftNames.addView(tvLeft);
         }
 
-        // 4. Настраиваем сетку
         rvCompatibility.setLayoutManager(new GridLayoutManager(this, n));
         rvCompatibility.setAdapter(new CompatibilityAdapter(data));
 
-        // 5. Синхронизируем скролл (чтобы шапки ехали вместе с таблицей)
         dataHorizontalScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> headerScroll.scrollTo(x, 0));
         rvCompatibility.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -116,13 +109,12 @@ public class CompatibilityActivity extends AppCompatActivity {
         tv.setTextSize(10);
         tv.setPadding(4, 4, 4, 4);
         tv.setTextColor(Color.BLACK);
-        // Размер должен совпадать с размером ячейки (50dp) + margin
         int size = (int) (51 * getResources().getDisplayMetrics().density);
         if (isTop) {
-            tv.setLayoutParams(new LinearLayout.LayoutParams(size, 80 * 3)); // 80dp высота шапки
-            tv.setRotation(-90); // Поворачиваем текст как на фото
+            tv.setLayoutParams(new LinearLayout.LayoutParams(size, 80 * 3));
+            tv.setRotation(-90);
         } else {
-            tv.setLayoutParams(new LinearLayout.LayoutParams(80 * 3, size)); // 80dp ширина боковины
+            tv.setLayoutParams(new LinearLayout.LayoutParams(80 * 3, size));
         }
         return tv;
     }

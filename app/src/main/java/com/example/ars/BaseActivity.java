@@ -13,14 +13,12 @@ public abstract class BaseActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         prefsHelper = new SharedPreferencesHelper(this);
 
-        // Проверяем авторизацию для защищенных экранов
         if (requiresAuth() && !isLoggedIn()) {
             redirectToLogin();
         }
     }
 
     protected boolean requiresAuth() {
-        // Переопределить в дочерних классах если экран требует авторизации
         return false;
     }
 

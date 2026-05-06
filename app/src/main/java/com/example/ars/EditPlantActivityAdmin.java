@@ -1,16 +1,20 @@
 package com.example.ars;
 
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
+import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -21,6 +25,7 @@ import com.example.ars.models.Crop;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,130 +36,140 @@ import retrofit2.Response;
 
 public class EditPlantActivityAdmin extends AppCompatActivity {
 
-    private static final String TAG = "EditPlantActivity";
+    private static final String TAG = "EditPlantAdmin";
 
-    private TextInputEditText etPlantName, etDescription, etMinTemp, etMaxTemp,
-            etMaxWind, etMinHumidity, etMaxHumidity, etNeededPrecipitation,
-            etSowingDepth, etDaysToGermination, etDaysToHarvest,
-            etPhotoPath;
+    // Поля ввода
+    private TextInputEditText etPlantName, etVariety, etDescription;
+    private TextInputEditText etMinTemp, etMaxTemp;
+    private TextInputEditText etMinHumidity, etMaxHumidity;
+    private TextInputEditText etPrecipitation, etMaxWind;
+    private TextInputEditText etSowingDepth;
+    private TextInputEditText etDaysToGermination, etDaysToHarvest;
+    private TextInputEditText etWateringInterval, etFertilizingInterval;
+    private TextInputEditText etSoilCareInterval, etProtectionInterval;
+    private TextInputEditText etPhotoPath;
 
+    private TextInputLayout tilPlantName, tilCategory, tilPhotoPath;
     private AutoCompleteTextView actvCategory;
-    private TextInputLayout tilCategory;
+    private CheckBox cbCanSeedlings, cbCanDirectSow;
     private MaterialButton btnSave, btnDelete;
-    private ImageView btnBack;
+    private ImageView btnBack, ivSelectedPhoto;
+    private View llPhotoPlaceholder, cvPhotoContainer;
     private TextView tvTitle, tvSubtitle;
 
     private ApiService apiService;
     private List<Category> categories = new ArrayList<>();
-    private Integer selectedCategoryId = null;
-    private String selectedCategoryName = "";
-
-    private Crop currentCrop;
     private Integer cropId;
-    private String originalCategoryName = "";
+    private String selectedCategoryName = "";
+    private Crop currentCrop;
+    private String selectedPhotoUri = "";
+
+    // Лаунчер для выбора фото
+    private ActivityResultLauncher<Intent> photoLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_plant_admin);
 
-        // Получаем ID растения из Intent
         cropId = getIntent().getIntExtra("CROP_ID", -1);
         if (cropId == -1) {
-            Toast.makeText(this, "Ошибка: ID растения не указан", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Ошибка: ID не найден", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
         apiService = RetrofitClient.getApiService();
         initViews();
+        setupPhotoLauncher();
         setupListeners();
         loadCategories();
         loadCropData();
     }
 
     private void initViews() {
-        // TextInputEditText поля
         etPlantName = findViewById(R.id.etPlantName);
+        etVariety = findViewById(R.id.etVariety);
         etDescription = findViewById(R.id.etDescription);
+
         etMinTemp = findViewById(R.id.etMinTemp);
         etMaxTemp = findViewById(R.id.etMaxTemp);
-        etMaxWind = findViewById(R.id.etMaxWind);
+
         etMinHumidity = findViewById(R.id.etMinHumidity);
         etMaxHumidity = findViewById(R.id.etMaxHumidity);
-        etNeededPrecipitation = findViewById(R.id.etNeededPrecipitation);
+
+        etPrecipitation = findViewById(R.id.etNeededPrecipitation);
+        etMaxWind = findViewById(R.id.etMaxWind);
+
         etSowingDepth = findViewById(R.id.etSowingDepth);
+
         etDaysToGermination = findViewById(R.id.etDaysToGermination);
         etDaysToHarvest = findViewById(R.id.etDaysToHarvest);
-        etPhotoPath = findViewById(R.id.etPhotoPath);
 
-        // Выпадающий список категорий
+        etWateringInterval = findViewById(R.id.etWateringInterval);
+        etFertilizingInterval = findViewById(R.id.etFertilizingInterval);
+        etSoilCareInterval = findViewById(R.id.etSoilCareInterval);
+        etProtectionInterval = findViewById(R.id.etProtectionInterval);
+
+        etPhotoPath = findViewById(R.id.etPhotoPath);
+        ivSelectedPhoto = findViewById(R.id.ivSelectedPhoto);
+        llPhotoPlaceholder = findViewById(R.id.llPhotoPlaceholder);
+        cvPhotoContainer = findViewById(R.id.cvPhotoContainer);
+
+        tilPlantName = findViewById(R.id.tilPlantName);
         tilCategory = findViewById(R.id.tilCategory);
+        tilPhotoPath = findViewById(R.id.tilPhotoPath);
         actvCategory = findViewById(R.id.actvCategory);
 
-        // Кнопки
+        cbCanSeedlings = findViewById(R.id.cbCanSeedlings);
+        cbCanDirectSow = findViewById(R.id.cbCanDirectSow);
+
         btnSave = findViewById(R.id.btnSave);
         btnDelete = findViewById(R.id.btnDelete);
         btnBack = findViewById(R.id.btnBack);
-
-        // Текстовые поля
         tvTitle = findViewById(R.id.tvTitle);
         tvSubtitle = findViewById(R.id.tvSubtitle);
     }
 
+    private void setupPhotoLauncher() {
+        photoLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Uri uri = result.getData().getData();
+                        selectedPhotoUri = uri.toString();
+                        ivSelectedPhoto.setImageURI(uri);
+                        llPhotoPlaceholder.setVisibility(View.GONE);
+                        etPhotoPath.setText(selectedPhotoUri);
+                    }
+                }
+        );
+    }
+
     private void setupListeners() {
-        btnSave.setOnClickListener(v -> savePlant());
-        btnDelete.setOnClickListener(v -> showDeleteConfirmation());
         btnBack.setOnClickListener(v -> finish());
 
-        // Обработчик выбора категории
+        btnDelete.setOnClickListener(v -> {
+            if (currentCrop != null) {
+                showDeleteConfirmation();
+            }
+        });
+
+        btnSave.setOnClickListener(v -> {
+            if (validateFields()) {
+                updatePlant();
+            }
+        });
+
+        findViewById(R.id.btnSelectPhoto).setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            photoLauncher.launch(intent);
+        });
+
         actvCategory.setOnItemClickListener((parent, view, position, id) -> {
-            if (position < categories.size()) {
-                Category selectedCategory = categories.get(position);
-                selectedCategoryId = Math.toIntExact(selectedCategory.getId());
-                selectedCategoryName = selectedCategory.getName();
-                Log.d(TAG, "Selected category: " + selectedCategoryName + " (ID: " + selectedCategoryId + ")");
-            }
+            selectedCategoryName = (String) parent.getItemAtPosition(position);
+            tilCategory.setError(null);
         });
-    }
-
-    private void loadCategories() {
-        apiService.getCategories().enqueue(new Callback<List<Category>>() {
-            @Override
-            public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    categories = response.body();
-                    setupCategoryAdapter();
-                } else {
-                    Toast.makeText(EditPlantActivityAdmin.this,
-                            "Ошибка загрузки категорий",
-                            Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Category>> call, Throwable t) {
-                Toast.makeText(EditPlantActivityAdmin.this,
-                        "Ошибка сети при загрузке категорий",
-                        Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "Error loading categories", t);
-            }
-        });
-    }
-
-    private void setupCategoryAdapter() {
-        List<String> categoryNames = new ArrayList<>();
-        for (Category category : categories) {
-            categoryNames.add(category.getName());
-        }
-
-        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_dropdown_item_1line,
-                categoryNames
-        );
-
-        actvCategory.setAdapter(categoryAdapter);
     }
 
     private void loadCropData() {
@@ -163,236 +178,200 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             public void onResponse(Call<Crop> call, Response<Crop> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     currentCrop = response.body();
-                    fillFormWithData();
+                    fillForm();
                 } else {
-                    Toast.makeText(EditPlantActivityAdmin.this,
-                            "Ошибка загрузки данных растения",
-                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(EditPlantActivityAdmin.this, "Растение не найдено", Toast.LENGTH_SHORT).show();
                     finish();
                 }
             }
-
             @Override
             public void onFailure(Call<Crop> call, Throwable t) {
-                Toast.makeText(EditPlantActivityAdmin.this,
-                        "Ошибка сети при загрузке данных",
-                        Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "Error loading crop data", t);
+                Toast.makeText(EditPlantActivityAdmin.this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
                 finish();
             }
         });
     }
 
-    private void fillFormWithData() {
-        if (currentCrop == null) return;
-
-        // Заполняем поля данными
+    private void fillForm() {
         tvTitle.setText("Редактирование растения");
-        tvSubtitle.setText("ID: " + currentCrop.getId() + " • " + currentCrop.getName());
+        tvSubtitle.setText(currentCrop.getName() + " (ID: " + currentCrop.getId() + ")");
 
         etPlantName.setText(currentCrop.getName());
+        etVariety.setText(currentCrop.getVariety());
+        etDescription.setText(currentCrop.getDescription());
 
-        // Категория
-        originalCategoryName = currentCrop.getCategory();
-        actvCategory.setText(originalCategoryName, false);
-        selectedCategoryName = originalCategoryName;
+        selectedCategoryName = currentCrop.getCategory();
+        actvCategory.setText(selectedCategoryName, false);
 
-        // Находим ID категории по имени
-        for (Category category : categories) {
-            if (category.getName().equals(originalCategoryName)) {
-                selectedCategoryId = Math.toIntExact(category.getId());
-                break;
+        setVal(etMinTemp, currentCrop.getMinTemp());
+        setVal(etMaxTemp, currentCrop.getMaxTemp());
+
+        setVal(etMinHumidity, currentCrop.getMinHumidity());
+        setVal(etMaxHumidity, currentCrop.getMaxHumidity());
+
+        setVal(etPrecipitation, currentCrop.getNeededPrecipitation());
+        setVal(etMaxWind, currentCrop.getMaxWind());
+
+        setVal(etSowingDepth, currentCrop.getSowingDepth());
+
+        setVal(etDaysToGermination, currentCrop.getDaysToGermination());
+        setVal(etDaysToHarvest, currentCrop.getDaysToHarvest());
+
+        setVal(etWateringInterval, currentCrop.getWateringInterval());
+        setVal(etFertilizingInterval, currentCrop.getFertilizingInterval());
+        setVal(etSoilCareInterval, currentCrop.getSoilCareInterval());
+        setVal(etProtectionInterval, currentCrop.getProtectionInterval());
+
+        if (currentCrop.getCanSeedlings() != null) {
+            cbCanSeedlings.setChecked(currentCrop.getCanSeedlings());
+        }
+        if (currentCrop.getCanDirectSow() != null) {
+            cbCanDirectSow.setChecked(currentCrop.getCanDirectSow());
+        }
+
+        if (currentCrop.getPhotoPath() != null && !currentCrop.getPhotoPath().isEmpty()) {
+            String photoPath = currentCrop.getPhotoPath();
+            etPhotoPath.setText(photoPath);
+            selectedPhotoUri = photoPath;
+
+            if (photoPath.startsWith("http")) {
+                Picasso.get().load(photoPath).placeholder(R.drawable.ic_info).into(ivSelectedPhoto);
+            } else if (photoPath.startsWith("/")) {
+                String url = RetrofitClient.BASE_URL + "/api/img" + photoPath;
+                Picasso.get().load(url).placeholder(R.drawable.ic_info).into(ivSelectedPhoto);
+            } else {
+                Picasso.get().load(Uri.parse(photoPath)).placeholder(R.drawable.ic_info).into(ivSelectedPhoto);
             }
-        }
-
-        // Описание
-        if (currentCrop.getDescription() != null) {
-            etDescription.setText(currentCrop.getDescription());
-        }
-
-        // Температура
-        if (currentCrop.getMinTemp() != null) {
-            etMinTemp.setText(String.valueOf(currentCrop.getMinTemp()));
-        }
-        if (currentCrop.getMaxTemp() != null) {
-            etMaxTemp.setText(String.valueOf(currentCrop.getMaxTemp()));
-        }
-
-        // Влажность
-        if (currentCrop.getMinHumidity() != null) {
-            etMinHumidity.setText(String.valueOf(currentCrop.getMinHumidity()));
-        }
-        if (currentCrop.getMaxHumidity() != null) {
-            etMaxHumidity.setText(String.valueOf(currentCrop.getMaxHumidity()));
-        }
-
-        // Осадки
-        if (currentCrop.getNeededPrecipitation() != null) {
-            etNeededPrecipitation.setText(String.valueOf(currentCrop.getNeededPrecipitation()));
-        }
-
-        // Ветер
-        if (currentCrop.getMaxWind() != null) {
-            etMaxWind.setText(String.valueOf(currentCrop.getMaxWind()));
-        }
-
-        // Глубина посева
-        if (currentCrop.getSowingDepth() != null) {
-            etSowingDepth.setText(String.valueOf(currentCrop.getSowingDepth()));
-        }
-
-        // Дни
-        if (currentCrop.getDaysToGermination() != null) {
-            etDaysToGermination.setText(String.valueOf(currentCrop.getDaysToGermination()));
-        }
-        if (currentCrop.getDaysToHarvest() != null) {
-            etDaysToHarvest.setText(String.valueOf(currentCrop.getDaysToHarvest()));
-        }
-
-        // Фото
-        if (currentCrop.getPhotoPath() != null) {
-            etPhotoPath.setText(currentCrop.getPhotoPath());
+            llPhotoPlaceholder.setVisibility(View.GONE);
+        } else {
+            llPhotoPlaceholder.setVisibility(View.VISIBLE);
         }
     }
 
-    private void savePlant() {
-        // Получаем данные из полей
-        String name = etPlantName.getText().toString().trim();
-        String description = etDescription.getText().toString().trim();
+    private boolean validateFields() {
+        boolean isValid = true;
 
-        // Проверка обязательных полей
-        if (name.isEmpty()) {
-            etPlantName.setError("Название обязательно");
-            etPlantName.requestFocus();
-            return;
+        if (TextUtils.isEmpty(etPlantName.getText().toString().trim())) {
+            tilPlantName.setError("Укажите название");
+            isValid = false;
+        } else {
+            tilPlantName.setError(null);
         }
 
-        if (selectedCategoryName.isEmpty()) {
+        if (TextUtils.isEmpty(selectedCategoryName)) {
             tilCategory.setError("Выберите категорию");
-            actvCategory.requestFocus();
-            return;
+            isValid = false;
+        } else {
+            tilCategory.setError(null);
         }
 
-        // Создаем объект растения с обновленными данными
-        Crop updatedCrop = new Crop();
-        updatedCrop.setName(name);
-        updatedCrop.setCategory(selectedCategoryName);
-        updatedCrop.setDescription(description.isEmpty() ? null : description);
-
-        // Заполняем числовые поля
-        try {
-            if (!etMinTemp.getText().toString().isEmpty()) {
-                updatedCrop.setMinTemp(Float.parseFloat(etMinTemp.getText().toString()));
-            } else {
-                updatedCrop.setMinTemp(null);
-            }
-
-            if (!etMaxTemp.getText().toString().isEmpty()) {
-                updatedCrop.setMaxTemp(Float.parseFloat(etMaxTemp.getText().toString()));
-            } else {
-                updatedCrop.setMaxTemp(null);
-            }
-
-            if (!etMaxWind.getText().toString().isEmpty()) {
-                updatedCrop.setMaxWind(Float.parseFloat(etMaxWind.getText().toString()));
-            } else {
-                updatedCrop.setMaxWind(null);
-            }
-
-            if (!etMinHumidity.getText().toString().isEmpty()) {
-                updatedCrop.setMinHumidity(Integer.parseInt(etMinHumidity.getText().toString()));
-            } else {
-                updatedCrop.setMinHumidity(null);
-            }
-
-            if (!etMaxHumidity.getText().toString().isEmpty()) {
-                updatedCrop.setMaxHumidity(Integer.parseInt(etMaxHumidity.getText().toString()));
-            } else {
-                updatedCrop.setMaxHumidity(null);
-            }
-
-            if (!etNeededPrecipitation.getText().toString().isEmpty()) {
-                updatedCrop.setNeededPrecipitation(Float.parseFloat(etNeededPrecipitation.getText().toString()));
-            } else {
-                updatedCrop.setNeededPrecipitation(null);
-            }
-
-            if (!etSowingDepth.getText().toString().isEmpty()) {
-                updatedCrop.setSowingDepth(Integer.parseInt(etSowingDepth.getText().toString()));
-            } else {
-                updatedCrop.setSowingDepth(null);
-            }
-
-            if (!etDaysToGermination.getText().toString().isEmpty()) {
-                updatedCrop.setDaysToGermination(Integer.parseInt(etDaysToGermination.getText().toString()));
-            } else {
-                updatedCrop.setDaysToGermination(null);
-            }
-
-            if (!etDaysToHarvest.getText().toString().isEmpty()) {
-                updatedCrop.setDaysToHarvest(Integer.parseInt(etDaysToHarvest.getText().toString()));
-            } else {
-                updatedCrop.setDaysToHarvest(null);
-            }
-
-            if (!etPhotoPath.getText().toString().isEmpty()) {
-                updatedCrop.setPhotoPath(etPhotoPath.getText().toString());
-            } else {
-                updatedCrop.setPhotoPath(null);
-            }
-
-            // Булевые значения
-            updatedCrop.setCanSeedlings(currentCrop != null ? currentCrop.getCanSeedlings() : true);
-            updatedCrop.setCanDirectSow(currentCrop != null ? currentCrop.getCanDirectSow() : true);
-
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Ошибка в числовых полях",
-                    Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "Number format error", e);
-            return;
+        Float minTemp = parseFloat(etMinTemp);
+        Float maxTemp = parseFloat(etMaxTemp);
+        if (minTemp != null && maxTemp != null && minTemp > maxTemp) {
+            etMinTemp.setError("Мин. температура не может быть больше макс.");
+            etMaxTemp.setError("Макс. температура не может быть меньше мин.");
+            isValid = false;
         }
 
-        // Показываем прогресс
+        Integer minHum = parseInteger(etMinHumidity);
+        Integer maxHum = parseInteger(etMaxHumidity);
+        if (minHum != null && maxHum != null && minHum > maxHum) {
+            etMinHumidity.setError("Мин. влажность не может быть больше макс.");
+            isValid = false;
+        }
+        if ((minHum != null && (minHum < 0 || minHum > 100)) ||
+                (maxHum != null && (maxHum < 0 || maxHum > 100))) {
+            if (minHum != null) etMinHumidity.setError("Влажность должна быть от 0 до 100");
+            if (maxHum != null) etMaxHumidity.setError("Влажность должна быть от 0 до 100");
+            isValid = false;
+        }
+
+        Integer daysGerm = parseInteger(etDaysToGermination);
+        Integer daysHarvest = parseInteger(etDaysToHarvest);
+        if (daysGerm != null && daysGerm < 0) {
+            etDaysToGermination.setError("Не может быть отрицательным");
+            isValid = false;
+        }
+        if (daysHarvest != null && daysHarvest < 0) {
+            etDaysToHarvest.setError("Не может быть отрицательным");
+            isValid = false;
+        }
+
+        if (parseInteger(etWateringInterval) != null && parseInteger(etWateringInterval) < 0) {
+            etWateringInterval.setError("Не может быть отрицательным");
+            isValid = false;
+        }
+        if (parseInteger(etFertilizingInterval) != null && parseInteger(etFertilizingInterval) < 0) {
+            etFertilizingInterval.setError("Не может быть отрицательным");
+            isValid = false;
+        }
+        if (parseInteger(etSoilCareInterval) != null && parseInteger(etSoilCareInterval) < 0) {
+            etSoilCareInterval.setError("Не может быть отрицательным");
+            isValid = false;
+        }
+        if (parseInteger(etProtectionInterval) != null && parseInteger(etProtectionInterval) < 0) {
+            etProtectionInterval.setError("Не может быть отрицательным");
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private void updatePlant() {
+        Crop crop = new Crop();
+
+        crop.setName(etPlantName.getText().toString().trim());
+        crop.setVariety(etVariety.getText().toString().trim());
+        crop.setCategory(selectedCategoryName);
+        crop.setDescription(etDescription.getText().toString().trim());
+
+        crop.setMinTemp(parseFloat(etMinTemp));
+        crop.setMaxTemp(parseFloat(etMaxTemp));
+
+        crop.setMinHumidity(parseInteger(etMinHumidity));
+        crop.setMaxHumidity(parseInteger(etMaxHumidity));
+
+        crop.setNeededPrecipitation(parseFloat(etPrecipitation));
+        crop.setMaxWind(parseFloat(etMaxWind));
+
+        crop.setSowingDepth(parseInteger(etSowingDepth));
+
+        crop.setDaysToGermination(parseInteger(etDaysToGermination));
+        crop.setDaysToHarvest(parseInteger(etDaysToHarvest));
+
+        crop.setWateringInterval(parseInteger(etWateringInterval));
+        crop.setFertilizingInterval(parseInteger(etFertilizingInterval));
+        crop.setSoilCareInterval(parseInteger(etSoilCareInterval));
+        crop.setProtectionInterval(parseInteger(etProtectionInterval));
+
+        crop.setCanSeedlings(cbCanSeedlings.isChecked());
+        crop.setCanDirectSow(cbCanDirectSow.isChecked());
+
+        String photoPath = etPhotoPath.getText().toString().trim();
+        if (!TextUtils.isEmpty(selectedPhotoUri) && TextUtils.isEmpty(photoPath)) {
+            photoPath = selectedPhotoUri;
+        }
+        crop.setPhotoPath(photoPath);
+
         btnSave.setEnabled(false);
-        btnSave.setText("Сохранение...");
 
-        // Отправляем обновленные данные на сервер
-        Call<Crop> call = apiService.updateCrop(cropId, updatedCrop);
-        call.enqueue(new Callback<Crop>() {
+        apiService.updateCrop(cropId, crop).enqueue(new Callback<Crop>() {
             @Override
             public void onResponse(Call<Crop> call, Response<Crop> response) {
                 btnSave.setEnabled(true);
-                btnSave.setText("Сохранить");
-
-                if (response.isSuccessful() && response.body() != null) {
-                    Crop savedCrop = response.body();
-                    Toast.makeText(EditPlantActivityAdmin.this,
-                            "✅ Растение \"" + savedCrop.getName() + "\" обновлено!",
-                            Toast.LENGTH_LONG).show();
-
-                    // Возвращаемся назад с результатом
+                if (response.isSuccessful()) {
+                    Toast.makeText(EditPlantActivityAdmin.this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
                     setResult(RESULT_OK);
                     finish();
-
                 } else {
-                    String errorMsg = "Ошибка обновления: " + response.code();
-                    Toast.makeText(EditPlantActivityAdmin.this,
-                            errorMsg,
-                            Toast.LENGTH_LONG).show();
-                    Log.e(TAG, "Error updating crop: " + response.code());
+                    Toast.makeText(EditPlantActivityAdmin.this, "Ошибка сохранения", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<Crop> call, Throwable t) {
                 btnSave.setEnabled(true);
-                btnSave.setText("Сохранить");
-
-                Toast.makeText(EditPlantActivityAdmin.this,
-                        "❌ Ошибка сети: " + t.getMessage(),
-                        Toast.LENGTH_LONG).show();
-
-                Log.e(TAG, "Network error when updating", t);
+                Toast.makeText(EditPlantActivityAdmin.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -400,62 +379,77 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
     private void showDeleteConfirmation() {
         new AlertDialog.Builder(this)
                 .setTitle("Удаление растения")
-                .setMessage("Вы уверены, что хотите удалить растение \"" +
-                        (currentCrop != null ? currentCrop.getName() : "") + "\"?\n\n" +
-                        "Это действие нельзя отменить.")
-                .setPositiveButton("Удалить", (dialog, which) -> deletePlant())
+                .setMessage("Вы уверены, что хотите удалить \"" + currentCrop.getName() + "\"?")
+                .setPositiveButton("Удалить", (d, w) -> {
+                    apiService.deleteCrop(cropId).enqueue(new Callback<Void>() {
+                        @Override
+                        public void onResponse(Call<Void> call, Response<Void> response) {
+                            if (response.isSuccessful()) {
+                                Toast.makeText(EditPlantActivityAdmin.this, "Растение удалено", Toast.LENGTH_SHORT).show();
+                                setResult(RESULT_OK);
+                                finish();
+                            } else {
+                                Toast.makeText(EditPlantActivityAdmin.this, "Ошибка удаления", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                        @Override
+                        public void onFailure(Call<Void> call, Throwable t) {
+                            Toast.makeText(EditPlantActivityAdmin.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                })
                 .setNegativeButton("Отмена", null)
-                .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
     }
 
-    private void deletePlant() {
-        // Показываем прогресс
-        btnDelete.setEnabled(false);
-        btnDelete.setText("Удаление...");
-
-        // Отправляем запрос на удаление
-        Call<Void> call = apiService.deleteCrop(cropId);
-        call.enqueue(new Callback<Void>() {
+    private void loadCategories() {
+        apiService.getCategories().enqueue(new Callback<List<Category>>() {
             @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                btnDelete.setEnabled(true);
-                btnDelete.setText("Удалить");
-
-                if (response.isSuccessful()) {
-                    Toast.makeText(EditPlantActivityAdmin.this,
-                            "✅ Растение удалено!",
-                            Toast.LENGTH_LONG).show();
-
-                    // Возвращаемся с результатом удаления
-                    setResult(RESULT_OK);
-                    finish();
-
-                } else {
-                    String errorMsg = "Ошибка удаления: " + response.code();
-                    Toast.makeText(EditPlantActivityAdmin.this,
-                            errorMsg,
-                            Toast.LENGTH_LONG).show();
-                    Log.e(TAG, "Error deleting crop: " + response.code());
+            public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    categories = response.body();
+                    List<String> names = new ArrayList<>();
+                    for (Category c : categories) {
+                        names.add(c.getName());
+                    }
+                    ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                            EditPlantActivityAdmin.this,
+                            android.R.layout.simple_dropdown_item_1line,
+                            names
+                    );
+                    actvCategory.setAdapter(adapter);
                 }
             }
-
             @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-                btnDelete.setEnabled(true);
-                btnDelete.setText("Удалить");
-
-                Toast.makeText(EditPlantActivityAdmin.this,
-                        "❌ Ошибка сети при удалении",
-                        Toast.LENGTH_LONG).show();
-
-                Log.e(TAG, "Network error when deleting", t);
+            public void onFailure(Call<List<Category>> call, Throwable t) {
+                Toast.makeText(EditPlantActivityAdmin.this, "Ошибка загрузки категорий", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    @Override
-    public void onBackPressed() {
-        finish();
+    private void setVal(TextInputEditText et, Object val) {
+        if (val != null) {
+            et.setText(String.valueOf(val));
+        }
+    }
+
+    private Float parseFloat(TextInputEditText et) {
+        String s = et.getText().toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return Float.parseFloat(s.replace(",", "."));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(TextInputEditText et) {
+        String s = et.getText().toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

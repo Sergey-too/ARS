@@ -36,4 +36,14 @@ public class WeatherData {
     public Double getWindMax() { return windMax != null ? windMax : 0.0; }
     public Double getPrecipitation() { return precipitation != null ? precipitation : 0.0; }
     public String getPressure() { return pressure; }
+
+    public String getTempRange() {
+        return tempMin + "°C - " + tempMax + "°C";
+    }
+    public String getHumidityRange() {
+        return humMin + "% - " + humMax + "%";
+    }
+    public String getWindRange() {
+        return windMin + " - " + windMax + " м/с";
+    }
 }

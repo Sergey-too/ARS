@@ -38,7 +38,15 @@ public class AdminPlantAdapter extends RecyclerView.Adapter<AdminPlantAdapter.Vi
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Crop plant = plants.get(position);
-        holder.tvName.setText(plant.getName() != null ? plant.getName() : "Без названия");
+
+        String name = (plant.getName() != null) ? plant.getName() : "Без названия";
+        String variety = (plant.getVariety() != null) ? plant.getVariety().trim() : "";
+        if (!variety.isEmpty()) {
+            holder.tvName.setText(name + " (" + variety + ")");
+        } else {
+            holder.tvName.setText(name);
+        }
+
         holder.itemView.setOnClickListener(v -> listener.onPlantClick(plant));
     }
 

@@ -12,8 +12,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp">
-
-        <!-- Верхний заголовок -->
         <LinearLayout
             android:id="@+id/topSection"
             android:layout_width="0dp"
@@ -94,7 +92,52 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- Название растения -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cvPhotoContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:layout_marginTop="16dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#F5F5F5"
+                    app:layout_constraintTop_toBottomOf="@+id/tvFormTitle">
+
+                    <RelativeLayout
+                        android:id="@+id/btnSelectPhoto"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:id="@+id/ivSelectedPhoto"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop" />
+
+                        <LinearLayout
+                            android:id="@+id/llPhotoPlaceholder"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerInParent="true"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/ic_add"
+                                app:tint="@color/color_green_primary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="Нажмите, чтобы выбрать фото"
+                                android:textColor="@color/color_text_dark" />
+                        </LinearLayout>
+                    </RelativeLayout>
+                </androidx.cardview.widget.CardView>
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPlantName"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -107,7 +150,7 @@
                     app:endIconTint="@color/color_green_primary"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvFormTitle">
+                    app:layout_constraintTop_toBottomOf="@+id/cvPhotoContainer">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPlantName"
@@ -120,7 +163,31 @@
                         android:hint="Введите название" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Категория (выпадающий список) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilVariety"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:boxStrokeColor="@color/color_input_border"
+                    app:boxStrokeWidthFocused="2dp"
+                    app:endIconMode="clear_text"
+                    app:endIconTint="@color/color_green_primary"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tilPlantName">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etVariety"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp"
+                        android:textColor="@color/color_text_dark"
+                        android:textSize="16sp"
+                        android:inputType="textCapWords"
+                        android:hint="Сорт" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilCategory"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -133,7 +200,7 @@
                     app:endIconTint="@color/color_green_primary"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilPlantName">
+                    app:layout_constraintTop_toBottomOf="@+id/tilVariety">
 
                     <AutoCompleteTextView
                         android:id="@+id/actvCategory"
@@ -146,7 +213,6 @@
                         android:hint="Выберите категорию" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Описание -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilDescription"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -172,7 +238,45 @@
                         android:maxLines="5" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Температура -->
+                <TextView
+                    android:id="@+id/tvSowingMethodLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Способ посадки"
+                    android:textColor="@color/color_text_dark"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tilDescription" />
+
+                <LinearLayout
+                    android:id="@+id/llSowingMethods"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tvSowingMethodLabel">
+
+                    <CheckBox
+                        android:id="@+id/cbCanSeedlings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Рассада"
+                        android:textColor="@color/color_text_dark" />
+
+                    <CheckBox
+                        android:id="@+id/cbCanDirectSow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="24dp"
+                        android:text="В грунт"
+                        android:textColor="@color/color_text_dark" />
+                </LinearLayout>
+
                 <TextView
                     android:id="@+id/tvTempLabel"
                     android:layout_width="0dp"
@@ -184,7 +288,7 @@
                     android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilDescription" />
+                    app:layout_constraintTop_toBottomOf="@+id/llSowingMethods" />
 
                 <LinearLayout
                     android:id="@+id/llTemp"
@@ -236,7 +340,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Влажность -->
                 <TextView
                     android:id="@+id/tvHumidityLabel"
                     android:layout_width="0dp"
@@ -300,7 +403,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Осадки -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPrecipitation"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -324,7 +426,6 @@
                         android:inputType="numberDecimal"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Макс. скорость ветра -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilMaxWind"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -348,7 +449,6 @@
                         android:inputType="numberDecimal"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Глубина посева -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilSowingDepth"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -372,7 +472,6 @@
                         android:inputType="number"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Дни до всходов/урожая -->
                 <LinearLayout
                     android:id="@+id/llDays"
                     android:layout_width="0dp"
@@ -423,31 +522,107 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Путь к фото -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilPhotoPath"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                <TextView
+                    android:id="@+id/tvIntervalsLabel"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Путь к фото (URL)"
-                    app:boxStrokeColor="@color/color_input_border"
-                    app:boxStrokeWidthFocused="2dp"
+                    android:layout_marginTop="24dp"
+                    android:text="Интервалы ухода (дней)"
+                    android:textColor="@color/color_text_dark"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/llDays">
+                    app:layout_constraintTop_toBottomOf="@+id/llDays" />
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etPhotoPath"
-                        android:layout_width="match_parent"
+                <LinearLayout
+                    android:id="@+id/llIntervals1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tvIntervalsLabel">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:padding="12dp"
-                        android:textColor="@color/color_text_dark"
-                        android:textSize="16sp"
-                        android:inputType="textUri"/>
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:hint="Полив"
+                        app:boxStrokeColor="@color/color_input_border"
+                        app:boxStrokeWidthFocused="1dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etWateringInterval"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:inputType="number"/>
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Кнопка добавления -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:hint="Удобрение"
+                        app:boxStrokeColor="@color/color_input_border"
+                        app:boxStrokeWidthFocused="1dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etFertilizingInterval"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:inputType="number"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/llIntervals2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/llIntervals1">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:hint="Рыхление"
+                        app:boxStrokeColor="@color/color_input_border"
+                        app:boxStrokeWidthFocused="1dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSoilCareInterval"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:inputType="number"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:hint="Защита"
+                        app:boxStrokeColor="@color/color_input_border"
+                        app:boxStrokeWidthFocused="1dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etProtectionInterval"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:inputType="number"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnAddPlant"
                     android:layout_width="0dp"
@@ -464,7 +639,8 @@
                     app:iconTint="@color/color_button_text_primary"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilPhotoPath" />
+                    app:layout_constraintTop_toBottomOf="@+id/llIntervals2"
+                    app:layout_constraintBottom_toBottomOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
