@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -17,7 +18,9 @@ import com.example.ars.models.UserCrop;
 import com.example.ars.utils.SharedPreferencesHelper;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -30,9 +33,9 @@ public class PlantsActivity extends AppCompatActivity {
     private ApiService apiService;
     private SharedPreferencesHelper prefsHelper;
     private UserPlantAdapter adapter;
+    private boolean isLoading = false; // Флаг для предотвращения дублирования
 
-    private List<UserCrop> combinedList = new ArrayList<>();
-    private List<UserCrop> originalPlants = new ArrayList<>();
+    private List<UserPlantAdapter.PlantItem> combinedList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,8 +43,29 @@ public class PlantsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_plants);
 
         prefsHelper = new SharedPreferencesHelper(this);
+        RetrofitClient.initialize(prefsHelper);
         apiService = RetrofitClient.getApiService();
 
+        setupSideMenu();
+        setupRecyclerView();
+        setupSimpleSearch();
+        setupMenuButtons();
+
+        findViewById(R.id.fabAdd).setOnClickListener(v ->
+                startActivity(new Intent(this, AddPlantActivity.class))
+        );
+
+        loadAllData();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Перезагружаем данные при возврате
+        loadAllData();
+    }
+
+    private void setupSideMenu() {
         sideMenuOverlay = findViewById(R.id.sideMenuOverlay);
         sideMenu = findViewById(R.id.sideMenu);
 
@@ -54,123 +78,99 @@ public class PlantsActivity extends AppCompatActivity {
             sideMenu.setTranslationX(menuWidth);
         });
 
+        sideMenuOverlay.setOnClickListener(v -> closeSideMenu());
+    }
+
+    private void setupRecyclerView() {
         RecyclerView rvPlants = findViewById(R.id.rvPlants);
         rvPlants.setLayoutManager(new LinearLayoutManager(this));
 
-        setupSimpleSearch();
-
-        adapter = new UserPlantAdapter(combinedList, selectedCrop -> {
+        adapter = new UserPlantAdapter(combinedList, item -> {
             Intent intent = new Intent(this, PlantDetailActivity.class);
-            intent.putExtra("user_crop_id", selectedCrop.getId());
-            boolean isIndividual = (selectedCrop.getCropId() == null);
-            intent.putExtra("is_individual", isIndividual);
-
-            startActivityForResult(intent, 1);
+            if (item.isIndividual()) {
+                intent.putExtra("individual_crop_id", item.getIndividualCropId());
+                intent.putExtra("is_individual", true);
+            } else {
+                intent.putExtra("user_crop_id", item.getId());
+                intent.putExtra("is_individual", false);
+            }
+            startActivity(intent);
         });
         rvPlants.setAdapter(adapter);
-
-        setupMenuButtons();
-
-        findViewById(R.id.fabAdd).setOnClickListener(v -> startActivity(new Intent(this, AddPlantActivity.class)));
-
-        loadAllData();
     }
 
     private void loadAllData() {
         if (prefsHelper.getUser() == null) return;
+        if (isLoading) return; // Предотвращаем дублирование запросов
+
+        isLoading = true;
         Integer userId = prefsHelper.getUser().getId();
 
+        // Очищаем список перед загрузкой
         combinedList.clear();
-        originalPlants.clear();
+        adapter.updateData(combinedList);
 
         apiService.getUserCrops(userId).enqueue(new Callback<List<UserCrop>>() {
             @Override
-            public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    updateMasterList(response.body());
-                }
-            }
-            @Override public void onFailure(Call<List<UserCrop>> call, Throwable t) {}
-        });
+            public void onResponse(@NonNull Call<List<UserCrop>> call, @NonNull Response<List<UserCrop>> response) {
+                isLoading = false;
 
-        apiService.getIndividualCrops(userId).enqueue(new Callback<List<UserCrop>>() {
-            @Override
-            public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    updateMasterList(response.body());
+                    List<UserCrop> crops = response.body();
+                    Log.d("PlantsActivity", "Загружено растений: " + crops.size());
+
+                    for (UserCrop crop : crops) {
+                        combinedList.add(new UserPlantAdapter.PlantItem(crop));
+                    }
+
+                    // Загружаем детали для системных растений
+                    for (UserCrop crop : crops) {
+                        if (crop.getCrop() == null && crop.getCropId() != null) {
+                            loadSystemCropDetails(crop);
+                        }
+                    }
+
+                    updateAdapter();
+                } else {
+                    Log.e("PlantsActivity", "Ошибка загрузки: " + response.code());
                 }
             }
-            @Override public void onFailure(Call<List<UserCrop>> call, Throwable t) {}
+
+            @Override
+            public void onFailure(@NonNull Call<List<UserCrop>> call, @NonNull Throwable t) {
+                isLoading = false;
+                Log.e("PlantsActivity", "Ошибка загрузки растений: " + t.getMessage());
+                Toast.makeText(PlantsActivity.this, "Ошибка загрузки: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
-
-    private synchronized void updateMasterList(List<UserCrop> newItems) {
-        boolean wasChanged = false;
-        for (UserCrop newItem : newItems) {
-            // Уникальный ключ: ID + наличие cropId (чтобы не путать системные и личные с одинаковым ID)
-            boolean isNewIndividual = (newItem.getCropId() == null);
-
-            boolean exists = false;
-            for (UserCrop existingItem : combinedList) {
-                boolean existingIsIndividual = (existingItem.getCropId() == null);
-                if (existingItem.getId().equals(newItem.getId()) && isNewIndividual == existingIsIndividual) {
-                    exists = true;
-                    break;
-                }
-            }
-
-            if (!exists) {
-                combinedList.add(newItem);
-                wasChanged = true;
-                // Если это системное растение и нет деталей — грузим один раз
-                if (newItem.getCrop() == null && newItem.getCropId() != null) {
-                    loadCropDetails(newItem.getCropId(), newItem);
-                }
-            }
-        }
-
-        if (wasChanged) {
-            originalPlants = new ArrayList<>(combinedList);
-            // Обновляем список целиком один раз, а не в цикле
-            runOnUiThread(() -> adapter.updateData(new ArrayList<>(combinedList)));
-        }
-    }
-
-    private void loadCropDetails(Integer cropId, UserCrop userCrop) {
-        apiService.getCropById(cropId).enqueue(new Callback<Crop>() {
+    private void loadSystemCropDetails(UserCrop userCrop) {
+        apiService.getCropById(userCrop.getCropId()).enqueue(new Callback<Crop>() {
             @Override
-            public void onResponse(Call<Crop> call, Response<Crop> response) {
+            public void onResponse(@NonNull Call<Crop> call, @NonNull Response<Crop> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     userCrop.setCrop(response.body());
-                    // Используем notifyItemChanged вместо notifyDataSetChanged для плавности
-                    runOnUiThread(() -> {
-                        int pos = combinedList.indexOf(userCrop);
-                        if (pos != -1) {
-                            adapter.notifyItemChanged(pos);
-                        }
-                    });
+                    updateAdapter(); // Обновляем адаптер с новыми данными
                 }
             }
-            @Override public void onFailure(Call<Crop> call, Throwable t) {
-                Log.e("PLANTS_ERR", "Не удалось загрузить детали для CropID: " + cropId);
+            @Override
+            public void onFailure(@NonNull Call<Crop> call, @NonNull Throwable t) {
+                Log.e("PlantsActivity", "Не удалось загрузить детали для CropID: " + userCrop.getCropId());
             }
         });
     }
 
-    // Чтобы удаление работало корректно и список обновлялся:
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1 && resultCode == RESULT_OK) {
-            // Если в DetailActivity произошло удаление, полностью перегружаем список
-            loadAllData();
-        }
+    private void updateAdapter() {
+        runOnUiThread(() -> {
+            adapter.updateData(new ArrayList<>(combinedList));
+        });
     }
 
     private void setupSimpleSearch() {
         com.google.android.material.textfield.TextInputEditText etSearch = findViewById(R.id.etSearch);
         if (etSearch == null) return;
+
         etSearch.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -181,14 +181,10 @@ public class PlantsActivity extends AppCompatActivity {
     }
 
     private void filter(String text) {
-        List<UserCrop> filtered = new ArrayList<>();
-        for (UserCrop uc : originalPlants) {
-            String name = "";
-            if (uc.getCrop() != null) name = uc.getCrop().getName();
-            else if (uc.getName() != null) name = uc.getName();
-
-            if (name.toLowerCase().contains(text)) {
-                filtered.add(uc);
+        List<UserPlantAdapter.PlantItem> filtered = new ArrayList<>();
+        for (UserPlantAdapter.PlantItem item : combinedList) {
+            if (item.getDisplayName().toLowerCase().contains(text)) {
+                filtered.add(item);
             }
         }
         adapter.updateData(filtered);
@@ -197,17 +193,37 @@ public class PlantsActivity extends AppCompatActivity {
     private void setupMenuButtons() {
         findViewById(R.id.btnMenu).setOnClickListener(v -> openSideMenu());
         findViewById(R.id.btnCloseMenu).setOnClickListener(v -> closeSideMenu());
-        sideMenuOverlay.setOnClickListener(v -> closeSideMenu());
 
-        findViewById(R.id.btnMenu1).setOnClickListener(v -> { closeSideMenu(); startActivity(new Intent(this, PlantingRecommendationActivity.class)); });
-        findViewById(R.id.btnMenu2).setOnClickListener(v -> { closeSideMenu(); startActivity(new Intent(this, WeatherActivity.class)); });
+        findViewById(R.id.btnMenu1).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, PlantingRecommendationActivity.class));
+        });
+        findViewById(R.id.btnMenu2).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, WeatherActivity.class));
+        });
         findViewById(R.id.btnMenu3).setOnClickListener(v -> showDeleteAllConfirmationDialog());
-        findViewById(R.id.btnMenu4).setOnClickListener(v -> { closeSideMenu(); startActivity(new Intent(this, AreasActivity.class)); });
+        findViewById(R.id.btnMenu4).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, AreasActivity.class));
+        });
         findViewById(R.id.btnMenu5).setOnClickListener(v -> logout());
-        findViewById(R.id.btnMenu6).setOnClickListener(v -> { closeSideMenu(); startActivity(new Intent(this, WeatherStatsActivity.class)); });
-        findViewById(R.id.btnMenu7).setOnClickListener(v -> { closeSideMenu(); startActivity(new Intent(this, CompatibilityActivity.class)); });
-        findViewById(R.id.btnMenu8).setOnClickListener(v -> { closeSideMenu(); startActivity(new Intent(this, SupportListActivity.class)); });
-        findViewById(R.id.btnMenu9).setOnClickListener(v -> { closeSideMenu(); startActivity(new Intent(this, UserCropsActivity.class)); });
+        findViewById(R.id.btnMenu6).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, WeatherStatsActivity.class));
+        });
+        findViewById(R.id.btnMenu7).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, CompatibilityActivity.class));
+        });
+        findViewById(R.id.btnMenu8).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, SupportListActivity.class));
+        });
+        findViewById(R.id.btnMenu9).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, UserCropsActivity.class));
+        });
     }
 
     private void showDeleteAllConfirmationDialog() {
@@ -215,23 +231,25 @@ public class PlantsActivity extends AppCompatActivity {
                 .setTitle("Удаление")
                 .setMessage("Очистить вашу коллекцию?")
                 .setPositiveButton("Да", (d, w) -> deleteAllPlants())
-                .setNegativeButton("Нет", null).show();
+                .setNegativeButton("Нет", null)
+                .show();
     }
 
     private void deleteAllPlants() {
         apiService.deleteAllUserCrops(prefsHelper.getUser().getId()).enqueue(new Callback<java.util.Map<String, Object>>() {
             @Override
-            public void onResponse(Call<java.util.Map<String, Object>> call, Response<java.util.Map<String, Object>> response) {
+            public void onResponse(@NonNull Call<java.util.Map<String, Object>> call, @NonNull Response<java.util.Map<String, Object>> response) {
                 if (response.isSuccessful()) {
-                    synchronized (this) {
-                        combinedList.clear();
-                        originalPlants.clear();
-                    }
+                    combinedList.clear();
                     adapter.updateData(combinedList);
                     closeSideMenu();
+                    Toast.makeText(PlantsActivity.this, "Все растения удалены", Toast.LENGTH_SHORT).show();
                 }
             }
-            @Override public void onFailure(Call<java.util.Map<String, Object>> call, Throwable t) {}
+            @Override
+            public void onFailure(@NonNull Call<java.util.Map<String, Object>> call, @NonNull Throwable t) {
+                Toast.makeText(PlantsActivity.this, "Ошибка удаления: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -254,13 +272,8 @@ public class PlantsActivity extends AppCompatActivity {
     private void closeSideMenu() {
         isMenuOpen = false;
         findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
-        sideMenuOverlay.animate().alpha(0f).setDuration(300).withEndAction(() -> sideMenuOverlay.setVisibility(View.GONE));
+        sideMenuOverlay.animate().alpha(0f).setDuration(300)
+                .withEndAction(() -> sideMenuOverlay.setVisibility(View.GONE));
         sideMenu.animate().translationX(sideMenu.getWidth()).setDuration(300);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        loadAllData();
     }
 }

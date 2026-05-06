@@ -202,6 +202,8 @@ public class AddPlantActivityUser extends AppCompatActivity {
 
         crop.setDaysToGermination(parseViewInt(etGermination));
         crop.setDaysToHarvest(parseViewInt(etHarvest));
+
+        // ИНТЕРВАЛЫ УХОДА - ВАЖНО! Добавьте эти строки:
         crop.setWateringInterval(parseViewInt(etWatering));
         crop.setFertilizingInterval(parseViewInt(etFertilizing));
         crop.setSoilCareInterval(parseViewInt(etSoilCare));
@@ -214,13 +216,21 @@ public class AddPlantActivityUser extends AppCompatActivity {
             @Override
             public void onResponse(Call<IndividualUserCrop> call, Response<IndividualUserCrop> response) {
                 if (response.isSuccessful()) {
-                    Toast.makeText(AddPlantActivityUser.this, "Данные сохранены", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AddPlantActivityUser.this,
+                            editingCropId == null ? "Растение добавлено" : "Изменения сохранены",
+                            Toast.LENGTH_SHORT).show();
                     finish();
+                } else {
+                    Toast.makeText(AddPlantActivityUser.this,
+                            "Ошибка сохранения: " + response.code(),
+                            Toast.LENGTH_SHORT).show();
                 }
             }
             @Override
             public void onFailure(Call<IndividualUserCrop> call, Throwable t) {
-                Toast.makeText(AddPlantActivityUser.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+                Toast.makeText(AddPlantActivityUser.this,
+                        "Ошибка сети: " + t.getMessage(),
+                        Toast.LENGTH_SHORT).show();
             }
         };
 
@@ -271,6 +281,15 @@ public class AddPlantActivityUser extends AppCompatActivity {
         if (crop.getFertilizingInterval() != null) etFertilizing.setText(String.valueOf(crop.getFertilizingInterval()));
         if (crop.getSoilCareInterval() != null) etSoilCare.setText(String.valueOf(crop.getSoilCareInterval()));
         if (crop.getProtectionInterval() != null) etProtection.setText(String.valueOf(crop.getProtectionInterval()));
+
+        if (crop.getWateringInterval() != null)
+            etWatering.setText(String.valueOf(crop.getWateringInterval()));
+        if (crop.getFertilizingInterval() != null)
+            etFertilizing.setText(String.valueOf(crop.getFertilizingInterval()));
+        if (crop.getSoilCareInterval() != null)
+            etSoilCare.setText(String.valueOf(crop.getSoilCareInterval()));
+        if (crop.getProtectionInterval() != null)
+            etProtection.setText(String.valueOf(crop.getProtectionInterval()));
 
         cbCanSeedlings.setChecked(crop.getCanSeedlings());
         cbCanDirectSow.setChecked(crop.getCanDirectSow());

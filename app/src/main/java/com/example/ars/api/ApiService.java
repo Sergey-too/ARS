@@ -34,7 +34,7 @@ import retrofit2.http.Query;
 
 public interface ApiService {
 
-    // Аутентификация
+    // Auth endpoints
     @POST("/api/auth/login")
     Call<AuthResponse> login(@Body LoginRequest loginRequest);
 
@@ -47,14 +47,13 @@ public interface ApiService {
     @GET("/api/auth/profile")
     Call<User> getProfile(@Header("Authorization") String token);
 
-    // Регионы и погода
+    // Weather endpoints
     @GET("/api/weather/regions")
     Call<List<Region>> getRegions();
 
     @GET("/api/weather/android/{regionName}")
     Call<WeatherResponse> getWeatherForRegion(@Path("regionName") String regionName);
 
-    // НОВЫЙ МЕТОД: получить ВСЕ данные по региону для админки
     @GET("/api/weather/admin/all/{regionName}")
     Call<WeatherResponse> getAllWeatherForRegion(@Path("regionName") String regionName);
 
@@ -64,35 +63,18 @@ public interface ApiService {
     @GET("/api/weather/test-data")
     Call<String> addTestWeatherData();
 
-    // 1. Получить все категории
-    @GET("/api/categories")
-    Call<List<Category>> getCategories();
+    @GET("/api/weather/compare/{regionId}")
+    Call<List<WeatherComparisonDTO>> getWeatherComparison(@Path("regionId") Long regionId);
 
-    // 2. Получить растения по названию категории
-    @GET("/api/crops/by-category/{categoryName}")
-    Call<List<Crop>> getCropsByCategory(@Path("categoryName") String categoryName);
+    @GET("/api/weather/all")
+    Call<List<WeatherData>> getAllWeather();
 
-    // 3. Получить растения пользователя
-    @GET("/api/crops/user/{userId}")
-    Call<List<UserCrop>> getUserCrops(@Path("userId") Integer userId);
+    @DELETE("/api/weather/{id}")
+    Call<Void> deleteWeather(@Path("id") Integer id);
 
-    // 4. Добавить растение пользователю
-    @POST("/api/crops/user/add")
-    Call<Map<String, Object>> addUserCrop(@Body Map<String, Object> request);
+    @GET("/api/weather/region/{regionId}")
+    Call<WeatherResponse> getWeatherByRegionId(@Path("regionId") int regionId);
 
-    // 5. Загрузка фото растения
-    @Multipart
-    @POST("/api/files/upload/crop")
-    Call<String> uploadCropImage(
-            @Part MultipartBody.Part file,
-            @Part("category") RequestBody category
-    );
-
-    // 6. Получить растение по ID (для детальной страницы)
-    @GET("/api/crops/{id}")
-    Call<Crop> getCropById(@Path("id") Integer id);
-
-    // Удаление данных о погоде
     @DELETE("/api/weather/delete/{id}")
     Call<DeleteResponse> deleteWeatherById(@Path("id") Integer id);
 
@@ -101,98 +83,9 @@ public interface ApiService {
             @Query("date") String date,
             @Query("regionName") String regionName);
 
-    // 7. Добавить новое растение
-    @POST("/api/crops")
-    Call<Crop> addCrop(@Body Crop crop);
-
-    // 8. Обновить растение
-    @PUT("/api/crops/{id}")
-    Call<Crop> updateCrop(@Path("id") Integer id, @Body Crop crop);
-
-    // 9. Удалить растение
-    @DELETE("/api/crops/{id}")
-    Call<Void> deleteCrop(@Path("id") Integer id);
-
-    @DELETE("/api/crops/user/{userId}/{cropId}")
-    Call<Map<String, Object>> deleteUserCrop(
-            @Path("userId") Integer userId,
-            @Path("cropId") Integer cropId);
-
-    @DELETE("/api/crops/user/all/{userId}")
-    Call<Map<String, Object>> deleteAllUserCrops(@Path("userId") Integer userId);
-
-    @GET("/api/areas/user/{userId}")
-    Call<List<Area>> getUserAreas(@Path("userId") Integer userId);
-
-    @POST("/api/areas/add")
-    Call<Map<String, Object>> addArea(@Body Map<String, Object> request);
-
-    @PUT("/api/areas/update/{id}")
-    Call<Map<String, Object>> updateArea(@Path("id") Integer areaId, @Body Map<String, Object> request);
-    @DELETE("/api/areas/delete/{id}")
-    Call<Map<String, Object>> deleteArea(@Path("id") Integer areaId);
-
-    @GET("/api/weather/compare/{regionId}")
-    Call<List<WeatherComparisonDTO>> getWeatherComparison(@Path("regionId") Long regionId);
-    @GET("/api/weather/regions")
-    Call<List<Region>> getAllRegions();
-
-    @GET("api/crops/compatibility")
-    Call<List<CompatibilityDTO>> getCompatibilityMatrix();
-
-    @GET("api/support/user/{userId}")
-    Call<List<SupportRequest>> getUserRequests(@Path("userId") Integer userId);
-
-    @POST("api/support")
-    Call<SupportRequest> createSupportRequest(@Body SupportRequest request);
-
-    @PUT("api/support/{id}")
-    Call<SupportRequest> updateSupportRequest(@Path("id") Integer id, @Body SupportRequest request);
-
-    @DELETE("api/support/{id}")
-    Call<Void> deleteSupportRequest(@Path("id") Integer id);
-
-    @GET("api/crops")
-    Call<List<Crop>> getAllCrops();
-
-    @GET("api/users")
-    Call<List<User>> getAllUsers();
-
-    @PUT("api/users/{id}/toggle-admin")
-    Call<Void> toggleAdmin(@Path("id") int userId);
-
-    @PUT("api/users/{id}/toggle-ban")
-    Call<Void> toggleBan(@Path("id") int userId);
-
-    @PUT("api/users/{id}")
-    Call<Void> updateUser(@Path("id") int userId, @Body User user);
-
-    @POST("api/regions")
-    Call<Region> createRegion(@Body Region region);
-
-    @PUT("api/regions/{id}")
-    Call<Region> updateRegion(@Path("id") Long id, @Body Region region);
-
-    @GET("api/my-crops/user/{userId}")
-    Call<List<IndividualUserCrop>> getIndividualUserCrops(@Path("userId") Integer userId);
-
-    @GET("api/my-crops/{id}")
-    Call<IndividualUserCrop> getUserCropById(@Path("id") Integer id);
-
-    @POST("api/my-crops")
-    Call<IndividualUserCrop> createUserCrop(@Body IndividualUserCrop crop);
-
-    @PUT("api/my-crops/{id}")
-    Call<IndividualUserCrop> updateUserCrop(@Path("id") Integer id, @Body IndividualUserCrop crop);
-
-    @DELETE("api/my-crops/{id}")
-    Call<Void> deleteUserCrop(@Path("id") Integer id);
-
-    @GET("api/my-crops/user/{userId}")
-    Call<List<UserCrop>> getIndividualCrops(@Path("userId") int userId);
-
-    @DELETE("api/regions/{id}")
-    Call<Void> deleteRegion(@Path("id") Long id);
+    // Categories endpoints
+    @GET("/api/categories")
+    Call<List<Category>> getCategories();
 
     @POST("/api/categories")
     Call<Category> createCategory(@Body Category category);
@@ -203,14 +96,118 @@ public interface ApiService {
     @DELETE("/api/categories/{id}")
     Call<Void> deleteCategory(@Path("id") Integer id);
 
-    @GET("api/weather/all")
-    Call<List<WeatherData>> getAllWeather();
+    // Crops (system) endpoints
+    @GET("/api/crops")
+    Call<List<Crop>> getAllCrops();
 
-    @DELETE("api/weather/{id}")
-    Call<Void> deleteWeather(@Path("id") Integer id);
+    @GET("/api/crops/{id}")
+    Call<Crop> getCropById(@Path("id") Integer id);
 
-    @GET("api/weather/region/{regionId}")
-    Call<WeatherResponse> getWeatherByRegionId(@Path("regionId") int regionId);
+    @GET("/api/crops/by-category/{categoryName}")
+    Call<List<Crop>> getCropsByCategory(@Path("categoryName") String categoryName);
+
+    @POST("/api/crops")
+    Call<Crop> addCrop(@Body Crop crop);
+
+    @PUT("/api/crops/{id}")
+    Call<Crop> updateCrop(@Path("id") Integer id, @Body Crop crop);
+
+    @DELETE("/api/crops/{id}")
+    Call<Void> deleteCrop(@Path("id") Integer id);
+
+    @GET("/api/crops/compatibility")
+    Call<List<CompatibilityDTO>> getCompatibilityMatrix();
+
+    // User Crops (planted in garden)
+    @GET("/api/crops/user/{userId}")
+    Call<List<UserCrop>> getUserCrops(@Path("userId") Integer userId);
+
+    @POST("/api/crops/user/add")
+    Call<Map<String, Object>> addUserCrop(@Body Map<String, Object> request);
+
+    @DELETE("/api/crops/user/{userId}/{cropId}")
+    Call<Map<String, Object>> deleteUserCrop(
+            @Path("userId") Integer userId,
+            @Path("cropId") Integer cropId);
+
+    @DELETE("/api/crops/user/all/{userId}")
+    Call<Map<String, Object>> deleteAllUserCrops(@Path("userId") Integer userId);
+
+    // Individual User Crops
+    @GET("/api/my-crops/user/{userId}")
+    Call<List<IndividualUserCrop>> getIndividualUserCrops(@Path("userId") Integer userId);
+
+    @GET("/api/my-crops/{id}")
+    Call<IndividualUserCrop> getUserCropById(@Path("id") int id);
+
+    @POST("/api/my-crops")
+    Call<IndividualUserCrop> createUserCrop(@Body IndividualUserCrop crop);
+
+    @PUT("/api/my-crops/{id}")
+    Call<IndividualUserCrop> updateUserCrop(@Path("id") int id, @Body IndividualUserCrop crop);
+
+    @DELETE("/api/my-crops/{id}")
+    Call<Void> deleteUserCrop(@Path("id") int id);
+
+    // Areas
+    @GET("/api/areas/user/{userId}")
+    Call<List<Area>> getUserAreas(@Path("userId") Integer userId);
+
+    @POST("/api/areas/add")
+    Call<Map<String, Object>> addArea(@Body Map<String, Object> request);
+
+    @PUT("/api/areas/update/{id}")
+    Call<Map<String, Object>> updateArea(@Path("id") Integer areaId, @Body Map<String, Object> request);
+
+    @DELETE("/api/areas/delete/{id}")
+    Call<Map<String, Object>> deleteArea(@Path("id") Integer areaId);
+
+    // Regions
+    @GET("/api/regions")
+    Call<List<Region>> getAllRegions();
+
+    @POST("/api/regions")
+    Call<Region> createRegion(@Body Region region);
+
+    @PUT("/api/regions/{id}")
+    Call<Region> updateRegion(@Path("id") Long id, @Body Region region);
+
+    @DELETE("/api/regions/{id}")
+    Call<Void> deleteRegion(@Path("id") Long id);
+
+    // Support
+    @GET("/api/support/user/{userId}")
+    Call<List<SupportRequest>> getUserRequests(@Path("userId") Integer userId);
+
+    @POST("/api/support")
+    Call<SupportRequest> createSupportRequest(@Body SupportRequest request);
+
+    @PUT("/api/support/{id}")
+    Call<SupportRequest> updateSupportRequest(@Path("id") Integer id, @Body SupportRequest request);
+
+    @DELETE("/api/support/{id}")
+    Call<Void> deleteSupportRequest(@Path("id") Integer id);
+
+    // Users (admin)
+    @GET("/api/users")
+    Call<List<User>> getAllUsers();
+
+    @PUT("/api/users/{id}/toggle-admin")
+    Call<Void> toggleAdmin(@Path("id") int userId);
+
+    @PUT("/api/users/{id}/toggle-ban")
+    Call<Void> toggleBan(@Path("id") int userId);
+
+    @PUT("/api/users/{id}")
+    Call<Void> updateUser(@Path("id") int userId, @Body User user);
+
+    @Multipart
+    @POST("/api/files/upload/crop")
+    Call<String> uploadCropImage(
+            @Part MultipartBody.Part file,
+            @Part("category") RequestBody category
+    );
+
     class LoginRequest {
         private String identifier;
         private String password;
