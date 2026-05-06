@@ -10,13 +10,18 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.AuthResponse;
+import com.example.ars.models.User;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.gson.Gson;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -38,60 +43,53 @@ public class LoginActivity extends AppCompatActivity {
 
         mainHandler = new Handler(Looper.getMainLooper());
 
-        checkAuthInBackground();
+        prefsHelper = new SharedPreferencesHelper(this);
 
+        // Проверяем, был ли уже вход
+        if (prefsHelper.isLoggedIn() && prefsHelper.getToken() != null) {
+            User user = prefsHelper.getUser();
+            if (user != null && user.getIsAdmin()) {
+                startActivity(new Intent(this, AdminDashboardActivity.class));
+            } else if (user != null) {
+                startActivity(new Intent(this, PlantsActivity.class));
+            }
+            finish();
+            return;
+        }
+
+        initializeRetrofit();
         initViews();
         setupClickListeners();
     }
 
-    private void checkAuthInBackground() {
-        new Thread(() -> {
-            prefsHelper = new SharedPreferencesHelper(LoginActivity.this);
-
-            mainHandler.post(this::initializeRetrofit);
-        }).start();
-    }
-
     private void initializeRetrofit() {
-        if (prefsHelper == null) {
-            prefsHelper = new SharedPreferencesHelper(this);
-        }
         RetrofitClient.initialize(prefsHelper);
         apiService = RetrofitClient.getApiService();
         Log.d(TAG, "Retrofit initialized");
     }
 
     private void initViews() {
-        // Изменяем имена переменных для логина
-        etIdentifier = findViewById(R.id.etEmail); // Используем существующий ID
+        etIdentifier = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
-        tilIdentifier = findViewById(R.id.tilEmail); // Используем существующий ID
+        tilIdentifier = findViewById(R.id.tilEmail);
         tilPassword = findViewById(R.id.tilPassword);
         btnLogin = findViewById(R.id.btnLogin);
 
-        // Меняем подсказки для поля идентификатора
         tilIdentifier.setHint("Логин или email");
         tilIdentifier.setHelperText("Введите ваш логин или email");
 
-        // Устанавливаем слушатели для скрытия ошибок при вводе
         etIdentifier.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                tilIdentifier.setError(null);
-            }
+            if (hasFocus) tilIdentifier.setError(null);
         });
 
         etPassword.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                tilPassword.setError(null);
-            }
+            if (hasFocus) tilPassword.setError(null);
         });
     }
 
     private void setupClickListeners() {
         btnLogin.setOnClickListener(v -> {
-            // Скрываем клавиатуру перед валидацией
             hideKeyboard();
-            // Запускаем валидацию с небольшой задержкой для плавности
             mainHandler.postDelayed(this::attemptLogin, 100);
         });
 
@@ -115,22 +113,19 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void attemptLogin() {
-        // Сбрасываем ошибки
         tilIdentifier.setError(null);
         tilPassword.setError(null);
 
-        String identifier = etIdentifier.getText().toString().trim(); // Используем identifier вместо email
+        String identifier = etIdentifier.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
         boolean hasError = false;
 
-        // Валидация идентификатора (логин или email)
         if (TextUtils.isEmpty(identifier)) {
             tilIdentifier.setError("Введите логин или email");
             hasError = true;
         }
 
-        // Валидация пароля
         if (TextUtils.isEmpty(password)) {
             tilPassword.setError("Введите пароль");
             hasError = true;
@@ -143,47 +138,16 @@ public class LoginActivity extends AppCompatActivity {
             performLogin(identifier, password);
         }
     }
-    private boolean isAdminCredentials(String identifier, String password) {
-        String username = identifier.toLowerCase().trim();
 
-        // Проверяем известные админские учетки
-        String[] adminLogins = {"admin", "administrator", "админ", "администратор"};
-        String adminPassword = "admin123"; // или любой другой пароль
-
-        for (String adminLogin : adminLogins) {
-            if (username.equals(adminLogin) && password.equals(adminPassword)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
     private void performLogin(String identifier, String password) {
         btnLogin.setEnabled(false);
         btnLogin.setText("Вход...");
 
-        // ПРОСТАЯ ПРОВЕРКА ДЛЯ ЛОКАЛЬНОГО АДМИНА
-        if (isAdminCredentials(identifier, password)) {
-            // Генерируем токен для админа
-            generateAdminToken(identifier);
-
-            Log.d(TAG, "Локальный админ вошел. is_admin сохранен: true");
-
-            Intent intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
-            startActivity(intent);
-            finish();
-            return;
-        }
-
-        // Проверяем инициализацию Retrofit
         if (apiService == null) {
             initializeRetrofit();
         }
 
-        // Используем LoginRequest с identifier (может быть логин или email)
         ApiService.LoginRequest loginRequest = new ApiService.LoginRequest(identifier, password);
-
-        Log.d(TAG, "Attempting login for identifier: " + identifier);
 
         apiService.login(loginRequest).enqueue(new Callback<AuthResponse>() {
             @Override
@@ -195,70 +159,35 @@ public class LoginActivity extends AppCompatActivity {
                     if (response.isSuccessful() && response.body() != null) {
                         AuthResponse authResponse = response.body();
 
-                        if (authResponse.isSuccess()) {
-                            // Сохраняем данные
+                        if (authResponse.isSuccess() && authResponse.getUser() != null) {
+                            User user = authResponse.getUser();
+
+                            if (user.getInBan()) {
+                                Toast.makeText(LoginActivity.this,
+                                        "Ваш аккаунт заблокирован. Обратитесь к администратору.",
+                                        Toast.LENGTH_LONG).show();
+                                return;
+                            }
+
                             prefsHelper.saveToken(authResponse.getToken());
-                            prefsHelper.saveUser(authResponse.getUser());
+                            prefsHelper.saveUser(user);
                             prefsHelper.setLoggedIn(true);
 
-                            // ПРОСТО ПРОВЕРЯЕМ ПО ЛОГИНУ В АНДРОИДЕ
-                            String username = identifier.toLowerCase().trim();
-
-                            // Если логин содержит "admin" - считаем админом
-                            boolean isAdmin = username.contains("admin") ||
-                                    username.equals("administrator") ||
-                                    username.equals("администратор");
-
-                            // Сохраняем флаг админа В ДВАХ МЕСТАХ
-                            // 1. В SharedPreferencesHelper (если он используется)
-                            // 2. В обычных SharedPreferences (для простой проверки)
-
-                            SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
-                            SharedPreferences.Editor editor = prefs.edit();
-                            editor.putBoolean("is_admin", isAdmin);
-                            editor.putString("username", identifier);
-                            editor.putString("login_time", String.valueOf(System.currentTimeMillis()));
-                            editor.apply(); // ВАЖНО: apply() а не commit()
-
-                            Log.d(TAG, "Серверный логин. is_admin сохранен: " + isAdmin +
-                                    " для пользователя: " + identifier);
-                            Log.d(TAG, "Все настройки после сохранения: " + prefs.getAll());
-
-                            if (isAdmin) {
-                                // В админку
+                            if (user.getIsAdmin()) {
                                 Intent intent = new Intent(LoginActivity.this, AdminDashboardActivity.class);
                                 startActivity(intent);
                             } else {
-                                // В основное приложение
                                 Intent intent = new Intent(LoginActivity.this, PlantsActivity.class);
                                 startActivity(intent);
                             }
                             finish();
                         } else {
-                            Toast.makeText(LoginActivity.this,
-                                    "Ошибка авторизации: " + authResponse.getError(),
-                                    Toast.LENGTH_LONG).show();
+                            String errorMsg = authResponse.getError() != null ?
+                                    authResponse.getError() : "Неверный логин или пароль";
+                            Toast.makeText(LoginActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                         }
                     } else {
-                        String errorMsg = "Ошибка сервера: " + response.code();
-                        Log.e(TAG, errorMsg);
-
-                        if (response.errorBody() != null) {
-                            try {
-                                String errorBody = response.errorBody().string();
-                                errorMsg = errorBody;
-                                Log.e(TAG, "Error body: " + errorBody);
-                            } catch (Exception e) {
-                                Log.e(TAG, "Error parsing error body", e);
-                            }
-                        }
-
-                        // Проверяем доступность сервера
-                        if (response.code() == 404 || response.code() == 500) {
-                            errorMsg = "Сервер недоступен. Проверьте подключение и URL";
-                        }
-
-                        Toast.makeText(LoginActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                        handleErrorResponse(response);
                     }
                 });
             }
@@ -268,66 +197,27 @@ public class LoginActivity extends AppCompatActivity {
                 mainHandler.post(() -> {
                     btnLogin.setEnabled(true);
                     btnLogin.setText("Войти");
-
-                    Log.e(TAG, "Login network error: " + t.getMessage(), t);
-
-                    String errorMsg = "Ошибка сети: " + t.getMessage();
-
-                    // Более понятные сообщения об ошибках
-                    if (t instanceof java.net.ConnectException) {
-                        errorMsg = "Не удается подключиться к серверу. Проверьте:\n" +
-                                "1. Запущен ли сервер Spring\n" +
-                                "2. Правильный ли IP адрес (10.0.2.2 для эмулятора)\n" +
-                                "3. Открыт ли порт 8080";
-
-                        // Предлагаем локальный вход для админа
-                        errorMsg += "\n\nДля локального доступа используйте:\nЛогин: admin\nПароль: admin123";
-                    } else if (t instanceof java.net.SocketTimeoutException) {
-                        errorMsg = "Таймаут подключения. Сервер не отвежает";
-                    }
-
-                    Toast.makeText(LoginActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                    Toast.makeText(LoginActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_LONG).show();
                 });
             }
         });
     }
-    @Override
-    public void onBackPressed() {
-        // При нажатии назад просто закрываем LoginActivity
-        super.onBackPressed();
-        finish();
-    }
 
-    private void generateAdminToken(String identifier) {
-        // Генерируем токен для админа
-        long timestamp = System.currentTimeMillis();
-        String adminToken = "token_" + identifier + "_admin_" + timestamp;
-
-        Log.d(TAG, "Сгенерирован токен админа: " + adminToken);
-
-        // Сохраняем токен и данные пользователя
-        prefsHelper.saveToken(adminToken);
-
-        // Создаем объект пользователя-админа
-        com.example.ars.models.User adminUser = new com.example.ars.models.User();
-        adminUser.setId(1); // ID админа
-        adminUser.setName("Администратор");
-        adminUser.setLogin(identifier);
-        adminUser.setEmail(identifier.contains("@") ? identifier : identifier + "@admin.local");
-
-        // Сохраняем пользователя
-        prefsHelper.saveUser(adminUser);
-        prefsHelper.setLoggedIn(true);
-
-        // Сохраняем флаг админа
-        SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean("is_admin", true);
-        editor.putString("username", identifier);
-        editor.putString("user_role", "admin");
-        editor.apply();
-
-        Log.d(TAG, "Админ авторизован с токеном: " + adminToken);
+    private void handleErrorResponse(Response<AuthResponse> response) {
+        try {
+            if (response.errorBody() != null) {
+                String errorBody = response.errorBody().string();
+                if (errorBody.contains("banned") || errorBody.contains("заблокирован")) {
+                    Toast.makeText(LoginActivity.this, "Аккаунт заблокирован", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(LoginActivity.this, "Ошибка: " + errorBody, Toast.LENGTH_LONG).show();
+                }
+            } else {
+                Toast.makeText(LoginActivity.this, "Ошибка сервера: " + response.code(), Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(LoginActivity.this, "Ошибка сервера", Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override

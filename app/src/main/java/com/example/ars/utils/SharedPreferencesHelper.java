@@ -10,6 +10,8 @@ public class SharedPreferencesHelper {
     private static final String KEY_TOKEN = "auth_token";
     private static final String KEY_USER = "user_data";
     private static final String KEY_IS_LOGGED_IN = "is_logged_in";
+    private static final String KEY_LAST_USER_ID = "last_user_id";
+    private static final String KEY_LAST_LOGIN = "last_login";
 
     private SharedPreferences preferences;
     private Gson gson;
@@ -19,7 +21,6 @@ public class SharedPreferencesHelper {
         gson = new Gson();
     }
 
-    // Токен
     public void saveToken(String token) {
         preferences.edit().putString(KEY_TOKEN, token).apply();
     }
@@ -32,10 +33,13 @@ public class SharedPreferencesHelper {
         preferences.edit().remove(KEY_TOKEN).apply();
     }
 
-    // Данные пользователя
     public void saveUser(User user) {
         String userJson = gson.toJson(user);
         preferences.edit().putString(KEY_USER, userJson).apply();
+        if (user != null && user.getId() != null) {
+            saveLastUserId(user.getId());
+            saveLastLogin(String.valueOf(System.currentTimeMillis()));
+        }
     }
 
     public User getUser() {
@@ -50,7 +54,6 @@ public class SharedPreferencesHelper {
         preferences.edit().remove(KEY_USER).apply();
     }
 
-    // Статус авторизации
     public void setLoggedIn(boolean isLoggedIn) {
         preferences.edit().putBoolean(KEY_IS_LOGGED_IN, isLoggedIn).apply();
     }
@@ -59,7 +62,30 @@ public class SharedPreferencesHelper {
         return preferences.getBoolean(KEY_IS_LOGGED_IN, false);
     }
 
-    // Очистить все данные
+    public void saveLastUserId(int userId) {
+        preferences.edit().putInt(KEY_LAST_USER_ID, userId).apply();
+    }
+
+    public int getLastUserId() {
+        return preferences.getInt(KEY_LAST_USER_ID, -1);
+    }
+
+    public void saveLastLogin(String timestamp) {
+        preferences.edit().putString(KEY_LAST_LOGIN, timestamp).apply();
+    }
+
+    public String getLastLogin() {
+        return preferences.getString(KEY_LAST_LOGIN, null);
+    }
+
+    public void saveIsAdmin(boolean isAdmin) {
+        preferences.edit().putBoolean("is_admin", isAdmin).apply();
+    }
+
+    public boolean isAdmin() {
+        return preferences.getBoolean("is_admin", false);
+    }
+
     public void clearAll() {
         preferences.edit().clear().apply();
     }

@@ -12,6 +12,7 @@ import com.example.ars.models.SupportRequest;
 import com.example.ars.models.User;
 import com.example.ars.models.UserCrop;
 import com.example.ars.models.WeatherComparisonDTO;
+import com.example.ars.models.WeatherData;
 import com.example.ars.models.WeatherResponse;
 
 import java.util.List;
@@ -201,6 +202,15 @@ public interface ApiService {
 
     @DELETE("/api/categories/{id}")
     Call<Void> deleteCategory(@Path("id") Integer id);
+
+    @GET("api/weather/all")
+    Call<List<WeatherData>> getAllWeather();
+
+    @DELETE("api/weather/{id}")
+    Call<Void> deleteWeather(@Path("id") Integer id);
+
+    @GET("api/weather/region/{regionId}")
+    Call<WeatherResponse> getWeatherByRegionId(@Path("regionId") int regionId);
     class LoginRequest {
         private String identifier;
         private String password;

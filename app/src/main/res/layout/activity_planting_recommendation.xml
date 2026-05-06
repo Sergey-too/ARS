@@ -1,95 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@drawable/bg_gradient_green"
+    tools:context=".PlantingRecommendationActivity">
 
-    <!-- Шапка -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/headerSection"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="#4CAF50"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Кнопка назад -->
         <ImageView
-            android:id="@+id/btnBack"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_arrow_back"
-            android:tint="#FFFFFF"
-            android:background="?attr/selectableItemBackground"
-            android:padding="12dp" />
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginBottom="8dp"
+            android:src="@drawable/ic_plant"
+            app:tint="@color/color_text_white" />
 
-        <!-- Заголовок -->
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="Рекомендации по посадке"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center" />
-
-        <!-- Пустой элемент для выравнивания -->
-        <View
-            android:layout_width="48dp"
-            android:layout_height="48dp" />
-
+            android:textColor="@color/color_text_white"
+            android:textSize="24sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Заголовок результатов -->
-    <TextView
-        android:id="@+id/tvResultsTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Результаты анализа"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#000000"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:visibility="gone" />
-
-    <!-- Сообщение, когда нет результатов -->
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Загружаем данные..."
-        android:textSize="16sp"
-        android:textColor="#666666"
-        android:gravity="center"
-        android:padding="32dp"
-        android:visibility="visible" />
-
-    <!-- RecyclerView для списка рекомендаций -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvRecommendations"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+    <ImageView
+        android:id="@+id/btnBack"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_margin="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:padding="8dp"
-        android:clipToPadding="false"
-        android:visibility="gone" />
+        android:src="@drawable/ic_arrow_back"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/color_text_white" />
 
-    <!-- Кнопка обновления -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/mainCard"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="@color/color_surface_white"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/headerSection"
+        app:layout_constraintWidth_percent="0.94">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvResultsTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Рекомендуемые дни для посадки"
+                android:textColor="@color/color_text_dark"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tvEmpty"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:gravity="center"
+                android:padding="32dp"
+                android:text="Анализируем условия для ваших участков..."
+                android:textColor="@color/color_text_gray"
+                android:textSize="14sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvRecommendations"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginTop="12dp"
+                android:clipToPadding="false"
+                android:paddingBottom="70dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tvResultsTitle" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnRefresh"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:text="Обновить прогноз"
-        android:textAllCaps="false"
-        android:textSize="16sp"
-        app:backgroundTint="#4CAF50"
-        android:visibility="gone" />
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_margin="24dp"
+        app:backgroundTint="@color/color_blue_primary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:cornerRadius="28dp"
+        app:icon="@drawable/ic_refresh"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:iconTint="@color/color_button_text_primary"
+        app:elevation="12dp" />
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

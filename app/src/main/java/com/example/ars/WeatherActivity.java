@@ -170,7 +170,7 @@ public class WeatherActivity extends AppCompatActivity {
         // 2. Температура
         if (tvTemp != null) {
             String tempRange = String.format(Locale.getDefault(), "%.1f..%.1f°C",
-                    weather.getTempMin(), weather.getTempMax());
+                    weather.getTemperatureMin(), weather.getTemperatureMax());
             tvTemp.setText(tempRange);
         }
 
@@ -187,7 +187,7 @@ public class WeatherActivity extends AppCompatActivity {
         // 5. Влажность
         if (humidityId != 0 && tvHumidity != null) {
             String humRange = String.format(Locale.getDefault(), "%.0f..%.0f%%",
-                    weather.getHumMin(), weather.getHumMax());
+                    weather.getHumidityMin(), weather.getHumidityMax());
             tvHumidity.setText(humRange);
         }
 

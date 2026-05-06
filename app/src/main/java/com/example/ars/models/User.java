@@ -1,4 +1,3 @@
-// User.java (Android)
 package com.example.ars.models;
 
 import com.google.gson.annotations.SerializedName;
@@ -13,14 +12,11 @@ public class User {
 
     @SerializedName("registration_date")
     private String registrationDate;
-
-    @SerializedName("is_admin")
     private boolean isAdmin;
 
     @SerializedName("in_ban")
     private boolean inBan;
 
-    // Конструкторы
     public User() {}
 
     public User(String name, String email, String password) {
@@ -29,7 +25,6 @@ public class User {
         this.password = password;
     }
 
-    // Геттеры и сеттеры
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

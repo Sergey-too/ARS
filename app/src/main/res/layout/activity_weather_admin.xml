@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient_blue"
+    tools:context=".WeatherAdminActivity">
+
+    <LinearLayout
+        android:id="@+id/headerSection"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginBottom="8dp"
+            android:src="@drawable/ic_weather"
+            app:tint="@color/color_text_white" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Управление погодой"
+            android:textColor="@color/color_text_white"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/btnBack"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_margin="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="8dp"
+        android:src="@drawable/ic_arrow_back"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/color_text_white" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/mainCard"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="@color/color_surface_white"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/headerSection"
+        app:layout_constraintWidth_percent="0.94">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
+
+            <!-- Фильтр по датам -->
+            <TextView
+                android:id="@+id/tvFilterTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Фильтр по датам"
+                android:textColor="@color/color_text_dark"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilDateFrom"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Дата от (ДД.ММ.ГГГГ)"
+                app:boxStrokeColor="@color/color_input_border"
+                app:layout_constraintEnd_toStartOf="@+id/tilDateTo"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tvFilterTitle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etDateFrom"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="date"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilDateTo"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginStart="8dp"
+                android:hint="Дата до (ДД.ММ.ГГГГ)"
+                app:boxStrokeColor="@color/color_input_border"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/tilDateFrom"
+                app:layout_constraintTop_toBottomOf="@+id/tvFilterTitle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etDateTo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="date"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Сортировка и Применить -->
+            <LinearLayout
+                android:id="@+id/llSortButtons"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tilDateFrom">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSortNewest"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:text="Новые ↓"
+                    android:textSize="12sp"
+                    app:iconGravity="textStart"
+                    app:iconPadding="4dp"
+                    app:iconTint="@color/color_green_primary"
+                    app:strokeColor="@color/color_input_border" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSortOldest"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:text="Старые ↓"
+                    android:textSize="12sp"
+                    app:iconGravity="textStart"
+                    app:iconPadding="4dp"
+                    app:iconTint="@color/color_green_primary"
+                    app:strokeColor="@color/color_input_border" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnApplyFilter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:text="Применить"
+                    android:textAllCaps="false"
+                    android:textColor="@color/color_button_text_primary"
+                    android:backgroundTint="@color/color_green_primary"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
+
+            <!-- Количество записей -->
+            <TextView
+                android:id="@+id/tvCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Найдено: -- записей"
+                android:textColor="@color/color_text_gray"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/llSortButtons" />
+
+            <!-- Список -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvWeatherList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="12dp"
+                android:clipToPadding="false"
+                android:paddingBottom="70dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tvCount"
+                tools:listitem="@layout/item_weather_admin" />
+
+            <!-- Пустое состояние -->
+            <LinearLayout
+                android:id="@+id/llEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@+id/rvWeatherList"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/rvWeatherList">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Нет данных о погоде"
+                    android:textColor="@color/color_text_gray"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/rvWeatherList" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,7 +2,11 @@ package com.example.ars;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.ars.models.User;
 import com.example.ars.utils.SharedPreferencesHelper;
 
 public abstract class BaseActivity extends AppCompatActivity {
@@ -15,15 +19,41 @@ public abstract class BaseActivity extends AppCompatActivity {
 
         if (requiresAuth() && !isLoggedIn()) {
             redirectToLogin();
+            return;
+        }
+
+        if (requiresAdmin() && !isAdmin()) {
+            Toast.makeText(this, "Доступ запрещён. Требуются права администратора.", Toast.LENGTH_LONG).show();
+            redirectToLogin();
+            return;
+        }
+
+        if (isBanned()) {
+            Toast.makeText(this, "Ваш аккаунт заблокирован.", Toast.LENGTH_LONG).show();
+            redirectToLogin();
         }
     }
 
     protected boolean requiresAuth() {
+        return true;
+    }
+
+    protected boolean requiresAdmin() {
         return false;
     }
 
     protected boolean isLoggedIn() {
         return prefsHelper.isLoggedIn() && prefsHelper.getToken() != null;
+    }
+
+    protected boolean isAdmin() {
+        User user = prefsHelper.getUser();
+        return user != null && user.getIsAdmin();
+    }
+
+    protected boolean isBanned() {
+        User user = prefsHelper.getUser();
+        return user != null && user.getInBan();
     }
 
     protected void redirectToLogin() {
@@ -37,7 +67,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         return prefsHelper.getToken();
     }
 
-    protected com.example.ars.models.User getCurrentUser() {
+    protected User getCurrentUser() {
         return prefsHelper.getUser();
     }
 

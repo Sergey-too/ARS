@@ -1,4 +1,3 @@
-// AuthResponse.java
 package com.example.ars;
 
 import com.example.ars.models.User;

@@ -3,47 +3,89 @@ package com.example.ars.models;
 import com.google.gson.annotations.SerializedName;
 
 public class WeatherData {
+
+    @SerializedName("id")
+    private Integer id;
+
+    @SerializedName("regionId")
+    private Integer regionId;
+
+    @SerializedName("date")
     private String date;
 
     @SerializedName("temperatureMin")
-    private Double tempMin;
+    private String temperatureMin;
 
     @SerializedName("temperatureMax")
-    private Double tempMax;
+    private String temperatureMax;
 
     @SerializedName("humidityMin")
-    private Double humMin;
+    private String humidityMin;
 
     @SerializedName("humidityMax")
-    private Double humMax;
+    private String humidityMax;
 
     @SerializedName("windMin")
-    private Double windMin;
+    private String windMin;
 
     @SerializedName("windMax")
-    private Double windMax;
+    private String windMax;
 
-    private Double precipitation;
+    @SerializedName("precipitation")
+    private String precipitation;
+
+    @SerializedName("pressure")
     private String pressure;
 
-    // Геттеры
-    public String getDate() { return date; }
-    public Double getTempMin() { return tempMin != null ? tempMin : 0.0; }
-    public Double getTempMax() { return tempMax != null ? tempMax : 0.0; }
-    public Double getHumMin() { return humMin != null ? humMin : 0.0; }
-    public Double getHumMax() { return humMax != null ? humMax : 0.0; }
-    public Double getWindMin() { return windMin != null ? windMin : 0.0; }
-    public Double getWindMax() { return windMax != null ? windMax : 0.0; }
-    public Double getPrecipitation() { return precipitation != null ? precipitation : 0.0; }
-    public String getPressure() { return pressure; }
+    @SerializedName("gustsOfWind")
+    private String gustsOfWind;
 
+    // Геттеры
+    public Integer getId() { return id; }
+    public Integer getRegionId() { return regionId; }
+    public String getDate() { return date; }
+    public String getTemperatureMin() { return temperatureMin != null ? temperatureMin : "0"; }
+    public String getTemperatureMax() { return temperatureMax != null ? temperatureMax : "0"; }
+    public String getHumidityMin() { return humidityMin != null ? humidityMin : "0"; }
+    public String getHumidityMax() { return humidityMax != null ? humidityMax : "0"; }
+    public String getWindMin() { return windMin != null ? windMin : "0"; }
+    public String getWindMax() { return windMax != null ? windMax : "0"; }
+    public String getPrecipitation() { return precipitation != null ? precipitation : "0"; }
+    public String getPressure() { return pressure != null ? pressure : "--"; }
+    public String getGustsOfWind() { return gustsOfWind; }
+
+    // Сеттеры (если нужны)
+    public void setId(Integer id) { this.id = id; }
+    public void setRegionId(Integer regionId) { this.regionId = regionId; }
+    public void setDate(String date) { this.date = date; }
+    public void setTemperatureMin(String temperatureMin) { this.temperatureMin = temperatureMin; }
+    public void setTemperatureMax(String temperatureMax) { this.temperatureMax = temperatureMax; }
+    public void setHumidityMin(String humidityMin) { this.humidityMin = humidityMin; }
+    public void setHumidityMax(String humidityMax) { this.humidityMax = humidityMax; }
+    public void setWindMin(String windMin) { this.windMin = windMin; }
+    public void setWindMax(String windMax) { this.windMax = windMax; }
+    public void setPrecipitation(String precipitation) { this.precipitation = precipitation; }
+    public void setPressure(String pressure) { this.pressure = pressure; }
+    public void setGustsOfWind(String gustsOfWind) { this.gustsOfWind = gustsOfWind; }
+
+    // Форматированные строки для отображения
     public String getTempRange() {
-        return tempMin + "°C - " + tempMax + "°C";
+        return temperatureMin + "° - " + temperatureMax + "°";
     }
+
     public String getHumidityRange() {
-        return humMin + "% - " + humMax + "%";
+        return humidityMin + "% - " + humidityMax + "%";
     }
+
     public String getWindRange() {
         return windMin + " - " + windMax + " м/с";
+    }
+
+    public String getWindPrecipText() {
+        return precipitation + " мм" + windMax + " м/с";
+    }
+
+    public String getPressureText() {
+        return "давление: " + pressure + " мм рт.ст.";
     }
 }
