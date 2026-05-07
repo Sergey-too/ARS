@@ -6,9 +6,11 @@ import com.example.ars.models.Category;
 import com.example.ars.models.CompatibilityDTO;
 import com.example.ars.models.Crop;
 import com.example.ars.models.DeleteResponse;
+import com.example.ars.models.GardenHistory;
 import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.models.Region;
 import com.example.ars.models.SupportRequest;
+import com.example.ars.models.TaskItem;
 import com.example.ars.models.User;
 import com.example.ars.models.UserCrop;
 import com.example.ars.models.WeatherComparisonDTO;
@@ -207,6 +209,23 @@ public interface ApiService {
             @Part MultipartBody.Part file,
             @Part("category") RequestBody category
     );
+
+    //Tasks
+    @POST("/api/history/add")
+    Call<Map<String, Object>> addGardenHistory(@Body Map<String, Object> request);
+
+    @GET("/api/tasks/user/{userId}/weekly")
+    Call<List<TaskItem>> getWeeklyTasks(@Path("userId") Integer userId);
+
+    @GET("/api/history/user/{userId}/planting")
+    Call<List<GardenHistory>> getPlantingHistory(@Path("userId") Integer userId);
+
+    @POST("/api/history/plant")
+    Call<Map<String, Object>> plantCrop(@Body Map<String, Object> request);
+
+    @POST("/api/tasks/complete")
+    Call<Map<String, Object>> completeTask(@Body Map<String, Object> request);
+
 
     class LoginRequest {
         private String identifier;

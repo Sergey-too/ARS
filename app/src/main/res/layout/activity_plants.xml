@@ -234,6 +234,16 @@
                     android:textSize="16sp"
                     app:icon="@drawable/ic_chart_line"/>
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMenu10"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="Список дел"
+                    android:textColor="@color/color_text_dark"
+                    android:textSize="16sp"
+                    app:icon="@drawable/ic_chart_line"/>
+
                 <!-- Кнопка 4 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu7"

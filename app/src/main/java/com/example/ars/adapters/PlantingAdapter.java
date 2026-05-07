@@ -18,6 +18,15 @@ import java.util.List;
 public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHolder> {
 
     private List<PlantingRecommendation> recommendations = new ArrayList<>();
+    private OnPlantClickListener onPlantClickListener;
+
+    public interface OnPlantClickListener {
+        void onPlantClick(PlantingRecommendation item, int position);
+    }
+
+    public void setOnPlantClickListener(OnPlantClickListener listener) {
+        this.onPlantClickListener = listener;
+    }
 
     public void updateData(List<PlantingRecommendation> newRecommendations) {
         this.recommendations.clear();
@@ -45,6 +54,12 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
         holder.tvRegion.setText(rec.getAreaName());
         holder.tvWeather.setText(rec.getWeatherText());
         holder.tvReason.setText(rec.getReason());
+
+        holder.btnPlant.setOnClickListener(v -> {
+            if (onPlantClickListener != null) {
+                onPlantClickListener.onPlantClick(rec, position);
+            }
+        });
     }
 
     @Override

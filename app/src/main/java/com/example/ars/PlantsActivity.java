@@ -33,7 +33,7 @@ public class PlantsActivity extends AppCompatActivity {
     private ApiService apiService;
     private SharedPreferencesHelper prefsHelper;
     private UserPlantAdapter adapter;
-    private boolean isLoading = false; // Флаг для предотвращения дублирования
+    private boolean isLoading = false;
 
     private List<UserPlantAdapter.PlantItem> combinedList = new ArrayList<>();
 
@@ -61,7 +61,6 @@ public class PlantsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Перезагружаем данные при возврате
         loadAllData();
     }
 
@@ -101,12 +100,11 @@ public class PlantsActivity extends AppCompatActivity {
 
     private void loadAllData() {
         if (prefsHelper.getUser() == null) return;
-        if (isLoading) return; // Предотвращаем дублирование запросов
+        if (isLoading) return;
 
         isLoading = true;
         Integer userId = prefsHelper.getUser().getId();
 
-        // Очищаем список перед загрузкой
         combinedList.clear();
         adapter.updateData(combinedList);
 
@@ -123,7 +121,6 @@ public class PlantsActivity extends AppCompatActivity {
                         combinedList.add(new UserPlantAdapter.PlantItem(crop));
                     }
 
-                    // Загружаем детали для системных растений
                     for (UserCrop crop : crops) {
                         if (crop.getCrop() == null && crop.getCropId() != null) {
                             loadSystemCropDetails(crop);
@@ -151,7 +148,7 @@ public class PlantsActivity extends AppCompatActivity {
             public void onResponse(@NonNull Call<Crop> call, @NonNull Response<Crop> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     userCrop.setCrop(response.body());
-                    updateAdapter(); // Обновляем адаптер с новыми данными
+                    updateAdapter();
                 }
             }
             @Override
@@ -223,6 +220,10 @@ public class PlantsActivity extends AppCompatActivity {
         findViewById(R.id.btnMenu9).setOnClickListener(v -> {
             closeSideMenu();
             startActivity(new Intent(this, UserCropsActivity.class));
+        });
+        findViewById(R.id.btnMenu10).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, TasksActivity.class));
         });
     }
 

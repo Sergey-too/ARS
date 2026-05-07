@@ -113,6 +113,10 @@
         <activity
             android:name=".WeatherAdminActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".TasksActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
