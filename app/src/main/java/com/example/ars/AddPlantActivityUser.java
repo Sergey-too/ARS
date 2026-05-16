@@ -1,10 +1,12 @@
 package com.example.ars;
 
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -28,11 +30,12 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -50,10 +53,13 @@ public class AddPlantActivityUser extends AppCompatActivity {
     private AutoCompleteTextView actvCategory;
     private ImageView ivSelectedPhoto;
     private View llPhotoPlaceholder;
+    private MaterialButton btnAddPlant;
 
     private List<Category> categories = new ArrayList<>();
     private Integer selectedCategoryId = null;
-    private String selectedPhotoUri = "";
+    private String selectedCategoryName = "";
+    private String selectedImagePath = null;
+    private String serverPhotoUrl = "";
     private Integer editingCropId = null;
 
     @Override
@@ -71,7 +77,7 @@ public class AddPlantActivityUser extends AppCompatActivity {
         if (getIntent().hasExtra("CROP_ID")) {
             editingCropId = getIntent().getIntExtra("CROP_ID", -1);
             loadCropData(editingCropId);
-            ((MaterialButton) findViewById(R.id.btnAddPlant)).setText("Сохранить изменения");
+            btnAddPlant.setText("Сохранить изменения");
         }
     }
 
@@ -102,26 +108,23 @@ public class AddPlantActivityUser extends AppCompatActivity {
         actvCategory = findViewById(R.id.actvCategory);
         ivSelectedPhoto = findViewById(R.id.ivSelectedPhoto);
         llPhotoPlaceholder = findViewById(R.id.llPhotoPlaceholder);
+        btnAddPlant = findViewById(R.id.btnAddPlant);
     }
 
     private void setupListeners() {
         findViewById(R.id.btnBack).setOnClickListener(v -> showExitDialog());
 
-        // ИСПРАВЛЕНО: Безопасное сохранение фото через копирование во внутреннюю память
         ActivityResultLauncher<Intent> photoLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         Uri uri = result.getData().getData();
                         if (uri != null) {
-                            String localPath = copyFileToInternalStorage(uri);
-                            if (!localPath.isEmpty()) {
-                                selectedPhotoUri = localPath;
-                                ivSelectedPhoto.setImageURI(Uri.fromFile(new File(localPath)));
-                                llPhotoPlaceholder.setVisibility(View.GONE);
-                            } else {
-                                Toast.makeText(this, "Не удалось обработать изображение", Toast.LENGTH_SHORT).show();
-                            }
+                            ivSelectedPhoto.setImageURI(uri);
+                            llPhotoPlaceholder.setVisibility(View.GONE);
+
+                            selectedImagePath = getRealPathFromURI(uri);
+                            Log.d("PHOTO_DEBUG", "Выбран путь: " + selectedImagePath);
                         }
                     }
                 }
@@ -132,32 +135,7 @@ public class AddPlantActivityUser extends AppCompatActivity {
             photoLauncher.launch(intent);
         });
 
-        findViewById(R.id.btnAddPlant).setOnClickListener(v -> validateAndSave());
-    }
-
-    // ИСПРАВЛЕНО: Новый метод для копирования картинок
-    private String copyFileToInternalStorage(Uri uri) {
-        try {
-            InputStream inputStream = getContentResolver().openInputStream(uri);
-            if (inputStream == null) return "";
-
-            File file = new File(getCacheDir(), "crop_" + System.currentTimeMillis() + ".jpg");
-            FileOutputStream outputStream = new FileOutputStream(file);
-
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
-            }
-
-            outputStream.close();
-            inputStream.close();
-
-            return file.getAbsolutePath();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "";
-        }
+        btnAddPlant.setOnClickListener(v -> validateAndSave());
     }
 
     private void validateAndSave() {
@@ -205,23 +183,55 @@ public class AddPlantActivityUser extends AppCompatActivity {
             return;
         }
 
-        savePlant();
+        if (selectedImagePath != null) {
+            uploadImageToServer(selectedImagePath);
+        } else {
+            savePlant();
+        }
     }
 
-    private boolean isInvalidPercent(Integer val) {
-        return val != null && (val < 0 || val > 100);
-    }
+    private void uploadImageToServer(String localPath) {
+        btnAddPlant.setEnabled(false);
+        btnAddPlant.setText("ОБРАБОТКА ФОТО...");
 
-    private boolean isNegative(TextInputEditText et) {
-        Integer val = parseViewInt(et);
-        return val != null && val < 0;
+        File file = new File(localPath);
+        RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), file);
+        MultipartBody.Part body = MultipartBody.Part.createFormData("file", file.getName(), requestFile);
+
+        String folderName = selectedCategoryName.toLowerCase().replaceAll("\\s+", "_");
+        RequestBody categoryReq = RequestBody.create(MediaType.parse("text/plain"), folderName);
+
+        RetrofitClient.getFileApiService().uploadCropImage(body, categoryReq).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    serverPhotoUrl = response.body();
+
+                    savePlant();
+                } else {
+                    resetButton();
+                    Toast.makeText(AddPlantActivityUser.this, "Ошибка загрузки фото", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                resetButton();
+                Log.e("UPLOAD_FAIL", "Сеть упала при загрузке фото: " + t.getMessage());
+                Toast.makeText(AddPlantActivityUser.this, "Ошибка сети при загрузке фото", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void savePlant() {
+        btnAddPlant.setEnabled(false);
+        btnAddPlant.setText("СОХРАНЕНИЕ...");
+
         IndividualUserCrop crop = new IndividualUserCrop();
         crop.setUserId(prefsHelper.getUser().getId());
         crop.setCategoryId(selectedCategoryId);
-        crop.setLocalPhotoPath(selectedPhotoUri);
+
+        crop.setLocalPhotoPath(serverPhotoUrl);
 
         crop.setName(etName.getText().toString().trim());
         crop.setVariety(etVariety.getText().toString().trim());
@@ -256,16 +266,15 @@ public class AddPlantActivityUser extends AppCompatActivity {
                             Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    Toast.makeText(AddPlantActivityUser.this,
-                            "Ошибка сохранения: " + response.code(),
-                            Toast.LENGTH_SHORT).show();
+                    resetButton();
+                    Log.e("DB_SAVE_ERROR", "Код: " + response.code());
+                    Toast.makeText(AddPlantActivityUser.this, "Ошибка сохранения: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
             @Override
             public void onFailure(Call<IndividualUserCrop> call, Throwable t) {
-                Toast.makeText(AddPlantActivityUser.this,
-                        "Ошибка сети: " + t.getMessage(),
-                        Toast.LENGTH_SHORT).show();
+                resetButton();
+                Toast.makeText(AddPlantActivityUser.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         };
 
@@ -273,26 +282,6 @@ public class AddPlantActivityUser extends AppCompatActivity {
             apiService.createUserCrop(crop).enqueue(callback);
         } else {
             apiService.updateUserCrop(editingCropId, crop).enqueue(callback);
-        }
-    }
-
-    private Integer parseViewInt(EditText editText) {
-        String text = editText.getText().toString().trim();
-        if (text.isEmpty()) return null;
-        try {
-            return Integer.parseInt(text);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private Float parseViewFloat(EditText editText) {
-        String text = editText.getText().toString().trim();
-        if (text.isEmpty()) return null;
-        try {
-            return Float.parseFloat(text.replace(",", "."));
-        } catch (NumberFormatException e) {
-            return null;
         }
     }
 
@@ -312,13 +301,11 @@ public class AddPlantActivityUser extends AppCompatActivity {
         if (crop.getDaysToGermination() != null) etGermination.setText(String.valueOf(crop.getDaysToGermination()));
         if (crop.getDaysToHarvest() != null) etHarvest.setText(String.valueOf(crop.getDaysToHarvest()));
 
-        // ИСПРАВЛЕНО: Убран дублирующийся блок кода для установки полей интервалов
         if (crop.getWateringInterval() != null) etWatering.setText(String.valueOf(crop.getWateringInterval()));
         if (crop.getFertilizingInterval() != null) etFertilizing.setText(String.valueOf(crop.getFertilizingInterval()));
         if (crop.getSoilCareInterval() != null) etSoilCare.setText(String.valueOf(crop.getSoilCareInterval()));
         if (crop.getProtectionInterval() != null) etProtection.setText(String.valueOf(crop.getProtectionInterval()));
 
-        // ИСПРАВЛЕНО: Безопасная проверка логических полей Boolean на null во избежание NPE
         cbCanSeedlings.setChecked(crop.getCanSeedlings() != null && crop.getCanSeedlings());
         cbCanDirectSow.setChecked(crop.getCanDirectSow() != null && crop.getCanDirectSow());
 
@@ -327,18 +314,17 @@ public class AddPlantActivityUser extends AppCompatActivity {
             for (Category c : categories) {
                 if (c.getId().equals(Long.valueOf(selectedCategoryId))) {
                     actvCategory.setText(c.getName(), false);
+                    selectedCategoryName = c.getName();
                     break;
                 }
             }
         }
 
-        // ИСПРАВЛЕНО: Чтение фото как из внутренней памяти по абсолютному пути, так и обычных Uri
         if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
-            selectedPhotoUri = crop.getLocalPhotoPath();
-            if (selectedPhotoUri.startsWith("/")) {
-                ivSelectedPhoto.setImageURI(Uri.fromFile(new File(selectedPhotoUri)));
-            } else {
-                ivSelectedPhoto.setImageURI(Uri.parse(selectedPhotoUri));
+            serverPhotoUrl = crop.getLocalPhotoPath();
+
+            if (serverPhotoUrl.startsWith("http") || serverPhotoUrl.startsWith("/")) {
+                ivSelectedPhoto.setImageURI(Uri.parse(serverPhotoUrl));
             }
             llPhotoPlaceholder.setVisibility(View.GONE);
         }
@@ -351,6 +337,16 @@ public class AddPlantActivityUser extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     categories = response.body();
                     updateCategoryDropdown();
+
+                    if (editingCropId != null && selectedCategoryId != null) {
+                        for (Category c : categories) {
+                            if (c.getId().equals(Long.valueOf(selectedCategoryId))) {
+                                actvCategory.setText(c.getName(), false);
+                                selectedCategoryName = c.getName();
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             @Override public void onFailure(Call<List<Category>> call, Throwable t) {}
@@ -363,7 +359,9 @@ public class AddPlantActivityUser extends AppCompatActivity {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, names);
         actvCategory.setAdapter(adapter);
         actvCategory.setOnItemClickListener((parent, view, position, id) -> {
-            selectedCategoryId = categories.get(position).getId().intValue();
+            Category selected = categories.get(position);
+            selectedCategoryId = selected.getId().intValue();
+            selectedCategoryName = selected.getName();
             tilCategory.setError(null);
         });
     }
@@ -376,6 +374,45 @@ public class AddPlantActivityUser extends AppCompatActivity {
             }
             @Override public void onFailure(Call<IndividualUserCrop> call, Throwable t) {}
         });
+    }
+
+    private String getRealPathFromURI(Uri contentUri) {
+        String[] proj = { MediaStore.Images.Media.DATA };
+        Cursor cursor = getContentResolver().query(contentUri, proj, null, null, null);
+        if (cursor == null) return null;
+        int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+        cursor.moveToFirst();
+        String path = cursor.getString(column_index);
+        cursor.close();
+        return path;
+    }
+
+    private void resetButton() {
+        btnAddPlant.setEnabled(true);
+        btnAddPlant.setText(editingCropId == null ? "Добавить растение" : "Сохранить изменения");
+    }
+
+    private boolean isInvalidPercent(Integer val) {
+        return val != null && (val < 0 || val > 100);
+    }
+
+    private boolean isNegative(TextInputEditText et) {
+        Integer val = parseViewInt(et);
+        return val != null && val < 0;
+    }
+
+    private Integer parseViewInt(EditText editText) {
+        String text = editText.getText().toString().trim();
+        if (text.isEmpty()) return null;
+        try { return Integer.parseInt(text); }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    private Float parseViewFloat(EditText editText) {
+        String text = editText.getText().toString().trim();
+        if (text.isEmpty()) return null;
+        try { return Float.parseFloat(text.replace(",", ".")); }
+        catch (NumberFormatException e) { return null; }
     }
 
     private void showExitDialog() {

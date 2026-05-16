@@ -32,7 +32,8 @@ public class PlantDetailActivity extends AppCompatActivity {
     private static final String BASE_IMAGE_URL = "http://192.168.100.15:8080";
 
     private ApiService apiService;
-    private int recordId;
+    private int cropDataId;       // ID самого растения для загрузки его свойств
+    private int userCropRowId;    // ID строки из таблицы user_crops для удаления связи
     private boolean isIndividual;
     private SharedPreferencesHelper prefsHelper;
 
@@ -52,14 +53,15 @@ public class PlantDetailActivity extends AppCompatActivity {
         RetrofitClient.initialize(prefsHelper);
         apiService = RetrofitClient.getApiService();
 
-        int userCropId = getIntent().getIntExtra("user_crop_id", -1);
+        // Получаем ID строки связи из таблицы user_crops ([id])
+        userCropRowId = getIntent().getIntExtra("user_crop_id", -1);
         int individualCropId = getIntent().getIntExtra("individual_crop_id", -1);
         isIndividual = getIntent().getBooleanExtra("is_individual", false);
 
         if (isIndividual && individualCropId != -1) {
-            recordId = individualCropId;
-        } else if (userCropId != -1) {
-            recordId = userCropId;
+            cropDataId = individualCropId;
+        } else if (!isIndividual && userCropRowId != -1) {
+            cropDataId = userCropRowId;
         } else {
             Toast.makeText(this, "Ошибка: ID растения не передан", Toast.LENGTH_SHORT).show();
             finish();
@@ -98,8 +100,7 @@ public class PlantDetailActivity extends AppCompatActivity {
 
     private void loadData() {
         if (isIndividual) {
-
-            apiService.getUserCropById(recordId).enqueue(new Callback<IndividualUserCrop>() {
+            apiService.getUserCropById(cropDataId).enqueue(new Callback<IndividualUserCrop>() {
                 @Override
                 public void onResponse(Call<IndividualUserCrop> call, Response<IndividualUserCrop> response) {
                     if (response.isSuccessful() && response.body() != null) {
@@ -121,7 +122,7 @@ public class PlantDetailActivity extends AppCompatActivity {
                 public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
                     if (response.isSuccessful() && response.body() != null) {
                         for (UserCrop uc : response.body()) {
-                            if (uc.getId() == recordId) {
+                            if (uc.getId() == cropDataId) {
                                 renderSystem(uc);
                                 return;
                             }
@@ -136,7 +137,6 @@ public class PlantDetailActivity extends AppCompatActivity {
     }
 
     private void renderIndividual(IndividualUserCrop crop) {
-
         String displayName = crop.getName();
         if (crop.getVariety() != null && !crop.getVariety().isEmpty()) {
             displayName += " (" + crop.getVariety() + ")";
@@ -144,18 +144,18 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvName.setText(displayName);
         tvDesc.setText(crop.getDescription() != null ? crop.getDescription() : "Описание отсутствует");
 
+        // Исправлено: Подгружаем фото индивидуального растения по сети через серверный URL
         if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
-            try {
-                Uri localUri = Uri.parse(crop.getLocalPhotoPath());
-
-                Picasso.get()
-                        .load(localUri)
-                        .placeholder(R.drawable.ic_plant)
-                        .error(R.drawable.ic_plant)
-                        .into(ivPhoto);
-            } catch (Exception e) {
-                ivPhoto.setImageResource(R.drawable.ic_plant);
+            String fullPhotoUrl = crop.getLocalPhotoPath();
+            if (!fullPhotoUrl.startsWith("http")) {
+                fullPhotoUrl = BASE_IMAGE_URL + fullPhotoUrl;
             }
+
+            Picasso.get()
+                    .load(fullPhotoUrl)
+                    .placeholder(R.drawable.ic_plant)
+                    .error(R.drawable.ic_plant)
+                    .into(ivPhoto);
         } else {
             ivPhoto.setImageResource(R.drawable.ic_plant);
         }
@@ -192,7 +192,6 @@ public class PlantDetailActivity extends AppCompatActivity {
     }
 
     private void renderSystem(UserCrop uc) {
-
         if (uc.getCrop() == null) return;
         Crop c = uc.getCrop();
 
@@ -268,56 +267,49 @@ public class PlantDetailActivity extends AppCompatActivity {
     private void showConfirmDelete() {
         new AlertDialog.Builder(this)
                 .setTitle("Удаление")
-                .setMessage("Вы уверены, что хотите удалить это растение?")
+                .setMessage("Вы уверены, что хотите удалить это растение из своего списка?")
                 .setPositiveButton("Удалить", (d, w) -> deleteProcess())
                 .setNegativeButton("Отмена", null)
                 .show();
     }
 
     private void deleteProcess() {
-        if (isIndividual) {
-            apiService.deleteUserCrop(recordId).enqueue(new Callback<Void>() {
-                @Override
-                public void onResponse(Call<Void> call, Response<Void> response) {
-                    if (response.isSuccessful()) {
-                        Toast.makeText(PlantDetailActivity.this, "Растение удалено", Toast.LENGTH_SHORT).show();
+        if (prefsHelper.getUser() == null) {
+            Toast.makeText(this, "Ошибка: пользователь не авторизован", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Проверяем наличие ID строки связи перед отправкой на бэкенд
+        if (userCropRowId == -1) {
+            Toast.makeText(this, "Ошибка: не передан верный ID связи списка", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int userId = prefsHelper.getUser().getId();
+
+        // Передаем строго id из связующей таблицы user_crops, чтобы бэкенд стер запись только оттуда
+        apiService.deleteUserCrop(userId, userCropRowId).enqueue(new Callback<Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Boolean success = (Boolean) response.body().get("success");
+                    if (success != null && success) {
+                        Toast.makeText(PlantDetailActivity.this, "Растение удалено из вашего списка", Toast.LENGTH_SHORT).show();
                         setResult(RESULT_OK);
                         finish();
                     } else {
-                        Toast.makeText(PlantDetailActivity.this, "Ошибка удаления", Toast.LENGTH_SHORT).show();
+                        String error = (String) response.body().get("error");
+                        Toast.makeText(PlantDetailActivity.this, "Ошибка: " + error, Toast.LENGTH_SHORT).show();
                     }
+                } else {
+                    Toast.makeText(PlantDetailActivity.this, "Ошибка удаления: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
-                @Override
-                public void onFailure(Call<Void> call, Throwable t) {
-                    Toast.makeText(PlantDetailActivity.this, "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        } else {
-            if (prefsHelper.getUser() == null) return;
-            int userId = prefsHelper.getUser().getId();
+            }
 
-            apiService.deleteUserCrop(userId, recordId).enqueue(new Callback<Map<String, Object>>() {
-                @Override
-                public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        Boolean success = (Boolean) response.body().get("success");
-                        if (success != null && success) {
-                            Toast.makeText(PlantDetailActivity.this, "Растение удалено", Toast.LENGTH_SHORT).show();
-                            setResult(RESULT_OK);
-                            finish();
-                        } else {
-                            String error = (String) response.body().get("error");
-                            Toast.makeText(PlantDetailActivity.this, "Ошибка: " + error, Toast.LENGTH_SHORT).show();
-                        }
-                    } else {
-                        Toast.makeText(PlantDetailActivity.this, "Ошибка удаления: " + response.code(), Toast.LENGTH_SHORT).show();
-                    }
-                }
-                @Override
-                public void onFailure(Call<Map<String, Object>> call, Throwable t) {
-                    Toast.makeText(PlantDetailActivity.this, "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
+            @Override
+            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                Toast.makeText(PlantDetailActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

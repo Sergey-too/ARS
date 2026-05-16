@@ -8,15 +8,15 @@ import okhttp3.Request;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.converter.scalars.ScalarsConverterFactory; // НАДО ДОБАВИТЬ В ДЕПЕНДЕНСИ
 import java.util.concurrent.TimeUnit;
 
 public class RetrofitClient {
     private static final String TAG = "RetrofitClient";
-    //public static final String BASE_URL = "http://10.0.2.2:8080"; // Для эмулятора
-    public static final String BASE_URL = "http://192.168.100.15:8080"; // Для телефона
-
+    public static final String BASE_URL = "http://192.168.100.15:8080";
 
     private static Retrofit retrofit = null;
+    private static Retrofit fileRetrofit = null;
     public static SharedPreferencesHelper prefsHelper;
 
     public static void initialize(SharedPreferencesHelper helper) {
@@ -25,45 +25,71 @@ public class RetrofitClient {
 
     public static ApiService getApiService() {
         if (retrofit == null) {
-
-            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-
-            OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
-
-            httpClient.addInterceptor(loggingInterceptor);
+            OkHttpClient.Builder httpClient = getBaseHttpClientBuilder();
 
             httpClient.addInterceptor(chain -> {
                 Request original = chain.request();
-
-                String token = null;
-                if (prefsHelper != null) {
-                    token = prefsHelper.getToken();
-                }
-
                 Request.Builder requestBuilder = original.newBuilder();
 
-                if (token != null && !token.isEmpty()) {
-                    requestBuilder.header("Authorization", "Bearer " + token);
-                }
+                addAuthHeader(requestBuilder);
 
                 requestBuilder.header("Content-Type", "application/json");
                 requestBuilder.header("Accept", "application/json");
 
                 return chain.proceed(requestBuilder.build());
             });
-            httpClient.connectTimeout(30, TimeUnit.SECONDS);
-            httpClient.readTimeout(30, TimeUnit.SECONDS);
-            httpClient.writeTimeout(30, TimeUnit.SECONDS);
 
             retrofit = new Retrofit.Builder()
                     .baseUrl(BASE_URL)
                     .client(httpClient.build())
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
-
         }
-
         return retrofit.create(ApiService.class);
+    }
+
+    public static ApiService getFileApiService() {
+        if (fileRetrofit == null) {
+            OkHttpClient.Builder httpClient = getBaseHttpClientBuilder();
+
+            httpClient.addInterceptor(chain -> {
+                Request original = chain.request();
+                Request.Builder requestBuilder = original.newBuilder();
+
+                addAuthHeader(requestBuilder);
+
+                return chain.proceed(requestBuilder.build());
+            });
+
+            fileRetrofit = new Retrofit.Builder()
+                    .baseUrl(BASE_URL)
+                    .client(httpClient.build())
+                    .addConverterFactory(ScalarsConverterFactory.create())
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build();
+        }
+        return fileRetrofit.create(ApiService.class);
+    }
+
+    private static OkHttpClient.Builder getBaseHttpClientBuilder() {
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.addInterceptor(loggingInterceptor);
+        builder.connectTimeout(30, TimeUnit.SECONDS);
+        builder.readTimeout(30, TimeUnit.SECONDS);
+        builder.writeTimeout(30, TimeUnit.SECONDS);
+        return builder;
+    }
+
+    private static void addAuthHeader(Request.Builder builder) {
+        String token = null;
+        if (prefsHelper != null) {
+            token = prefsHelper.getToken();
+        }
+        if (token != null && !token.isEmpty()) {
+            builder.header("Authorization", "Bearer " + token);
+        }
     }
 }

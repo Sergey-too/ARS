@@ -44,6 +44,7 @@ public class CompatibilityActivity extends AppCompatActivity {
         headerScroll = findViewById(R.id.headerScroll);
         sideScroll = findViewById(R.id.sideScroll);
         dataHorizontalScroll = findViewById(R.id.dataHorizontalScroll);
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
         loadData();
     }

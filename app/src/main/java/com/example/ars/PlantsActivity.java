@@ -86,13 +86,16 @@ public class PlantsActivity extends AppCompatActivity {
 
         adapter = new UserPlantAdapter(combinedList, item -> {
             Intent intent = new Intent(this, PlantDetailActivity.class);
+
+            intent.putExtra("user_crop_id", item.getId());
+
             if (item.isIndividual()) {
                 intent.putExtra("individual_crop_id", item.getIndividualCropId());
                 intent.putExtra("is_individual", true);
             } else {
-                intent.putExtra("user_crop_id", item.getId());
                 intent.putExtra("is_individual", false);
             }
+
             startActivity(intent);
         });
         rvPlants.setAdapter(adapter);
