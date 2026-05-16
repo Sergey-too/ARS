@@ -164,38 +164,58 @@ public class WeatherActivity extends AppCompatActivity {
         TextView tvHumidity = findViewById(humidityId);
         TextView tvPrecip = findViewById(precipId);
 
-        // 1. Дата
-        if (tvDate != null) tvDate.setText(weather.getDate());
-
-        // 2. Температура
-        if (tvTemp != null) {
-            String tempRange = String.format(Locale.getDefault(), "%.1f..%.1f°C",
-                    weather.getTemperatureMin(), weather.getTemperatureMax());
-            tvTemp.setText(tempRange);
+        if (tvDate != null) {
+            tvDate.setText(formatDate(weather.getDate()));
         }
 
-        // 3. Ветер
-        if (tvWind != null) {
-            String windRange = String.format(Locale.getDefault(), "%.1f..%.1f м/с",
-                    weather.getWindMin(), weather.getWindMax());
-            tvWind.setText(windRange);
+        try {
+            if (tvTemp != null) {
+                float tMin = Float.parseFloat(weather.getTemperatureMin());
+                float tMax = Float.parseFloat(weather.getTemperatureMax());
+                String tempRange = String.format(Locale.getDefault(), "%.1f..%.1f°C", tMin, tMax);
+                tvTemp.setText(tempRange);
+            }
+
+            if (tvWind != null) {
+                float wMin = Float.parseFloat(weather.getWindMin());
+                float wMax = Float.parseFloat(weather.getWindMax());
+                String windRange = String.format(Locale.getDefault(), "%.1f..%.1f м/с", wMin, wMax);
+                tvWind.setText(windRange);
+            }
+
+            if (tvPressure != null) {
+                tvPressure.setText(weather.getPressure() + " мм");
+            }
+
+            if (humidityId != 0 && tvHumidity != null) {
+                float hMin = Float.parseFloat(weather.getHumidityMin());
+                float hMax = Float.parseFloat(weather.getHumidityMax());
+                String humRange = String.format(Locale.getDefault(), "%.0f..%.0f%%", hMin, hMax);
+                tvHumidity.setText(humRange);
+            }
+
+            if (precipId != 0 && tvPrecip != null) {
+                float precipVal = Float.parseFloat(weather.getPrecipitation());
+                String precip = String.format(Locale.getDefault(), "%.1f мм", precipVal);
+                tvPrecip.setText(precip);
+            }
+
+        } catch (NumberFormatException e) {
+            Log.e("WeatherError", "Ошибка парсинга чисел погоды: " + e.getMessage());
         }
+    }
 
-        // 4. Давление
-        if (tvPressure != null) tvPressure.setText(weather.getPressure());
+    private String formatDate(String rawDate) {
+        if (rawDate == null || rawDate.isEmpty()) return "--";
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Date date = inputFormat.parse(rawDate);
 
-        // 5. Влажность
-        if (humidityId != 0 && tvHumidity != null) {
-            String humRange = String.format(Locale.getDefault(), "%.0f..%.0f%%",
-                    weather.getHumidityMin(), weather.getHumidityMax());
-            tvHumidity.setText(humRange);
-        }
-
-        // 6. Осадки
-        if (precipId != 0 && tvPrecip != null) {
-            String precip = String.format(Locale.getDefault(), "%.1f мм",
-                    weather.getPrecipitation());
-            tvPrecip.setText(precip);
+            SimpleDateFormat outputFormat = new SimpleDateFormat("d MMMM", new Locale("ru"));
+            return date != null ? outputFormat.format(date) : rawDate;
+        } catch (Exception e) {
+            Log.e("WeatherError", "Ошибка форматирования даты: " + rawDate);
+            return rawDate;
         }
     }
 }

@@ -163,7 +163,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
-                <!-- Кнопка 1 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu1"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -176,7 +175,6 @@
                     app:icon="@drawable/ic_profile"
                     app:iconTint="@color/color_green_primary" />
 
-                <!-- Кнопка 2 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu2"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -189,7 +187,6 @@
                     app:icon="@drawable/ic_weather"
                     app:iconTint="@color/color_green_primary" />
 
-                <!-- Кнопка 3 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu3"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -202,7 +199,6 @@
                     app:icon="@drawable/ic_close"
                     app:iconTint="@color/color_green_primary" />
 
-                <!-- Кнопка 4 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu4"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -221,9 +217,8 @@
                     android:text="Мои растения"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_chart_line"/>
+                    app:icon="@drawable/ic_plant"/>
 
-                <!-- Кнопка 4 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu6"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -242,9 +237,8 @@
                     android:text="Список дел"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_chart_line"/>
+                    app:icon="@drawable/ic_ab_sort_stepped"/>
 
-                <!-- Кнопка 4 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu7"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -253,7 +247,7 @@
                     android:text="Совместимость"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_chart_line"/>
+                    app:icon="@drawable/ic_hub"/>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu11"
@@ -263,9 +257,8 @@
                     android:text="История"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_chart_line"/>
+                    app:icon="@drawable/ic_history"/>
 
-                <!-- Кнопка 4 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu8"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -274,9 +267,8 @@
                     android:text="Поддержка"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_chart_line"/>
+                    app:icon="@drawable/ic_info"/>
 
-                <!-- Кнопка 5 -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu5"
                     style="@style/Widget.MaterialComponents.Button.TextButton"

@@ -27,6 +27,9 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -104,14 +107,22 @@ public class AddPlantActivityUser extends AppCompatActivity {
     private void setupListeners() {
         findViewById(R.id.btnBack).setOnClickListener(v -> showExitDialog());
 
+        // ИСПРАВЛЕНО: Безопасное сохранение фото через копирование во внутреннюю память
         ActivityResultLauncher<Intent> photoLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         Uri uri = result.getData().getData();
-                        selectedPhotoUri = uri.toString();
-                        ivSelectedPhoto.setImageURI(uri);
-                        llPhotoPlaceholder.setVisibility(View.GONE);
+                        if (uri != null) {
+                            String localPath = copyFileToInternalStorage(uri);
+                            if (!localPath.isEmpty()) {
+                                selectedPhotoUri = localPath;
+                                ivSelectedPhoto.setImageURI(Uri.fromFile(new File(localPath)));
+                                llPhotoPlaceholder.setVisibility(View.GONE);
+                            } else {
+                                Toast.makeText(this, "Не удалось обработать изображение", Toast.LENGTH_SHORT).show();
+                            }
+                        }
                     }
                 }
         );
@@ -122,6 +133,31 @@ public class AddPlantActivityUser extends AppCompatActivity {
         });
 
         findViewById(R.id.btnAddPlant).setOnClickListener(v -> validateAndSave());
+    }
+
+    // ИСПРАВЛЕНО: Новый метод для копирования картинок
+    private String copyFileToInternalStorage(Uri uri) {
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            if (inputStream == null) return "";
+
+            File file = new File(getCacheDir(), "crop_" + System.currentTimeMillis() + ".jpg");
+            FileOutputStream outputStream = new FileOutputStream(file);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+            outputStream.close();
+            inputStream.close();
+
+            return file.getAbsolutePath();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
     }
 
     private void validateAndSave() {
@@ -203,7 +239,6 @@ public class AddPlantActivityUser extends AppCompatActivity {
         crop.setDaysToGermination(parseViewInt(etGermination));
         crop.setDaysToHarvest(parseViewInt(etHarvest));
 
-        // ИНТЕРВАЛЫ УХОДА - ВАЖНО! Добавьте эти строки:
         crop.setWateringInterval(parseViewInt(etWatering));
         crop.setFertilizingInterval(parseViewInt(etFertilizing));
         crop.setSoilCareInterval(parseViewInt(etSoilCare));
@@ -277,22 +312,15 @@ public class AddPlantActivityUser extends AppCompatActivity {
         if (crop.getDaysToGermination() != null) etGermination.setText(String.valueOf(crop.getDaysToGermination()));
         if (crop.getDaysToHarvest() != null) etHarvest.setText(String.valueOf(crop.getDaysToHarvest()));
 
+        // ИСПРАВЛЕНО: Убран дублирующийся блок кода для установки полей интервалов
         if (crop.getWateringInterval() != null) etWatering.setText(String.valueOf(crop.getWateringInterval()));
         if (crop.getFertilizingInterval() != null) etFertilizing.setText(String.valueOf(crop.getFertilizingInterval()));
         if (crop.getSoilCareInterval() != null) etSoilCare.setText(String.valueOf(crop.getSoilCareInterval()));
         if (crop.getProtectionInterval() != null) etProtection.setText(String.valueOf(crop.getProtectionInterval()));
 
-        if (crop.getWateringInterval() != null)
-            etWatering.setText(String.valueOf(crop.getWateringInterval()));
-        if (crop.getFertilizingInterval() != null)
-            etFertilizing.setText(String.valueOf(crop.getFertilizingInterval()));
-        if (crop.getSoilCareInterval() != null)
-            etSoilCare.setText(String.valueOf(crop.getSoilCareInterval()));
-        if (crop.getProtectionInterval() != null)
-            etProtection.setText(String.valueOf(crop.getProtectionInterval()));
-
-        cbCanSeedlings.setChecked(crop.getCanSeedlings());
-        cbCanDirectSow.setChecked(crop.getCanDirectSow());
+        // ИСПРАВЛЕНО: Безопасная проверка логических полей Boolean на null во избежание NPE
+        cbCanSeedlings.setChecked(crop.getCanSeedlings() != null && crop.getCanSeedlings());
+        cbCanDirectSow.setChecked(crop.getCanDirectSow() != null && crop.getCanDirectSow());
 
         selectedCategoryId = crop.getCategoryId();
         if (selectedCategoryId != null) {
@@ -304,9 +332,14 @@ public class AddPlantActivityUser extends AppCompatActivity {
             }
         }
 
+        // ИСПРАВЛЕНО: Чтение фото как из внутренней памяти по абсолютному пути, так и обычных Uri
         if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
             selectedPhotoUri = crop.getLocalPhotoPath();
-            ivSelectedPhoto.setImageURI(Uri.parse(selectedPhotoUri));
+            if (selectedPhotoUri.startsWith("/")) {
+                ivSelectedPhoto.setImageURI(Uri.fromFile(new File(selectedPhotoUri)));
+            } else {
+                ivSelectedPhoto.setImageURI(Uri.parse(selectedPhotoUri));
+            }
             llPhotoPlaceholder.setVisibility(View.GONE);
         }
     }

@@ -29,6 +29,8 @@ import retrofit2.Response;
 
 public class PlantDetailActivity extends AppCompatActivity {
 
+    private static final String BASE_IMAGE_URL = "http://192.168.100.15:8080";
+
     private ApiService apiService;
     private int recordId;
     private boolean isIndividual;
@@ -54,10 +56,6 @@ public class PlantDetailActivity extends AppCompatActivity {
         int individualCropId = getIntent().getIntExtra("individual_crop_id", -1);
         isIndividual = getIntent().getBooleanExtra("is_individual", false);
 
-        Log.d("PlantDetail", "userCropId: " + userCropId);
-        Log.d("PlantDetail", "individualCropId: " + individualCropId);
-        Log.d("PlantDetail", "isIndividual: " + isIndividual);
-
         if (isIndividual && individualCropId != -1) {
             recordId = individualCropId;
         } else if (userCropId != -1) {
@@ -67,8 +65,6 @@ public class PlantDetailActivity extends AppCompatActivity {
             finish();
             return;
         }
-
-        Log.d("PlantDetail", "ID: " + recordId + ", isIndividual: " + isIndividual);
 
         initViews();
 
@@ -102,30 +98,22 @@ public class PlantDetailActivity extends AppCompatActivity {
 
     private void loadData() {
         if (isIndividual) {
-            // Для пользовательского растения - запрос к /api/my-crops/{id}
-            Log.d("PlantDetail", "Загружаем пользовательское растение с ID: " + recordId);
 
             apiService.getUserCropById(recordId).enqueue(new Callback<IndividualUserCrop>() {
                 @Override
                 public void onResponse(Call<IndividualUserCrop> call, Response<IndividualUserCrop> response) {
-                    Log.d("PlantDetail", "Код ответа: " + response.code());
                     if (response.isSuccessful() && response.body() != null) {
                         renderIndividual(response.body());
                     } else {
-                        Log.e("PlantDetail", "Ошибка: " + response.code());
                         Toast.makeText(PlantDetailActivity.this, "Растение не найдено", Toast.LENGTH_SHORT).show();
                     }
                 }
                 @Override
                 public void onFailure(Call<IndividualUserCrop> call, Throwable t) {
-                    Log.e("PlantDetail", "Ошибка: " + t.getMessage());
                     Toast.makeText(PlantDetailActivity.this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
                 }
             });
         } else {
-            // Для системного растения - нужно получить через userCrop
-            Log.d("PlantDetail", "Загружаем системное растение с userCropId: " + recordId);
-
             if (prefsHelper.getUser() == null) return;
 
             apiService.getUserCrops(prefsHelper.getUser().getId()).enqueue(new Callback<List<UserCrop>>() {
@@ -148,9 +136,7 @@ public class PlantDetailActivity extends AppCompatActivity {
     }
 
     private void renderIndividual(IndividualUserCrop crop) {
-        Log.d("PLANT_DEBUG", "=== renderIndividual ВЫЗВАН ===");
 
-        // Название + сорт
         String displayName = crop.getName();
         if (crop.getVariety() != null && !crop.getVariety().isEmpty()) {
             displayName += " (" + crop.getVariety() + ")";
@@ -158,52 +144,46 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvName.setText(displayName);
         tvDesc.setText(crop.getDescription() != null ? crop.getDescription() : "Описание отсутствует");
 
-        // Температура
+        if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
+            try {
+                Uri localUri = Uri.parse(crop.getLocalPhotoPath());
+
+                Picasso.get()
+                        .load(localUri)
+                        .placeholder(R.drawable.ic_plant)
+                        .error(R.drawable.ic_plant)
+                        .into(ivPhoto);
+            } catch (Exception e) {
+                ivPhoto.setImageResource(R.drawable.ic_plant);
+            }
+        } else {
+            ivPhoto.setImageResource(R.drawable.ic_plant);
+        }
+
         if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
             tvValTemp.setText(crop.getMinTemp() + " - " + crop.getMaxTemp() + " °C");
-        } else if (crop.getMinTemp() != null) {
-            tvValTemp.setText("от " + crop.getMinTemp() + " °C");
-        } else if (crop.getMaxTemp() != null) {
-            tvValTemp.setText("до " + crop.getMaxTemp() + " °C");
         } else {
             tvValTemp.setText("Не указана");
         }
 
-        // Влажность
         if (crop.getMinHumidity() != null && crop.getMaxHumidity() != null) {
             tvValHum.setText(crop.getMinHumidity() + " - " + crop.getMaxHumidity() + " %");
-        } else if (crop.getMinHumidity() != null) {
-            tvValHum.setText("от " + crop.getMinHumidity() + " %");
-        } else if (crop.getMaxHumidity() != null) {
-            tvValHum.setText("до " + crop.getMaxHumidity() + " %");
         } else {
             tvValHum.setText("Не указана");
         }
 
-        // Ветер
         tvValWind.setText(crop.getMaxWind() != null ? crop.getMaxWind() + " м/с" : "--");
-
-        // Осадки
         tvValPrec.setText(crop.getNeededPrecipitation() != null ? crop.getNeededPrecipitation() + " мм" : "--");
-
-        // Глубина посева
         tvValDepth.setText(crop.getSowingDepth() != null ? crop.getSowingDepth() + " см" : "--");
-
-        // Рассада/грунт
         tvValSeedlings.setText(crop.getCanSeedlings() != null && crop.getCanSeedlings() ? "Да" : "Нет");
         tvValDirectSow.setText(crop.getCanDirectSow() != null && crop.getCanDirectSow() ? "Да" : "Нет");
-
-        // Дни до всходов/урожая
         tvValGerm.setText(crop.getDaysToGermination() != null ? crop.getDaysToGermination() + " дн." : "--");
         tvValHarvest.setText(crop.getDaysToHarvest() != null ? crop.getDaysToHarvest() + " дн." : "--");
-
-        // Интервалы ухода
         tvValWaterInt.setText(crop.getWateringInterval() != null ? crop.getWateringInterval() + " дн." : "--");
         tvValFertInt.setText(crop.getFertilizingInterval() != null ? crop.getFertilizingInterval() + " дн." : "--");
         tvValSoilInt.setText(crop.getSoilCareInterval() != null ? crop.getSoilCareInterval() + " дн." : "--");
         tvValProtect.setText(crop.getProtectionInterval() != null ? crop.getProtectionInterval() + " дн." : "--");
 
-        // Категория
         if (crop.getCategoryId() != null && crop.getCategoryId() > 0) {
             loadCategoryName(crop.getCategoryId());
         } else {
@@ -212,16 +192,10 @@ public class PlantDetailActivity extends AppCompatActivity {
     }
 
     private void renderSystem(UserCrop uc) {
-        Log.d("PLANT_DEBUG", "=== renderSystem ВЫЗВАН ===");
 
-        if (uc.getCrop() == null) {
-            Log.d("PLANT_DEBUG", "uc.getCrop() = null");
-            return;
-        }
-
+        if (uc.getCrop() == null) return;
         Crop c = uc.getCrop();
 
-        // Название + сорт
         String displayName = c.getName();
         if (c.getVariety() != null && !c.getVariety().isEmpty()) {
             displayName += " (" + c.getVariety() + ")";
@@ -229,23 +203,26 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvName.setText(displayName);
         tvDesc.setText(c.getDescription() != null ? c.getDescription() : "Описание отсутствует");
 
-        // Температура
+        if (c.getPhotoPath() != null && !c.getPhotoPath().isEmpty()) {
+            String fullPhotoUrl = BASE_IMAGE_URL + c.getPhotoPath();
+
+            Picasso.get()
+                    .load(fullPhotoUrl)
+                    .placeholder(R.drawable.ic_plant)
+                    .error(R.drawable.ic_plant)
+                    .into(ivPhoto);
+        } else {
+            ivPhoto.setImageResource(R.drawable.ic_plant);
+        }
+
         if (c.getMinTemp() != null && c.getMaxTemp() != null) {
             tvValTemp.setText(c.getMinTemp() + " - " + c.getMaxTemp() + " °C");
-        } else if (c.getMinTemp() != null) {
-            tvValTemp.setText("от " + c.getMinTemp() + " °C");
-        } else if (c.getMaxTemp() != null) {
-            tvValTemp.setText("до " + c.getMaxTemp() + " °C");
         } else {
             tvValTemp.setText("Не указана");
         }
 
         if (c.getMinHumidity() != null && c.getMaxHumidity() != null) {
             tvValHum.setText(c.getMinHumidity() + " - " + c.getMaxHumidity() + " %");
-        } else if (c.getMinHumidity() != null) {
-            tvValHum.setText("от " + c.getMinHumidity() + " %");
-        } else if (c.getMaxHumidity() != null) {
-            tvValHum.setText("до " + c.getMaxHumidity() + " %");
         } else {
             tvValHum.setText("Не указана");
         }
@@ -281,13 +258,13 @@ public class PlantDetailActivity extends AppCompatActivity {
                     tvValCategory.setText("Ошибка");
                 }
             }
-
             @Override
             public void onFailure(Call<List<Category>> call, Throwable t) {
                 tvValCategory.setText("Ошибка");
             }
         });
     }
+
     private void showConfirmDelete() {
         new AlertDialog.Builder(this)
                 .setTitle("Удаление")
@@ -299,27 +276,17 @@ public class PlantDetailActivity extends AppCompatActivity {
 
     private void deleteProcess() {
         if (isIndividual) {
-            Log.d("DELETE_DEBUG", "Удаляем пользовательское растение с ID: " + recordId);
-
             apiService.deleteUserCrop(recordId).enqueue(new Callback<Void>() {
                 @Override
                 public void onResponse(Call<Void> call, Response<Void> response) {
-
                     if (response.isSuccessful()) {
                         Toast.makeText(PlantDetailActivity.this, "Растение удалено", Toast.LENGTH_SHORT).show();
                         setResult(RESULT_OK);
                         finish();
                     } else {
-                        Log.e("DELETE_DEBUG", "Ошибка: " + response.code());
-                        try {
-                            String error = response.errorBody().string();
-                            Toast.makeText(PlantDetailActivity.this, "Ошибка: " + error, Toast.LENGTH_LONG).show();
-                        } catch (Exception e) {
-                            Toast.makeText(PlantDetailActivity.this, "Ошибка удаления", Toast.LENGTH_SHORT).show();
-                        }
+                        Toast.makeText(PlantDetailActivity.this, "Ошибка удаления", Toast.LENGTH_SHORT).show();
                     }
                 }
-
                 @Override
                 public void onFailure(Call<Void> call, Throwable t) {
                     Toast.makeText(PlantDetailActivity.this, "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
@@ -327,18 +294,13 @@ public class PlantDetailActivity extends AppCompatActivity {
             });
         } else {
             if (prefsHelper.getUser() == null) return;
-
             int userId = prefsHelper.getUser().getId();
 
             apiService.deleteUserCrop(userId, recordId).enqueue(new Callback<Map<String, Object>>() {
                 @Override
                 public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
-
-
                     if (response.isSuccessful() && response.body() != null) {
                         Boolean success = (Boolean) response.body().get("success");
-                        Log.d("DELETE_DEBUG", "success = " + success);
-
                         if (success != null && success) {
                             Toast.makeText(PlantDetailActivity.this, "Растение удалено", Toast.LENGTH_SHORT).show();
                             setResult(RESULT_OK);
@@ -351,7 +313,6 @@ public class PlantDetailActivity extends AppCompatActivity {
                         Toast.makeText(PlantDetailActivity.this, "Ошибка удаления: " + response.code(), Toast.LENGTH_SHORT).show();
                     }
                 }
-
                 @Override
                 public void onFailure(Call<Map<String, Object>> call, Throwable t) {
                     Toast.makeText(PlantDetailActivity.this, "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
