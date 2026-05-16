@@ -7,6 +7,7 @@ import com.example.ars.models.CompatibilityDTO;
 import com.example.ars.models.Crop;
 import com.example.ars.models.DeleteResponse;
 import com.example.ars.models.GardenHistory;
+import com.example.ars.models.History;
 import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.models.Region;
 import com.example.ars.models.SupportRequest;
@@ -225,6 +226,13 @@ public interface ApiService {
 
     @POST("/api/tasks/complete")
     Call<Map<String, Object>> completeTask(@Body Map<String, Object> request);
+
+    //History
+    @GET("api/history/user/{userId}")
+    Call<List<History>> getHistory(@Path("userId") int userId);
+
+    @GET("/api/weather/by-date/{regionId}/{date}")
+    Call<WeatherData> getWeatherByDate(@Path("regionId") int regionId, @Path("date") String date);
 
 
     class LoginRequest {

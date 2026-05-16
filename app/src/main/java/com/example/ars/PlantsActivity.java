@@ -225,6 +225,10 @@ public class PlantsActivity extends AppCompatActivity {
             closeSideMenu();
             startActivity(new Intent(this, TasksActivity.class));
         });
+        findViewById(R.id.btnMenu11).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, HistoryActivity.class));
+        });
     }
 
     private void showDeleteAllConfirmationDialog() {

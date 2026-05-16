@@ -6,19 +6,19 @@ import java.io.Serializable;
 public class GardenHistory implements Serializable {
     private Integer id;
 
-    @SerializedName("action_type_id")
+    @SerializedName("actionTypeId")
     private Integer actionTypeId;
+
+    @SerializedName("cropName")
+    private String cropName;
+
+    @SerializedName("areaName")
+    private String areaName;
 
     @SerializedName("done_at")
     private String doneAt;
 
-    @SerializedName("crop_name")
-    private String cropName;
-
     private String variety;
-
-    @SerializedName("area_name")
-    private String areaName;
 
     @SerializedName("watering_interval") private Integer wateringInterval;
     @SerializedName("fertilizing_interval") private Integer fertilizingInterval;

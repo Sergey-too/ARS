@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:cardUseCompatPadding="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="#E3F2FD"
+            android:padding="12dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvHistoryDate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="19 января"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#1565C0" />
+
+            <TextView
+                android:id="@+id/tvHistoryTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="14:30"
+                android:textSize="14sp"
+                android:textColor="#1565C0" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvHistoryAction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Полив"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tvHistoryCrop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Огурец (Родничок)"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tvHistoryArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Участок: Южный сектор"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tvWeather"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Загрузка погоды..."
+            android:textSize="14sp"
+            android:textStyle="italic"
+            android:textColor="#F57C00"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tvHistoryDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Работа выполнена в соответствии с климатическими нормами региона."
+            android:textSize="13sp"
+            android:textColor="#5D4037"
+            android:lineSpacingExtra="4dp" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

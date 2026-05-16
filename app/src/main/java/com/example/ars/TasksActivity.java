@@ -16,6 +16,7 @@ import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.TaskItem;
 import com.example.ars.utils.SharedPreferencesHelper;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -75,8 +76,12 @@ public class TasksActivity extends AppCompatActivity {
     }
 
     private void onTaskComplete(TaskItem task) {
-        showLoading(true);
+        if (!isTaskAvailable(task)) {
+            Toast.makeText(this, "Нельзя выполнить задачу раньше " + task.getDueDate(), Toast.LENGTH_LONG).show();
+            return;
+        }
 
+        showLoading(true);
         Map<String, Object> request = new HashMap<>();
         request.put("cropName", task.getCropName());
         request.put("variety", task.getVariety());
@@ -93,13 +98,24 @@ public class TasksActivity extends AppCompatActivity {
                     loadTasks();
                 }
             }
-
             @Override
             public void onFailure(retrofit2.Call<Map<String, Object>> call, Throwable t) {
                 showLoading(false);
-                Toast.makeText(TasksActivity.this, "Ошибка выполнения", Toast.LENGTH_SHORT).show();
+                Toast.makeText(TasksActivity.this, "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private boolean isTaskAvailable(TaskItem task) {
+        if (task.getDueDate() == null) return true;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date dueDate = sdf.parse(task.getDueDate());
+            Date today = sdf.parse(sdf.format(new Date()));
+            return !dueDate.after(today);
+        } catch (ParseException e) {
+            return true;
+        }
     }
 
     private void showLoading(boolean show) {

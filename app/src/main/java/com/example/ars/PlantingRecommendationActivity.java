@@ -26,8 +26,8 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
     private ApiService apiService;
     private SharedPreferencesHelper prefsHelper;
     private List<UserCrop> userCrops = new ArrayList<>();
-    private Set<String> plantedKeys = new HashSet<>(); // "cropName|areaName" уже посаженных
-    private Map<String, List<WeatherData>> weatherByRegion = new HashMap<>();
+    private final Set<String> plantedKeys = new HashSet<>();
+    private final Map<String, List<WeatherData>> weatherByRegion = new HashMap<>();
     private PlantingAdapter adapter;
 
     private TextView tvEmpty, tvResultsTitle;
@@ -61,9 +61,12 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
     }
 
     private void refreshData() {
-        userCrops.clear();
-        plantedKeys.clear();
-        weatherByRegion.clear();
+        runOnUiThread(() -> {
+            userCrops.clear();
+            plantedKeys.clear();
+            weatherByRegion.clear();
+            adapter.updateData(new ArrayList<>());
+        });
         loadData();
     }
 
@@ -79,56 +82,80 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
         apiService.getUserCrops(currentUser.getId()).enqueue(new retrofit2.Callback<List<UserCrop>>() {
             @Override
             public void onResponse(retrofit2.Call<List<UserCrop>> call, retrofit2.Response<List<UserCrop>> response) {
-                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
+                if (response.isSuccessful() && response.body() != null) {
                     userCrops = response.body();
-                    loadPlantingHistory(currentUser.getId());
+                    loadPlantedHistory();
                 } else {
                     showLoading(false);
-                    tvEmpty.setText("У вас нет растений для посадки");
+                    tvEmpty.setVisibility(View.VISIBLE);
+                    tvEmpty.setText("У вас нет растений");
                 }
             }
 
             @Override
             public void onFailure(retrofit2.Call<List<UserCrop>> call, Throwable t) {
                 showLoading(false);
+                tvEmpty.setVisibility(View.VISIBLE);
                 tvEmpty.setText("Ошибка: " + t.getMessage());
             }
         });
     }
 
-    private void loadPlantingHistory(Integer userId) {
-        apiService.getPlantingHistory(userId).enqueue(new retrofit2.Callback<List<GardenHistory>>() {
+    private void loadPlantedHistory() {
+        User currentUser = prefsHelper.getUser();
+        if (currentUser == null) return;
+
+        apiService.getPlantingHistory(currentUser.getId()).enqueue(new retrofit2.Callback<List<GardenHistory>>() {
             @Override
             public void onResponse(retrofit2.Call<List<GardenHistory>> call, retrofit2.Response<List<GardenHistory>> response) {
                 plantedKeys.clear();
                 if (response.isSuccessful() && response.body() != null) {
                     for (GardenHistory h : response.body()) {
-                        if (h.getActionTypeId() == 1 && h.getCropName() != null && h.getAreaName() != null) {
-                            String key = h.getCropName() + "|" + h.getAreaName();
+                        Integer actionTypeId = h.getActionTypeId();
+
+                        Log.d("PLANT_DEBUG", "История из БД -> actionId: " + actionTypeId
+                                + ", культура: " + h.getCropName() + ", сорт: " + h.getVariety() + ", участок: " + h.getAreaName());
+
+                        if (actionTypeId != null && actionTypeId == 1 && h.getCropName() != null && h.getAreaName() != null) {
+                            String cropName = h.getCropName().trim().toLowerCase();
+                            String variety = h.getVariety() != null ? h.getVariety().trim().toLowerCase() : "обычный";
+                            if (variety.isEmpty()) variety = "обычный";
+                            String areaName = h.getAreaName().trim().toLowerCase();
+
+                            // Трёхсоставной ключ: культура + сорт + участок
+                            String key = cropName + "|" + variety + "|" + areaName;
                             plantedKeys.add(key);
+                            Log.d("PLANT_DEBUG", "Ключ добавлен в Set истории: " + key);
                         }
                     }
                 }
+                Log.d("PLANT_DEBUG", "Всего уникальных ключей в истории: " + plantedKeys.size());
                 loadWeatherForAllRegions();
             }
 
             @Override
             public void onFailure(retrofit2.Call<List<GardenHistory>> call, Throwable t) {
+                Log.e("PLANT_DEBUG", "Ошибка загрузки истории: " + t.getMessage());
                 loadWeatherForAllRegions();
             }
         });
     }
 
     private void loadWeatherForAllRegions() {
+        weatherByRegion.clear();
         Set<Integer> uniqueRegionIds = new HashSet<>();
         for (UserCrop uc : userCrops) {
-            if (uc.getArea() != null && uc.getArea().getRegion() != null && uc.getArea().getRegion().getId() != null) {
-                uniqueRegionIds.add(uc.getArea().getRegion().getId().intValue());
+            if (uc.getArea() != null && uc.getArea().getRegion() != null) {
+                Long regionIdLong = uc.getArea().getRegion().getId();
+                if (regionIdLong != null) {
+                    uniqueRegionIds.add(regionIdLong.intValue());
+                }
             }
         }
 
         if (uniqueRegionIds.isEmpty()) {
             showLoading(false);
+            tvEmpty.setVisibility(View.VISIBLE);
             tvEmpty.setText("У ваших участков не указан регион");
             return;
         }
@@ -152,7 +179,8 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(retrofit2.Call<WeatherResponse> call, Throwable t) {
-                if (weatherByRegion.size() + 1 == totalExpected) {
+                weatherByRegion.put(String.valueOf(regionId), new ArrayList<>());
+                if (weatherByRegion.size() == totalExpected) {
                     analyzeRecommendations();
                 }
             }
@@ -161,29 +189,56 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
     private void analyzeRecommendations() {
         List<PlantingRecommendation> recommendations = new ArrayList<>();
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMMM", new Locale("ru"));
         SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", new Locale("ru"));
+
         Calendar calendar = Calendar.getInstance();
 
+        // Шаг 1. Фильтруем по истории (Культура + Сорт + Поле)
+        List<UserCrop> activeCropsToRecommend = new ArrayList<>();
+
+        Log.d("PLANT_DEBUG", "=== СТАРТ ФИЛЬТРАЦИИ ПО ИСТОРИИ ===");
+        for (UserCrop uc : userCrops) {
+            if (uc.getArea() == null || uc.getCrop() == null) {
+                continue;
+            }
+
+            // Достаем имя, сорт и поле, очищаем и приводим к нижнему регистру
+            String cropName = uc.getCrop().getName().trim().toLowerCase();
+            String variety = uc.getCrop().getVariety() != null ? uc.getCrop().getVariety().trim().toLowerCase() : "обычный";
+            if (variety.isEmpty()) variety = "обычный";
+            String areaName = uc.getArea().getName().trim().toLowerCase();
+
+            // Собираем точный трёхсоставной ключ для проверки, СОВПАДАЮЩИЙ с методом истории
+            String checkKey = cropName + "|" + variety + "|" + areaName;
+
+            // ПРОВЕРКА: Если такой ключ уже есть в истории
+            if (plantedKeys.contains(checkKey)) {
+                Log.d("PLANT_DEBUG", "❌ ИСКЛЮЧЕНО: [" + checkKey + "] уже посажено на этом поле (есть в истории)");
+                continue;
+            }
+
+            Log.d("PLANT_DEBUG", "✅ ДОБАВЛЕНО: [" + checkKey + "] разрешено, совпадений в истории нет");
+            activeCropsToRecommend.add(uc);
+        }
+        Log.d("PLANT_DEBUG", "=== КОНЕЦ ФИЛЬТРАЦИИ. Прошло растений: " + activeCropsToRecommend.size() + " ===");
+
+        // Шаг 2. Строим рекомендации на неделю вперед для тех, кто прошел фильтр
         for (int day = 0; day < 7; day++) {
             String dateStr = sdf.format(calendar.getTime());
             String displayDate = dateFormat.format(calendar.getTime());
             String dayOfWeek = dayFormat.format(calendar.getTime());
 
-            for (UserCrop uc : userCrops) {
-                if (uc.getArea() == null || uc.getArea().getRegion() == null) continue;
-                if (uc.getCrop() == null) continue;
+            for (UserCrop uc : activeCropsToRecommend) {
+                if (uc.getArea().getRegion() == null) continue;
 
-                String cropName = uc.getCrop().getName();
-                String areaName = uc.getArea().getName();
-                String key = cropName + "|" + areaName;
+                Long regionIdLong = uc.getArea().getRegion().getId();
+                if (regionIdLong == null) continue;
+                String regionKey = String.valueOf(regionIdLong.intValue());
 
-                if (plantedKeys.contains(key)) continue;
-
-                String regionKey = String.valueOf(uc.getArea().getRegion().getId().intValue());
                 List<WeatherData> weatherList = weatherByRegion.get(regionKey);
-
                 if (weatherList == null) continue;
 
                 for (WeatherData wd : weatherList) {
@@ -192,9 +247,9 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
                         rec.setUserCropId(uc.getId());
                         rec.setDate(displayDate);
                         rec.setDayOfWeek(dayOfWeek);
-                        rec.setCropName(cropName);
+                        rec.setCropName(uc.getCrop().getName());
                         rec.setVariety(uc.getCrop().getVariety());
-                        rec.setAreaName(areaName);
+                        rec.setAreaName(uc.getArea().getName());
                         rec.setAreaId(uc.getAreaId());
 
                         double tempMin = parseDouble(wd.getTemperatureMin());
@@ -219,17 +274,21 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             calendar.add(Calendar.DAY_OF_YEAR, 1);
         }
 
-        showLoading(false);
-        if (recommendations.isEmpty()) {
-            tvEmpty.setVisibility(View.VISIBLE);
-            rvRecommendations.setVisibility(View.GONE);
-            tvResultsTitle.setVisibility(View.GONE);
-        } else {
-            tvEmpty.setVisibility(View.GONE);
-            rvRecommendations.setVisibility(View.VISIBLE);
-            tvResultsTitle.setVisibility(View.VISIBLE);
-            adapter.updateData(recommendations);
-        }
+        // Шаг 3. Вывод на UI
+        runOnUiThread(() -> {
+            showLoading(false);
+            if (recommendations.isEmpty()) {
+                tvEmpty.setVisibility(View.VISIBLE);
+                rvRecommendations.setVisibility(View.GONE);
+                tvResultsTitle.setVisibility(View.GONE);
+                tvEmpty.setText("Нет доступных растений для посадки на выбранных полях");
+            } else {
+                tvEmpty.setVisibility(View.GONE);
+                rvRecommendations.setVisibility(View.VISIBLE);
+                tvResultsTitle.setVisibility(View.VISIBLE);
+                adapter.updateData(recommendations);
+            }
+        });
     }
 
     private String getReasonText(Crop crop, double tempMin, double humMin) {
@@ -259,34 +318,28 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
         Map<String, Object> request = new HashMap<>();
         request.put("userCropId", item.getUserCropId());
+        request.put("areaId", item.getAreaId());
         request.put("actionTypeId", 1);
 
-        try {
-            String tempStr = item.getWeatherText().replaceAll("[^0-9.-]", " ").trim().split(" ")[0];
-            request.put("temperature", parseDouble(tempStr));
-        } catch (Exception e) {
-            request.put("temperature", 0.0);
-        }
+        Log.d("PLANT_DEBUG", "Отправка запроса посадки -> userCropId: " + item.getUserCropId() + ", areaId: " + item.getAreaId());
 
         apiService.plantCrop(request).enqueue(new retrofit2.Callback<Map<String, Object>>() {
             @Override
             public void onResponse(retrofit2.Call<Map<String, Object>> call, retrofit2.Response<Map<String, Object>> response) {
-                showLoading(false);
                 if (response.isSuccessful()) {
-                    Toast.makeText(PlantingRecommendationActivity.this, "Успешно добавлено в историю!", Toast.LENGTH_SHORT).show();
-
-                    String key = item.getCropName() + "|" + item.getAreaName();
-                    plantedKeys.add(key);
-                    analyzeRecommendations();
+                    Toast.makeText(PlantingRecommendationActivity.this, "Растение успешно посажено!", Toast.LENGTH_SHORT).show();
+                    refreshData();
                 } else {
-                    Toast.makeText(PlantingRecommendationActivity.this, "Ошибка сервера: " + response.code(), Toast.LENGTH_SHORT).show();
+                    showLoading(false);
+                    Toast.makeText(PlantingRecommendationActivity.this, "Ошибка сервера: " + response.code(), Toast.LENGTH_LONG).show();
+                    refreshData();
                 }
             }
 
             @Override
             public void onFailure(retrofit2.Call<Map<String, Object>> call, Throwable t) {
                 showLoading(false);
-                Toast.makeText(PlantingRecommendationActivity.this, "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(PlantingRecommendationActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -302,5 +355,10 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
     private void showLoading(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) {
+            tvEmpty.setVisibility(View.GONE);
+            rvRecommendations.setVisibility(View.GONE);
+            tvResultsTitle.setVisibility(View.GONE);
+        }
     }
 }
