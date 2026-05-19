@@ -11,11 +11,19 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.ars.R;
 import com.example.ars.models.SupportRequest;
 
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 import java.util.List;
 
 public class SupportAdapter extends RecyclerView.Adapter<SupportAdapter.ViewHolder> {
     private List<SupportRequest> list;
     private OnRequestClickListener listener;
+
+    private static final DateTimeFormatter TICKET_FORMATTER =
+            DateTimeFormatter.ofPattern("d MMMM, HH:mm", new Locale("ru"));
 
     public interface OnRequestClickListener {
         void onEdit(SupportRequest request);
@@ -34,14 +42,23 @@ public class SupportAdapter extends RecyclerView.Adapter<SupportAdapter.ViewHold
         return new ViewHolder(v);
     }
 
-
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         SupportRequest req = list.get(position);
+
         holder.tvSubject.setText(req.getSubject());
 
-        if (req.getCreatedAt() != null) {
-            holder.tvDate.setText(req.getCreatedAt());
+        String rawDate = req.getCreatedAt();
+        if (rawDate != null && rawDate.length() >= 19) {
+            try {
+                String cleanDate = rawDate.substring(0, 19);
+
+                java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(cleanDate);
+
+                holder.tvDate.setText(ldt.format(TICKET_FORMATTER));
+            } catch (Exception e) {
+                holder.tvDate.setText(rawDate.replace("T", " "));
+            }
         } else {
             holder.tvDate.setText("Недавно");
         }
@@ -49,10 +66,10 @@ public class SupportAdapter extends RecyclerView.Adapter<SupportAdapter.ViewHold
         String statusText;
         int statusColor;
         switch (req.getStatusId()) {
-            case 1: statusText = "Новый"; statusColor = 0xFF2196F3; break; // Синий
-            case 3: statusText = "В работе"; statusColor = 0xFFFF9800; break; // Оранжевый
-            case 4: statusText = "Закрыт"; statusColor = 0xFF4CAF50; break; // Зеленый
-            default: statusText = "Отправлено"; statusColor = 0xFF757575; // Серый
+            case 1: statusText = "Новый"; statusColor = 0xFF2196F3; break;
+            case 3: statusText = "В работе"; statusColor = 0xFFFF9800; break;
+            case 4: statusText = "Закрыт"; statusColor = 0xFF4CAF50; break;
+            default: statusText = "Отправлено"; statusColor = 0xFF757575;
         }
         holder.tvStatus.setText(statusText);
         holder.tvStatus.setTextColor(statusColor);

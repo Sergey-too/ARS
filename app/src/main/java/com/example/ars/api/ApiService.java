@@ -11,6 +11,7 @@ import com.example.ars.models.GardenHistory;
 import com.example.ars.models.History;
 import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.models.Region;
+import com.example.ars.models.SupportMessage;
 import com.example.ars.models.SupportRequest;
 import com.example.ars.models.TaskItem;
 import com.example.ars.models.User;
@@ -241,6 +242,25 @@ public interface ApiService {
     // Action Types
     @GET("/api/action-types")
     Call<List<ActionType>> getActionTypes();
+
+    // SupportMessage
+    @GET("api/support/user/{userId}")
+    Call<List<SupportRequest>> getUserRequests(@Path("userId") int userId);
+
+    @GET("api/support/admin/all")
+    Call<List<SupportRequest>> getAllRequests();
+
+    @PUT("api/support/{id}/status")
+    Call<SupportRequest> updateRequestStatus(@Path("id") int id, @Query("statusId") int statusId);
+
+    @DELETE("api/support/{id}")
+    Call<Void> deleteSupportRequest(@Path("id") int id);
+
+    @GET("api/support/{requestId}/messages")
+    Call<List<SupportMessage>> getChatMessages(@Path("requestId") int requestId);
+
+    @POST("api/support/messages")
+    Call<SupportMessage> sendChatMessage(@Body SupportMessage message);
 
     class LoginRequest {
         private String identifier;

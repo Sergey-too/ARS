@@ -14,6 +14,7 @@ public class AdminDashboardActivity extends BaseActivity {
     CardView btnNavCategories;
     CardView btnNavWeather;
     CardView btnNavCompatibility;
+    CardView btnNavFeedback;
 
     @SuppressLint({"WrongViewCast", "SetTextI18n"})
     @Override
@@ -27,6 +28,7 @@ public class AdminDashboardActivity extends BaseActivity {
         btnNavCategories = findViewById(R.id.btnNavCategories);
         btnNavWeather = findViewById(R.id.btnNavWeather);
         btnNavCompatibility = findViewById(R.id.btnNavCompatibility);
+        btnNavFeedback = findViewById(R.id.btnNavFeedback);
 
         findViewById(R.id.btnLogout).setOnClickListener(v -> logoutAndClear());
 
@@ -57,6 +59,11 @@ public class AdminDashboardActivity extends BaseActivity {
 
         btnNavCompatibility.setOnClickListener(v -> {
             Intent intent = new Intent(this, AdminCompatibilityActivity.class);
+            startActivity(intent);
+        });
+
+        btnNavFeedback.setOnClickListener(v -> {
+            Intent intent = new Intent(this, AdminSupportActivity.class);
             startActivity(intent);
         });
     }

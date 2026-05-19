@@ -1,6 +1,7 @@
 package com.example.ars;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -52,6 +53,7 @@ public class SupportListActivity extends AppCompatActivity {
 
         rv = findViewById(R.id.rvSupportRequests);
         rv.setLayoutManager(new LinearLayoutManager(this));
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
         findViewById(R.id.fabAddRequest).setOnClickListener(v -> showSupportDialog(null));
 
@@ -65,8 +67,20 @@ public class SupportListActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     requestList = response.body();
                     adapter = new SupportAdapter(requestList, new SupportAdapter.OnRequestClickListener() {
-                        @Override public void onEdit(SupportRequest req) { showSupportDialog(req); }
-                        @Override public void onDelete(Integer id) { confirmDeletion(id); }
+                        @Override
+                        public void onEdit(SupportRequest req) {
+                            Intent intent = new Intent(SupportListActivity.this, ChatActivity.class);
+                            intent.putExtra("REQUEST_ID", req.getId());
+                            intent.putExtra("USER_ID", currentUserId);
+                            intent.putExtra("SUBJECT", req.getSubject());
+                            intent.putExtra("CONTENT", req.getContent());
+                            startActivity(intent);
+                        }
+
+                        @Override
+                        public void onDelete(Integer id) {
+                            confirmDeletion(id);
+                        }
                     });
                     rv.setAdapter(adapter);
                 } else {

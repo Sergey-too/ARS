@@ -127,6 +127,14 @@
         <activity
             android:name=".AdminCompatibilityActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".AdminSupportActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
