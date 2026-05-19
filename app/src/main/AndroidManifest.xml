@@ -123,6 +123,10 @@
         <activity
             android:name=".HistoryActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".AdminCompatibilityActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

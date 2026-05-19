@@ -46,7 +46,6 @@ public class UsersListActivityAdmin extends AppCompatActivity {
         RecyclerView rvUsers = findViewById(R.id.rvUsers);
         rvUsers.setLayoutManager(new LinearLayoutManager(this));
 
-        // Инициализация адаптера с обработкой кнопок
         adapter = new UserAdapter(new ArrayList<>(), new UserAdapter.OnUserActionListener() {
             @Override
             public void onAdminToggle(User user) {
@@ -78,7 +77,6 @@ public class UsersListActivityAdmin extends AppCompatActivity {
     private void filter(String text) {
         List<User> filteredList = new ArrayList<>();
         for (User user : allUsers) {
-            // Ищем по логину или почте
             if (user.getLogin().toLowerCase().contains(text.toLowerCase()) ||
                     user.getEmail().toLowerCase().contains(text.toLowerCase())) {
                 filteredList.add(user);

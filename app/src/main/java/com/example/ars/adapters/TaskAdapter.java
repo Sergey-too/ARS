@@ -7,6 +7,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.ars.R;
+import com.example.ars.TasksActivity;
 import com.example.ars.models.TaskItem;
 import com.google.android.material.button.MaterialButton;
 import java.text.ParseException;
@@ -55,7 +56,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.ViewHolder> {
 
         holder.tvDate.setText(formattedDate);
         holder.tvDayOfWeek.setText(dayOfWeek);
-        holder.tvActionType.setText(item.getActionName());
+
+        if (holder.itemView.getContext() instanceof TasksActivity) {
+            TasksActivity activity = (TasksActivity) holder.itemView.getContext();
+            holder.tvActionType.setText(activity.getCategoryNameById(item.getActionTypeId()));
+        } else {
+            holder.tvActionType.setText(item.getActionName());
+        }
+
         holder.tvCropName.setText(item.getDisplayName());
         holder.tvAreaName.setText("Участок: " + item.getAreaName());
 

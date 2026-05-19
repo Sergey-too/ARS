@@ -10,12 +10,14 @@ public class User {
     private String password;
     private String createdAt;
 
-    @SerializedName("registration_date")
-    private String registrationDate;
+    @SerializedName(value = "admin", alternate = {"is_admin", "isAdmin"})
     private boolean isAdmin;
 
-    @SerializedName("in_ban")
+    @SerializedName(value = "inBan", alternate = {"in_ban", "is_ban", "isBan"})
     private boolean inBan;
+
+    @SerializedName(value = "registrationDate", alternate = {"registration_date"})
+    private String registrationDate;
 
     public User() {}
 

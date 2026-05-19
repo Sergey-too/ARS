@@ -1,11 +1,13 @@
 package com.example.ars.adapters;
 
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.ars.R;
 import com.example.ars.models.User;
@@ -35,16 +37,38 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         User user = users.get(position);
-        holder.tvLogin.setText(user.getLogin());
-        holder.tvEmail.setText(user.getEmail());
-        holder.tvDate.setText("Регистрация: " + user.getRegistrationDate());
 
-        // Настройка кнопок
-        holder.btnAdmin.setText(user.getIsAdmin() ? "Убрать админа" : "Сделать админом");
-        holder.btnBan.setText(user.getInBan() ? "Разбанить" : "Забанить");
+        holder.tvEmail.setText(user.getEmail() != null ? user.getEmail() : "Без email");
 
-        holder.btnAdmin.setOnClickListener(v -> listener.onAdminToggle(user));
-        holder.btnBan.setOnClickListener(v -> listener.onBanToggle(user));
+        var context = holder.itemView.getContext();
+
+        if (user.getIsAdmin()) {
+            holder.btnAdmin.setText("Администратор");
+            int grayColor = ContextCompat.getColor(context, android.R.color.darker_gray);
+            holder.btnAdmin.setBackgroundTintList(ColorStateList.valueOf(grayColor));
+        } else {
+            holder.btnAdmin.setText("Пользователь");
+            int greenPrimary = ContextCompat.getColor(context, R.color.color_input_border);
+            holder.btnAdmin.setBackgroundTintList(ColorStateList.valueOf(greenPrimary));
+        }
+
+        if (user.getInBan()) {
+            holder.btnBan.setText("Разбанить");
+            int safeGreen = ContextCompat.getColor(context, android.R.color.holo_green_dark);
+            holder.btnBan.setBackgroundTintList(ColorStateList.valueOf(safeGreen));
+        } else {
+            holder.btnBan.setText("Забанить");
+            int dangerRed = ContextCompat.getColor(context, android.R.color.holo_red_dark);
+            holder.btnBan.setBackgroundTintList(ColorStateList.valueOf(dangerRed));
+        }
+
+        holder.btnAdmin.setOnClickListener(v -> {
+            if (listener != null) listener.onAdminToggle(user);
+        });
+
+        holder.btnBan.setOnClickListener(v -> {
+            if (listener != null) listener.onBanToggle(user);
+        });
     }
 
     @Override
@@ -56,13 +80,12 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvLogin, tvEmail, tvDate;
+        TextView tvEmail;
         Button btnAdmin, btnBan;
+
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvLogin = itemView.findViewById(R.id.tvUserLogin);
-            tvEmail = itemView.findViewById(R.id.tvUserEmail);
-            tvDate = itemView.findViewById(R.id.tvRegDate);
+            tvEmail = itemView.findViewById(R.id.tvEmail);
             btnAdmin = itemView.findViewById(R.id.btnToggleAdmin);
             btnBan = itemView.findViewById(R.id.btnToggleBan);
         }

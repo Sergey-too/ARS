@@ -7,13 +7,11 @@
     android:background="@color/color_green_soft"
     tools:context=".PlantsActivity">
 
-    <!-- Основной контент -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- AppBar с поиском и меню -->
         <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -63,12 +61,12 @@
                     android:layout_marginEnd="16dp"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp"
-                    android:hint="Поиск растений"
+                    app:hintEnabled="false"
                     app:boxBackgroundColor="@color/color_surface_white"
-                    app:boxCornerRadiusBottomEnd="24dp"
-                    app:boxCornerRadiusBottomStart="24dp"
-                    app:boxCornerRadiusTopEnd="24dp"
-                    app:boxCornerRadiusTopStart="24dp"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusTopStart="12dp"
                     app:endIconMode="clear_text"
                     app:endIconTint="@color/color_green_primary"
                     app:startIconDrawable="@drawable/ic_search"
@@ -78,6 +76,8 @@
                         android:id="@+id/etSearch"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:hint="Поиск растений"
+                        android:textColorHint="@color/color_green_primary"
                         android:paddingVertical="10dp"
                         android:paddingHorizontal="16dp"
                         android:textColor="@color/color_text_dark"

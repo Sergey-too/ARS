@@ -64,9 +64,8 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="16dp">
+            android:padding="12dp">
 
-            <!-- Фильтр по датам -->
             <TextView
                 android:id="@+id/tvFilterTitle"
                 android:layout_width="0dp"
@@ -120,7 +119,6 @@
                     android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Сортировка и Применить -->
             <LinearLayout
                 android:id="@+id/llSortButtons"
                 android:layout_width="0dp"

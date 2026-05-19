@@ -1,5 +1,6 @@
 package com.example.ars.api;
 
+import com.example.ars.models.ActionType;
 import com.example.ars.models.Area;
 import com.example.ars.models.AuthResponse;
 import com.example.ars.models.Category;
@@ -37,7 +38,7 @@ import retrofit2.http.Query;
 
 public interface ApiService {
 
-    // Auth endpoints
+    // Auth
     @POST("/api/auth/login")
     Call<AuthResponse> login(@Body LoginRequest loginRequest);
 
@@ -50,7 +51,7 @@ public interface ApiService {
     @GET("/api/auth/profile")
     Call<User> getProfile(@Header("Authorization") String token);
 
-    // Weather endpoints
+    // Weather
     @GET("/api/weather/regions")
     Call<List<Region>> getRegions();
 
@@ -86,7 +87,7 @@ public interface ApiService {
             @Query("date") String date,
             @Query("regionName") String regionName);
 
-    // Categories endpoints
+    // Categories
     @GET("/api/categories")
     Call<List<Category>> getCategories();
 
@@ -99,7 +100,7 @@ public interface ApiService {
     @DELETE("/api/categories/{id}")
     Call<Void> deleteCategory(@Path("id") Integer id);
 
-    // Crops (system) endpoints
+    // Crops (system)
     @GET("/api/crops")
     Call<List<Crop>> getAllCrops();
 
@@ -121,7 +122,10 @@ public interface ApiService {
     @GET("/api/crops/compatibility")
     Call<List<CompatibilityDTO>> getCompatibilityMatrix();
 
-    // User Crops (planted in garden)
+    @POST("api/compatibility/update")
+    Call<Void> updateCompatibility(@Body CompatibilityDTO dto);
+
+    // User Crops
     @GET("/api/crops/user/{userId}")
     Call<List<UserCrop>> getUserCrops(@Path("userId") Integer userId);
 
@@ -234,6 +238,9 @@ public interface ApiService {
     @GET("/api/weather/by-date/{regionId}/{date}")
     Call<WeatherData> getWeatherByDate(@Path("regionId") int regionId, @Path("date") String date);
 
+    // Action Types
+    @GET("/api/action-types")
+    Call<List<ActionType>> getActionTypes();
 
     class LoginRequest {
         private String identifier;

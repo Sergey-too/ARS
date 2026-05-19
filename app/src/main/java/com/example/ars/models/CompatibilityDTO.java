@@ -21,4 +21,6 @@ public class CompatibilityDTO {
     public String getCrop1() { return crop1; }
     public String getCrop2() { return crop2; }
     public Integer getStatus() { return status; }
+
+    public void setStatus(Integer status) { this.status = status; }
 }

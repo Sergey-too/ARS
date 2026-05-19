@@ -39,11 +39,9 @@ public class SupportListActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_support_list);
 
-        // 1. Инициализация сервисов
         apiService = RetrofitClient.getApiService();
         prefsHelper = new SharedPreferencesHelper(this);
 
-        // Получаем реальный ID пользователя
         if (prefsHelper.getUser() != null) {
             currentUserId = prefsHelper.getUser().getId();
         } else {
@@ -52,14 +50,11 @@ public class SupportListActivity extends AppCompatActivity {
             return;
         }
 
-        // 2. Настройка UI
         rv = findViewById(R.id.rvSupportRequests);
         rv.setLayoutManager(new LinearLayoutManager(this));
 
-        //findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         findViewById(R.id.fabAddRequest).setOnClickListener(v -> showSupportDialog(null));
 
-        // 3. Загрузка данных
         loadRequests();
     }
 
