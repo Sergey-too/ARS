@@ -9,6 +9,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
 import com.example.ars.adapters.UserPlantAdapter;
 import com.example.ars.api.ApiService;
@@ -21,6 +24,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -39,6 +44,17 @@ public class PlantsActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        WorkManager.getInstance(this).cancelAllWork();
+        PeriodicWorkRequest alertWorkRequest =
+                new PeriodicWorkRequest.Builder(AlertWorker.class, 15, TimeUnit.MINUTES)
+                        .build();
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "AlertCheck",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                alertWorkRequest
+        );
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plants);
 

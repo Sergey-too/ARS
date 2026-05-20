@@ -16,6 +16,7 @@ import com.example.ars.models.SupportRequest;
 import com.example.ars.models.TaskItem;
 import com.example.ars.models.User;
 import com.example.ars.models.UserCrop;
+import com.example.ars.models.WeatherAlert;
 import com.example.ars.models.WeatherComparisonDTO;
 import com.example.ars.models.WeatherData;
 import com.example.ars.models.WeatherResponse;
@@ -261,6 +262,10 @@ public interface ApiService {
 
     @POST("api/support/messages")
     Call<SupportMessage> sendChatMessage(@Body SupportMessage message);
+
+    //WeatherAlert
+    @GET("api/alerts/check/{userId}")
+    Call<List<WeatherAlert>> checkAlerts(@Path("userId") int userId);
 
     class LoginRequest {
         private String identifier;
