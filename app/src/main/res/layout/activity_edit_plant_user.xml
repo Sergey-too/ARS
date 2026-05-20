@@ -6,16 +6,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_gradient_green"
     android:fillViewport="true"
-    tools:context=".EditPlantActivityAdmin">
+        tools:context=".EditPlantActivityUser">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp">
-
-        <!-- Верхний заголовок -->
         <LinearLayout
-            android:id="@+id/topSection"
+                android:id="@+id/topSection"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
@@ -69,8 +67,6 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
-
-                <!-- Кнопка назад -->
                 <ImageView
                     android:id="@+id/btnBack"
                     android:layout_width="40dp"
@@ -97,7 +93,6 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- КАРТОЧКА ВЫБОРА ФОТО -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cvPhotoContainer"
                     android:layout_width="match_parent"
@@ -144,7 +139,6 @@
                     </RelativeLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Название растения -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPlantName"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -170,7 +164,6 @@
                         android:inputType="textCapWords" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Сорт -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilVariety"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -196,7 +189,6 @@
                         android:inputType="textCapWords" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Категория -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilCategory"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -222,7 +214,6 @@
                         android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Описание -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilDescription"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -248,7 +239,6 @@
                         android:maxLines="5" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Способы посадки -->
                 <TextView
                     android:id="@+id/tvSowingLabel"
                     android:layout_width="0dp"
@@ -288,7 +278,6 @@
                         android:textColor="@color/color_text_dark" />
                 </LinearLayout>
 
-                <!-- Температура -->
                 <TextView
                     android:id="@+id/tvTempLabel"
                     android:layout_width="0dp"
@@ -350,7 +339,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Влажность -->
                 <TextView
                     android:id="@+id/tvHumidityLabel"
                     android:layout_width="0dp"
@@ -412,7 +400,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Осадки и Ветер -->
                 <LinearLayout
                     android:id="@+id/llEnvironment"
                     android:layout_width="0dp"
@@ -457,7 +444,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Глубина посева -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilSowingDepth"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -481,7 +467,6 @@
                         android:inputType="number" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Дни до всходов и урожая -->
                 <LinearLayout
                     android:id="@+id/llDays"
                     android:layout_width="0dp"
@@ -526,7 +511,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Интервалы ухода -->
                 <TextView
                     android:id="@+id/tvCareLabel"
                     android:layout_width="0dp"
@@ -628,31 +612,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Путь к фото -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilPhotoPath"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Путь к фото (URL)"
-                    app:boxStrokeColor="@color/color_input_border"
-                    app:boxStrokeWidthFocused="2dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/llCareIntervals2">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etPhotoPath"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="12dp"
-                        android:textColor="@color/color_text_dark"
-                        android:textSize="16sp"
-                        android:inputType="textUri" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- Кнопки -->
                 <LinearLayout
                     android:id="@+id/llButtons"
                     android:layout_width="0dp"
@@ -663,7 +622,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilPhotoPath">
+                    app:layout_constraintTop_toBottomOf="@+id/llCareIntervals2">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDelete"

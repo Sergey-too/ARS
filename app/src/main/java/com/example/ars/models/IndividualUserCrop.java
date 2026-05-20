@@ -14,13 +14,11 @@ public class IndividualUserCrop implements Serializable {
     @SerializedName("maxTemp") private Float maxTemp;
     @SerializedName("maxWind") private Float maxWind;
 
-    // Исправлено: Integer вместо Float (соответствует бэкенду)
     @SerializedName("minHumidity") private Integer minHumidity;
     @SerializedName("maxHumidity") private Integer maxHumidity;
 
     @SerializedName("neededPrecipitation") private Float neededPrecipitation;
 
-    // Исправлено: Integer вместо Float
     @SerializedName("sowingDepth") private Integer sowingDepth;
 
     @SerializedName("daysToGermination") private Integer daysToGermination;

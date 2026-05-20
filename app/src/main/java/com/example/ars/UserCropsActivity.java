@@ -39,8 +39,8 @@ public class UserCropsActivity extends AppCompatActivity {
         rv.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new UserCropAdapter(new ArrayList<>(), crop -> {
-            Intent intent = new Intent(this, AddPlantActivityUser.class);
-            intent.putExtra("CROP_ID", crop.getId()); // Передаем ID для редактирования
+            Intent intent = new Intent(this, EditPlantActivityUser.class);
+            intent.putExtra("CROP_ID", crop.getId());
             startActivity(intent);
         });
         rv.setAdapter(adapter);

@@ -136,6 +136,10 @@
         <activity
             android:name=".ChatActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".EditPlantActivityUser"
+            android:exported="false" />
     </application>
 
 </manifest>
