@@ -151,7 +151,6 @@ public class HistoryActivity extends AppCompatActivity {
                         item.setHumidity(w.getHumidityMin() + ".." + w.getHumidityMax());
                         item.setPrecipitation(w.getPrecipitation());
                     } else {
-                        // Погода не найдена
                         item.setTemperature("--");
                         item.setHumidity("--");
                         item.setPrecipitation("--");
@@ -166,7 +165,6 @@ public class HistoryActivity extends AppCompatActivity {
 
                 @Override
                 public void onFailure(Call<WeatherData> call, Throwable t) {
-                    // Ошибка сети - ставим прочерки
                     item.setTemperature("--");
                     item.setHumidity("--");
                     item.setPrecipitation("--");

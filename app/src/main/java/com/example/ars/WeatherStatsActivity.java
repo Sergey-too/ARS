@@ -39,7 +39,6 @@ public class WeatherStatsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weather_stats);
 
-        // Инициализация UI
         apiService = RetrofitClient.getApiService();
         tempChart = findViewById(R.id.tempBarChart);
         humChart = findViewById(R.id.humBarChart);
@@ -47,10 +46,8 @@ public class WeatherStatsActivity extends AppCompatActivity {
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
-        // Загрузка регионов и установка Минска
         loadRegions();
 
-        // Обработка выбора региона
         actvRegion.setOnItemClickListener((parent, view, position, id) -> {
             Region selectedRegion = (Region) parent.getAdapter().getItem(position);
             if (selectedRegion != null) {
@@ -90,8 +87,8 @@ public class WeatherStatsActivity extends AppCompatActivity {
         });
     }
 
-    private void loadComparisonData(Long regionId) {
-        apiService.getWeatherComparison(regionId).enqueue(new Callback<List<WeatherComparisonDTO>>() {
+    private void loadComparisonData(Integer regionId) {
+        apiService.getWeatherComparison(regionId.longValue()).enqueue(new Callback<List<WeatherComparisonDTO>>() {
             @Override
             public void onResponse(Call<List<WeatherComparisonDTO>> call, Response<List<WeatherComparisonDTO>> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -136,7 +133,6 @@ public class WeatherStatsActivity extends AppCompatActivity {
     }
 
     private void renderLineChart(LineChart chart, ArrayList<Entry> fact, ArrayList<Entry> norm, String label, String[] labels, int color) {
-        // 1. ПОЛНАЯ ОЧИСТКА (Критично для обновления данных)
         chart.clear();
 
         LineDataSet factSet = new LineDataSet(fact, "Факт");
@@ -156,16 +152,13 @@ public class WeatherStatsActivity extends AppCompatActivity {
         LineData lineData = new LineData(factSet, normSet);
         chart.setData(lineData);
 
-        // 2. НАСТРОЙКА ОСИ X (Используем переданный в метод chart)
         XAxis xAxis = chart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setGranularity(1f);
-        // Важно: обновляем форматтер меток под новые данные
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setLabelRotationAngle(-45f);
         xAxis.setYOffset(5f);
 
-        // 3. НАСТРОЙКА ЛЕГЕНДЫ
         Legend legend = chart.getLegend();
         legend.setEnabled(true);
         legend.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
@@ -175,15 +168,13 @@ public class WeatherStatsActivity extends AppCompatActivity {
         legend.setYOffset(10f);
         legend.setForm(Legend.LegendForm.CIRCLE);
 
-        // Добавляем отступ, чтобы легенда не "съедалась"
         chart.setExtraBottomOffset(25f);
 
         chart.getAxisRight().setEnabled(false);
         chart.getDescription().setEnabled(false);
 
-        // 4. ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ
-        chart.notifyDataSetChanged(); // Сообщить, что данные изменились
+        chart.notifyDataSetChanged();
         chart.animateX(800);
-        chart.invalidate(); // Перерисовать
+        chart.invalidate();
     }
 }

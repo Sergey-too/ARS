@@ -113,29 +113,22 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
                     for (GardenHistory h : response.body()) {
                         Integer actionTypeId = h.getActionTypeId();
 
-                        Log.d("PLANT_DEBUG", "История из БД -> actionId: " + actionTypeId
-                                + ", культура: " + h.getCropName() + ", сорт: " + h.getVariety() + ", участок: " + h.getAreaName());
-
                         if (actionTypeId != null && actionTypeId == 1 && h.getCropName() != null && h.getAreaName() != null) {
                             String cropName = h.getCropName().trim().toLowerCase();
                             String variety = h.getVariety() != null ? h.getVariety().trim().toLowerCase() : "обычный";
                             if (variety.isEmpty()) variety = "обычный";
                             String areaName = h.getAreaName().trim().toLowerCase();
 
-                            // Трёхсоставной ключ: культура + сорт + участок
                             String key = cropName + "|" + variety + "|" + areaName;
                             plantedKeys.add(key);
-                            Log.d("PLANT_DEBUG", "Ключ добавлен в Set истории: " + key);
                         }
                     }
                 }
-                Log.d("PLANT_DEBUG", "Всего уникальных ключей в истории: " + plantedKeys.size());
                 loadWeatherForAllRegions();
             }
 
             @Override
             public void onFailure(retrofit2.Call<List<GardenHistory>> call, Throwable t) {
-                Log.e("PLANT_DEBUG", "Ошибка загрузки истории: " + t.getMessage());
                 loadWeatherForAllRegions();
             }
         });
@@ -146,7 +139,7 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
         Set<Integer> uniqueRegionIds = new HashSet<>();
         for (UserCrop uc : userCrops) {
             if (uc.getArea() != null && uc.getArea().getRegion() != null) {
-                Long regionIdLong = uc.getArea().getRegion().getId();
+                Integer regionIdLong = uc.getArea().getRegion().getId();
                 if (regionIdLong != null) {
                     uniqueRegionIds.add(regionIdLong.intValue());
                 }
@@ -196,36 +189,27 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
         Calendar calendar = Calendar.getInstance();
 
-        // Шаг 1. Фильтруем по истории (Культура + Сорт + Поле)
         List<UserCrop> activeCropsToRecommend = new ArrayList<>();
 
-        Log.d("PLANT_DEBUG", "=== СТАРТ ФИЛЬТРАЦИИ ПО ИСТОРИИ ===");
         for (UserCrop uc : userCrops) {
             if (uc.getArea() == null || uc.getCrop() == null) {
                 continue;
             }
 
-            // Достаем имя, сорт и поле, очищаем и приводим к нижнему регистру
             String cropName = uc.getCrop().getName().trim().toLowerCase();
             String variety = uc.getCrop().getVariety() != null ? uc.getCrop().getVariety().trim().toLowerCase() : "обычный";
             if (variety.isEmpty()) variety = "обычный";
             String areaName = uc.getArea().getName().trim().toLowerCase();
 
-            // Собираем точный трёхсоставной ключ для проверки, СОВПАДАЮЩИЙ с методом истории
             String checkKey = cropName + "|" + variety + "|" + areaName;
 
-            // ПРОВЕРКА: Если такой ключ уже есть в истории
             if (plantedKeys.contains(checkKey)) {
-                Log.d("PLANT_DEBUG", "❌ ИСКЛЮЧЕНО: [" + checkKey + "] уже посажено на этом поле (есть в истории)");
                 continue;
             }
 
-            Log.d("PLANT_DEBUG", "✅ ДОБАВЛЕНО: [" + checkKey + "] разрешено, совпадений в истории нет");
             activeCropsToRecommend.add(uc);
         }
-        Log.d("PLANT_DEBUG", "=== КОНЕЦ ФИЛЬТРАЦИИ. Прошло растений: " + activeCropsToRecommend.size() + " ===");
 
-        // Шаг 2. Строим рекомендации на неделю вперед для тех, кто прошел фильтр
         for (int day = 0; day < 7; day++) {
             String dateStr = sdf.format(calendar.getTime());
             String displayDate = dateFormat.format(calendar.getTime());
@@ -234,7 +218,7 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             for (UserCrop uc : activeCropsToRecommend) {
                 if (uc.getArea().getRegion() == null) continue;
 
-                Long regionIdLong = uc.getArea().getRegion().getId();
+                Integer regionIdLong = uc.getArea().getRegion().getId();
                 if (regionIdLong == null) continue;
                 String regionKey = String.valueOf(regionIdLong.intValue());
 
@@ -274,7 +258,6 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             calendar.add(Calendar.DAY_OF_YEAR, 1);
         }
 
-        // Шаг 3. Вывод на UI
         runOnUiThread(() -> {
             showLoading(false);
             if (recommendations.isEmpty()) {
@@ -320,8 +303,6 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
         request.put("userCropId", item.getUserCropId());
         request.put("areaId", item.getAreaId());
         request.put("actionTypeId", 1);
-
-        Log.d("PLANT_DEBUG", "Отправка запроса посадки -> userCropId: " + item.getUserCropId() + ", areaId: " + item.getAreaId());
 
         apiService.plantCrop(request).enqueue(new retrofit2.Callback<Map<String, Object>>() {
             @Override

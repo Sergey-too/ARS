@@ -139,7 +139,6 @@ public class RegionsAdminActivity extends AppCompatActivity {
             input.setText(region.getName());
         }
 
-        // Настройка отступов внутри диалога
         FrameLayout container = new FrameLayout(this);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);

@@ -179,10 +179,10 @@ public interface ApiService {
     Call<Region> createRegion(@Body Region region);
 
     @PUT("/api/regions/{id}")
-    Call<Region> updateRegion(@Path("id") Long id, @Body Region region);
+    Call<Region> updateRegion(@Path("id") Integer id, @Body Region region);
 
     @DELETE("/api/regions/{id}")
-    Call<Void> deleteRegion(@Path("id") Long id);
+    Call<Void> deleteRegion(@Path("id") Integer id);
 
     // Support
     @GET("/api/support/user/{userId}")

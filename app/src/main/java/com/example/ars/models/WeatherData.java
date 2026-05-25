@@ -54,7 +54,6 @@ public class WeatherData {
     public String getPressure() { return pressure != null ? pressure : "--"; }
     public String getGustsOfWind() { return gustsOfWind; }
 
-    // Сеттеры (если нужны)
     public void setId(Integer id) { this.id = id; }
     public void setRegionId(Integer regionId) { this.regionId = regionId; }
     public void setDate(String date) { this.date = date; }
@@ -68,7 +67,6 @@ public class WeatherData {
     public void setPressure(String pressure) { this.pressure = pressure; }
     public void setGustsOfWind(String gustsOfWind) { this.gustsOfWind = gustsOfWind; }
 
-    // Форматированные строки для отображения
     public String getTempRange() {
         return temperatureMin + "° - " + temperatureMax + "°";
     }
