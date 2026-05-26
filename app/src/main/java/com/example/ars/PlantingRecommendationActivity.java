@@ -138,10 +138,10 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
         weatherByRegion.clear();
         Set<Integer> uniqueRegionIds = new HashSet<>();
         for (UserCrop uc : userCrops) {
-            if (uc.getArea() != null && uc.getArea().getRegion() != null) {
-                Integer regionIdLong = uc.getArea().getRegion().getId();
-                if (regionIdLong != null) {
-                    uniqueRegionIds.add(regionIdLong.intValue());
+            if (uc.getArea() != null) {
+                Integer regionId = uc.getArea().getRegionId();
+                if (regionId != null) {
+                    uniqueRegionIds.add(regionId);
                 }
             }
         }
@@ -191,6 +191,9 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
         List<UserCrop> activeCropsToRecommend = new ArrayList<>();
 
+        Log.d("RECOMMEND", "userCrops size: " + userCrops.size());
+        Log.d("RECOMMEND", "weatherByRegion size: " + weatherByRegion.size());
+        Log.d("RECOMMEND", "plantedKeys: " + plantedKeys.toString());
         for (UserCrop uc : userCrops) {
             if (uc.getArea() == null || uc.getCrop() == null) {
                 continue;
@@ -216,7 +219,7 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
                 tvEmpty.setVisibility(View.VISIBLE);
                 rvRecommendations.setVisibility(View.GONE);
                 tvResultsTitle.setVisibility(View.GONE);
-                tvEmpty.setText("Все растения уже посажены!");
+                tvEmpty.setText("Нет культур для посадок в данный момент");
             });
             return;
         }
@@ -259,7 +262,7 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             for (UserCrop uc : activeCropsToRecommend) {
                 if (uc.getArea().getRegion() == null) continue;
 
-                Integer regionId = uc.getArea().getRegion().getId();
+                Integer regionId = uc.getArea().getRegionId();
                 if (regionId == null) continue;
                 String regionKey = String.valueOf(regionId);
 
@@ -284,6 +287,35 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
                         rec.setAreaId(uc.getAreaId());
 
                         Crop crop = uc.getCrop();
+
+                        rec.setTempCurrent(String.format("%.0f-%.0f°C", tempMin, tempMax));
+                        rec.setHumidityCurrent(String.format("%.0f%%", humMin));
+                        rec.setPrecipCurrent(String.format("%.1f мм", precipitation));
+                        rec.setWindCurrent(String.format("%.1f м/с", windMax));
+
+                        if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
+                            rec.setTempRequired(String.format("%.0f-%.0f°C", crop.getMinTemp(), crop.getMaxTemp()));
+                        } else {
+                            rec.setTempRequired("—");
+                        }
+
+                        if (crop.getMinHumidity() != null && crop.getMaxHumidity() != null) {
+                            rec.setHumidityRequired(String.format("%.0f-%.0f%%", (float)crop.getMinHumidity(), (float)crop.getMaxHumidity()));
+                        } else {
+                            rec.setHumidityRequired("—");
+                        }
+
+                        if (crop.getNeededPrecipitation() != null) {
+                            rec.setPrecipRequired(String.format("до %.0f мм", crop.getNeededPrecipitation()));
+                        } else {
+                            rec.setPrecipRequired("—");
+                        }
+
+                        if (crop.getMaxWind() != null) {
+                            rec.setWindRequired(String.format("до %.0f м/с", crop.getMaxWind()));
+                        } else {
+                            rec.setWindRequired("—");
+                        }
 
                         boolean tempOk = true;
                         if (crop.getMinTemp() != null) {
@@ -324,6 +356,8 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             }
             calendar.add(Calendar.DAY_OF_YEAR, 1);
         }
+        Log.d("RECOMMEND", "activeCropsToRecommend size: " + activeCropsToRecommend.size());
+        Log.d("RECOMMEND", "final recommendations size: " + recommendations.size());
 
         runOnUiThread(() -> {
             showLoading(false);
@@ -345,45 +379,55 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
         StringBuilder sb = new StringBuilder();
 
         if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
-            sb.append(String.format("%d..%d°C (нужно %d-%d°C)\n",
-                    (int)tempMin, (int)tempMax, crop.getMinTemp(), crop.getMaxTemp()));
+            if (tempMin >= crop.getMinTemp() && tempMax <= crop.getMaxTemp()) {
+                sb.append(String.format("Температура: %.0f..%.0f°C (оптимум: %.0f-%.0f°C) ✓\n",
+                        tempMin, tempMax, crop.getMinTemp(), crop.getMaxTemp()));
+            } else {
+                sb.append(String.format("Температура: %.0f..%.0f°C (нужно: %.0f-%.0f°C) ✗\n",
+                        tempMin, tempMax, crop.getMinTemp(), crop.getMaxTemp()));
+            }
         } else {
-            sb.append(String.format("%d..%d°C\n", (int)tempMin, (int)tempMax));
+            sb.append(String.format("Температура: %.0f..%.0f°C\n", tempMin, tempMax));
         }
 
         if (crop.getMinHumidity() != null && crop.getMaxHumidity() != null) {
-            sb.append(String.format("%d%% (нужно %d-%d%%)\n",
-                    (int)hum, crop.getMinHumidity(), crop.getMaxHumidity()));
+            if (hum >= crop.getMinHumidity() && hum <= crop.getMaxHumidity()) {
+                sb.append(String.format("Влажность: %.0f%% (оптимум: %.0f-%.0f%%) ✓\n",
+                        hum, (float)crop.getMinHumidity(), (float)crop.getMaxHumidity()));
+            } else {
+                sb.append(String.format("Влажность: %.0f%% (нужно: %.0f-%.0f%%) ✗\n",
+                        hum, (float)crop.getMinHumidity(), (float)crop.getMaxHumidity()));
+            }
         } else {
-            sb.append(String.format("%d%%\n", (int)hum));
+            sb.append(String.format("Влажность: %.0f%%\n", hum));
         }
 
         if (crop.getNeededPrecipitation() != null) {
-            sb.append(String.format("%.1f мм (максимум %d мм)\n",
-                    precip, crop.getNeededPrecipitation()));
+            if (precip <= crop.getNeededPrecipitation()) {
+                sb.append(String.format("Осадки: %.1f мм (максимум: %.0f мм) ✓\n",
+                        precip, crop.getNeededPrecipitation()));
+            } else {
+                sb.append(String.format("Осадки: %.1f мм (превышает норму: %.0f мм) ✗\n",
+                        precip, crop.getNeededPrecipitation()));
+            }
         } else {
-            sb.append(String.format("%.1f мм\n", precip));
+            sb.append(String.format("Осадки: %.1f мм\n", precip));
         }
 
         if (crop.getMaxWind() != null) {
-            sb.append(String.format("%.1f м/с (максимум %d м/с)",
-                    wind, crop.getMaxWind()));
+            if (wind <= crop.getMaxWind()) {
+                sb.append(String.format("Ветер: %.1f м/с (максимум: %.0f м/с) ✓",
+                        wind, crop.getMaxWind()));
+            } else {
+                sb.append(String.format("Ветер: %.1f м/с (превышает норму: %.0f м/с) ✗",
+                        wind, crop.getMaxWind()));
+            }
         } else {
-            sb.append(String.format("%.1f м/с", wind));
+            sb.append(String.format("Ветер: %.1f м/с", wind));
         }
 
         return sb.toString();
     }
-    private String getReasonText(Crop crop, double tempMin, double humMin) {
-        String tempText = (crop.getMinTemp() != null && crop.getMaxTemp() != null)
-                ? String.format("%.1f°C (нужно %.0f-%.0f°C)", tempMin, crop.getMinTemp(), crop.getMaxTemp())
-                : String.format("%.1f°C", tempMin);
-        String humText = (crop.getMinHumidity() != null && crop.getMaxHumidity() != null)
-                ? String.format("%.0f%% (нужно %.0f-%.0f%%)", humMin, (float)crop.getMinHumidity(), (float)crop.getMaxHumidity())
-                : String.format("%.0f%%", humMin);
-        return "Температура: " + tempText + "\nВлажность: " + humText;
-    }
-
     private void onPlantClick(PlantingRecommendation item) {
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Посадка")

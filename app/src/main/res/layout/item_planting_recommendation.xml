@@ -14,11 +14,12 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Заголовок: дата и день недели -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             android:background="#E8F5E9"
             android:padding="12dp"
             android:gravity="center_vertical">
@@ -42,6 +43,7 @@
                 android:textColor="#2E7D32" />
         </LinearLayout>
 
+        <!-- Название растения -->
         <TextView
             android:id="@+id/tvCropName"
             android:layout_width="match_parent"
@@ -52,6 +54,7 @@
             android:textColor="#000000"
             android:layout_marginBottom="4dp" />
 
+        <!-- Регион -->
         <TextView
             android:id="@+id/tvRegion"
             android:layout_width="match_parent"
@@ -59,27 +62,227 @@
             android:text="Минск"
             android:textSize="14sp"
             android:textColor="#666666"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:id="@+id/tvWeather"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🌡️ 18..25°C  💧 65-75%  💨 1-2 м/с"
-            android:textSize="14sp"
-            android:textColor="#1976D2"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:id="@+id/tvReason"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Температура: 21.5°C (нужно: 18.0-28.0°C)\nВлажность: 70% (нужно: 70-90%)"
-            android:textSize="13sp"
-            android:textColor="#5D4037"
-            android:lineSpacingExtra="4dp"
             android:layout_marginBottom="16dp" />
 
+        <!-- Таблица погоды -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Погода"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginBottom="8dp" />
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="1dp"
+            app:cardBackgroundColor="#F5F5F5">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <!-- Заголовки таблицы -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:background="#E0E0E0"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Параметр"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333" />
+
+                    <TextView
+                        android:id="@+id/tvCurrentValue"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Текущее"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/tvRequiredValue"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Норма"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333"
+                        android:gravity="center" />
+                </LinearLayout>
+
+                <!-- Строка температуры -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="6dp"
+                    android:padding="6dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Температура"
+                        android:textSize="12sp"
+                        android:textColor="#555555" />
+
+                    <TextView
+                        android:id="@+id/tvTempCurrent"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="18°C"
+                        android:textSize="12sp"
+                        android:textColor="#1976D2"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/tvTempRequired"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="15-25°C"
+                        android:textSize="12sp"
+                        android:textColor="#555555"
+                        android:gravity="center" />
+                </LinearLayout>
+
+                <!-- Строка влажности -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="6dp"
+                    android:padding="6dp"
+                    android:background="#FAFAFA">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Влажность"
+                        android:textSize="12sp"
+                        android:textColor="#555555" />
+
+                    <TextView
+                        android:id="@+id/tvHumidityCurrent"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="65%"
+                        android:textSize="12sp"
+                        android:textColor="#1976D2"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/tvHumidityRequired"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="60-80%"
+                        android:textSize="12sp"
+                        android:textColor="#555555"
+                        android:gravity="center" />
+                </LinearLayout>
+
+                <!-- Строка осадков -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="6dp"
+                    android:padding="6dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Осадки"
+                        android:textSize="12sp"
+                        android:textColor="#555555" />
+
+                    <TextView
+                        android:id="@+id/tvPrecipCurrent"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="2.5 мм"
+                        android:textSize="12sp"
+                        android:textColor="#1976D2"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/tvPrecipRequired"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text=" 10 мм"
+                        android:textSize="12sp"
+                        android:textColor="#555555"
+                        android:gravity="center" />
+                </LinearLayout>
+
+                <!-- Строка ветра -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="6dp"
+                    android:background="#FAFAFA">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Ветер"
+                        android:textSize="12sp"
+                        android:textColor="#555555" />
+
+                    <TextView
+                        android:id="@+id/tvWindCurrent"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="3 м/с"
+                        android:textSize="12sp"
+                        android:textColor="#1976D2"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/tvWindRequired"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text=" 5 м/с"
+                        android:textSize="12sp"
+                        android:textColor="#555555"
+                        android:gravity="center" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Кнопка посадки -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPlant"
             android:layout_width="match_parent"

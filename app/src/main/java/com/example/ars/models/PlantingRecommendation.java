@@ -12,8 +12,15 @@ public class PlantingRecommendation {
     private String weatherText;
     private String reason;
     private boolean goodDay;
+    private String tempCurrent;
+    private String tempRequired;
+    private String humidityCurrent;
+    private String humidityRequired;
+    private String precipCurrent;
+    private String precipRequired;
+    private String windCurrent;
+    private String windRequired;
 
-    // Геттеры и сеттеры
     public String getDate() { return date; }
     public void setDate(String date) { this.date = date; }
 
@@ -46,4 +53,28 @@ public class PlantingRecommendation {
 
     public String getVariety() { return variety; }
     public void setVariety(String variety) { this.variety = variety; }
+
+    public String getTempCurrent() { return tempCurrent; }
+    public void setTempCurrent(String tempCurrent) { this.tempCurrent = tempCurrent; }
+
+    public String getTempRequired() { return tempRequired; }
+    public void setTempRequired(String tempRequired) { this.tempRequired = tempRequired; }
+
+    public String getHumidityCurrent() { return humidityCurrent; }
+    public void setHumidityCurrent(String humidityCurrent) { this.humidityCurrent = humidityCurrent; }
+
+    public String getHumidityRequired() { return humidityRequired; }
+    public void setHumidityRequired(String humidityRequired) { this.humidityRequired = humidityRequired; }
+
+    public String getPrecipCurrent() { return precipCurrent; }
+    public void setPrecipCurrent(String precipCurrent) { this.precipCurrent = precipCurrent; }
+
+    public String getPrecipRequired() { return precipRequired; }
+    public void setPrecipRequired(String precipRequired) { this.precipRequired = precipRequired; }
+
+    public String getWindCurrent() { return windCurrent; }
+    public void setWindCurrent(String windCurrent) { this.windCurrent = windCurrent; }
+
+    public String getWindRequired() { return windRequired; }
+    public void setWindRequired(String windRequired) { this.windRequired = windRequired; }
 }

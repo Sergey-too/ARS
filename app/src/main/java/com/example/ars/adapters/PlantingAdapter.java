@@ -48,12 +48,40 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         PlantingRecommendation rec = recommendations.get(position);
 
+        // Основная информация
         holder.tvDate.setText(rec.getDate());
         holder.tvDayOfWeek.setText(rec.getDayOfWeek());
         holder.tvCropName.setText(rec.getCropName());
         holder.tvRegion.setText(rec.getAreaName());
-        holder.tvWeather.setText(rec.getWeatherText());
-        holder.tvReason.setText(rec.getReason());
+
+        // Данные для таблицы
+        if (rec.getTempCurrent() != null) {
+            holder.tvTempCurrent.setText(rec.getTempCurrent());
+        }
+        if (rec.getTempRequired() != null) {
+            holder.tvTempRequired.setText(rec.getTempRequired());
+        }
+
+        if (rec.getHumidityCurrent() != null) {
+            holder.tvHumidityCurrent.setText(rec.getHumidityCurrent());
+        }
+        if (rec.getHumidityRequired() != null) {
+            holder.tvHumidityRequired.setText(rec.getHumidityRequired());
+        }
+
+        if (rec.getPrecipCurrent() != null) {
+            holder.tvPrecipCurrent.setText(rec.getPrecipCurrent());
+        }
+        if (rec.getPrecipRequired() != null) {
+            holder.tvPrecipRequired.setText(rec.getPrecipRequired());
+        }
+
+        if (rec.getWindCurrent() != null) {
+            holder.tvWindCurrent.setText(rec.getWindCurrent());
+        }
+        if (rec.getWindRequired() != null) {
+            holder.tvWindRequired.setText(rec.getWindRequired());
+        }
 
         holder.btnPlant.setOnClickListener(v -> {
             if (onPlantClickListener != null) {
@@ -68,7 +96,11 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvDate, tvDayOfWeek, tvCropName, tvRegion, tvWeather, tvReason;
+        TextView tvDate, tvDayOfWeek, tvCropName, tvRegion;
+        TextView tvTempCurrent, tvTempRequired;
+        TextView tvHumidityCurrent, tvHumidityRequired;
+        TextView tvPrecipCurrent, tvPrecipRequired;
+        TextView tvWindCurrent, tvWindRequired;
         MaterialButton btnPlant;
 
         ViewHolder(@NonNull View itemView) {
@@ -77,8 +109,16 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
             tvDayOfWeek = itemView.findViewById(R.id.tvDayOfWeek);
             tvCropName = itemView.findViewById(R.id.tvCropName);
             tvRegion = itemView.findViewById(R.id.tvRegion);
-            tvWeather = itemView.findViewById(R.id.tvWeather);
-            tvReason = itemView.findViewById(R.id.tvReason);
+
+            tvTempCurrent = itemView.findViewById(R.id.tvTempCurrent);
+            tvTempRequired = itemView.findViewById(R.id.tvTempRequired);
+            tvHumidityCurrent = itemView.findViewById(R.id.tvHumidityCurrent);
+            tvHumidityRequired = itemView.findViewById(R.id.tvHumidityRequired);
+            tvPrecipCurrent = itemView.findViewById(R.id.tvPrecipCurrent);
+            tvPrecipRequired = itemView.findViewById(R.id.tvPrecipRequired);
+            tvWindCurrent = itemView.findViewById(R.id.tvWindCurrent);
+            tvWindRequired = itemView.findViewById(R.id.tvWindRequired);
+
             btnPlant = itemView.findViewById(R.id.btnPlant);
         }
     }
