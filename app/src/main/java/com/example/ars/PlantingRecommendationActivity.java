@@ -210,6 +210,47 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             activeCropsToRecommend.add(uc);
         }
 
+        if (activeCropsToRecommend.isEmpty()) {
+            runOnUiThread(() -> {
+                showLoading(false);
+                tvEmpty.setVisibility(View.VISIBLE);
+                rvRecommendations.setVisibility(View.GONE);
+                tvResultsTitle.setVisibility(View.GONE);
+                tvEmpty.setText("Все растения уже посажены!");
+            });
+            return;
+        }
+
+        boolean hasRegion = false;
+        for (UserCrop uc : activeCropsToRecommend) {
+            if (uc.getArea().getRegion() != null && uc.getArea().getRegion().getId() != null) {
+                hasRegion = true;
+                break;
+            }
+        }
+
+        if (!hasRegion) {
+            runOnUiThread(() -> {
+                showLoading(false);
+                tvEmpty.setVisibility(View.VISIBLE);
+                rvRecommendations.setVisibility(View.GONE);
+                tvResultsTitle.setVisibility(View.GONE);
+                tvEmpty.setText("У ваших участков не указан регион");
+            });
+            return;
+        }
+
+        if (weatherByRegion.isEmpty()) {
+            runOnUiThread(() -> {
+                showLoading(false);
+                tvEmpty.setVisibility(View.VISIBLE);
+                rvRecommendations.setVisibility(View.GONE);
+                tvResultsTitle.setVisibility(View.GONE);
+                tvEmpty.setText("Нет данных о погоде для вашего региона");
+            });
+            return;
+        }
+
         for (int day = 0; day < 7; day++) {
             String dateStr = sdf.format(calendar.getTime());
             String displayDate = dateFormat.format(calendar.getTime());
@@ -218,15 +259,21 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             for (UserCrop uc : activeCropsToRecommend) {
                 if (uc.getArea().getRegion() == null) continue;
 
-                Integer regionIdLong = uc.getArea().getRegion().getId();
-                if (regionIdLong == null) continue;
-                String regionKey = String.valueOf(regionIdLong.intValue());
+                Integer regionId = uc.getArea().getRegion().getId();
+                if (regionId == null) continue;
+                String regionKey = String.valueOf(regionId);
 
                 List<WeatherData> weatherList = weatherByRegion.get(regionKey);
                 if (weatherList == null) continue;
 
                 for (WeatherData wd : weatherList) {
                     if (wd.getDate() != null && wd.getDate().equals(dateStr)) {
+                        double tempMin = parseDouble(wd.getTemperatureMin());
+                        double tempMax = parseDouble(wd.getTemperatureMax());
+                        double humMin = parseDouble(wd.getHumidityMin());
+                        double windMax = parseDouble(wd.getWindMax());
+                        double precipitation = parseDouble(wd.getPrecipitation());
+
                         PlantingRecommendation rec = new PlantingRecommendation();
                         rec.setUserCropId(uc.getId());
                         rec.setDate(displayDate);
@@ -236,19 +283,39 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
                         rec.setAreaName(uc.getArea().getName());
                         rec.setAreaId(uc.getAreaId());
 
-                        double tempMin = parseDouble(wd.getTemperatureMin());
-                        double tempMax = parseDouble(wd.getTemperatureMax());
-                        double humMin = parseDouble(wd.getHumidityMin());
-                        double windMax = parseDouble(wd.getWindMax());
+                        Crop crop = uc.getCrop();
 
-                        rec.setWeatherText("🌡️ " + (int)tempMin + ".." + (int)tempMax + "°C");
+                        boolean tempOk = true;
+                        if (crop.getMinTemp() != null) {
+                            tempOk = tempOk && (tempMin >= crop.getMinTemp());
+                        }
+                        if (crop.getMaxTemp() != null) {
+                            tempOk = tempOk && (tempMax <= crop.getMaxTemp());
+                        }
 
-                        boolean goodTemp = (uc.getCrop().getMinTemp() == null || tempMin >= uc.getCrop().getMinTemp());
-                        boolean goodWind = (uc.getCrop().getMaxWind() == null || windMax <= uc.getCrop().getMaxWind());
-                        boolean goodRain = parseDouble(wd.getPrecipitation()) < 10.0;
+                        boolean humidityOk = true;
+                        if (crop.getMinHumidity() != null) {
+                            humidityOk = humidityOk && (humMin >= crop.getMinHumidity());
+                        }
+                        if (crop.getMaxHumidity() != null) {
+                            humidityOk = humidityOk && (humMin <= crop.getMaxHumidity());
+                        }
 
-                        rec.setGoodDay(goodTemp && goodWind && goodRain);
-                        rec.setReason(getReasonText(uc.getCrop(), tempMin, humMin));
+                        boolean windOk = true;
+                        if (crop.getMaxWind() != null) {
+                            windOk = windOk && (windMax <= crop.getMaxWind());
+                        }
+
+                        boolean rainOk = true;
+                        if (crop.getNeededPrecipitation() != null) {
+                            rainOk = rainOk && (precipitation <= crop.getNeededPrecipitation());
+                        }
+
+                        boolean goodDay = tempOk && humidityOk && windOk && rainOk;
+
+                        rec.setGoodDay(goodDay);
+                        rec.setReason(getReasonTextFull(crop, tempMin, tempMax, humMin, precipitation, windMax));
+                        rec.setWeatherText((int)tempMin + "-" + (int)tempMax + "°C");
 
                         recommendations.add(rec);
                         break;
@@ -264,7 +331,7 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
                 tvEmpty.setVisibility(View.VISIBLE);
                 rvRecommendations.setVisibility(View.GONE);
                 tvResultsTitle.setVisibility(View.GONE);
-                tvEmpty.setText("Нет доступных растений для посадки на выбранных полях");
+                tvEmpty.setText("Нет подходящих дней для посадки в ближайшую неделю");
             } else {
                 tvEmpty.setVisibility(View.GONE);
                 rvRecommendations.setVisibility(View.VISIBLE);
@@ -274,6 +341,39 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
         });
     }
 
+    private String getReasonTextFull(Crop crop, double tempMin, double tempMax, double hum, double precip, double wind) {
+        StringBuilder sb = new StringBuilder();
+
+        if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
+            sb.append(String.format("%d..%d°C (нужно %d-%d°C)\n",
+                    (int)tempMin, (int)tempMax, crop.getMinTemp(), crop.getMaxTemp()));
+        } else {
+            sb.append(String.format("%d..%d°C\n", (int)tempMin, (int)tempMax));
+        }
+
+        if (crop.getMinHumidity() != null && crop.getMaxHumidity() != null) {
+            sb.append(String.format("%d%% (нужно %d-%d%%)\n",
+                    (int)hum, crop.getMinHumidity(), crop.getMaxHumidity()));
+        } else {
+            sb.append(String.format("%d%%\n", (int)hum));
+        }
+
+        if (crop.getNeededPrecipitation() != null) {
+            sb.append(String.format("%.1f мм (максимум %d мм)\n",
+                    precip, crop.getNeededPrecipitation()));
+        } else {
+            sb.append(String.format("%.1f мм\n", precip));
+        }
+
+        if (crop.getMaxWind() != null) {
+            sb.append(String.format("%.1f м/с (максимум %d м/с)",
+                    wind, crop.getMaxWind()));
+        } else {
+            sb.append(String.format("%.1f м/с", wind));
+        }
+
+        return sb.toString();
+    }
     private String getReasonText(Crop crop, double tempMin, double humMin) {
         String tempText = (crop.getMinTemp() != null && crop.getMaxTemp() != null)
                 ? String.format("%.1f°C (нужно %.0f-%.0f°C)", tempMin, crop.getMinTemp(), crop.getMaxTemp())
@@ -326,11 +426,11 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
     }
 
     private double parseDouble(String value) {
-        if (value == null || value.isEmpty()) return 0;
+        if (value == null || value.isEmpty()) return 0.0;
         try {
             return Double.parseDouble(value.replace(",", "."));
         } catch (NumberFormatException e) {
-            return 0;
+            return 0.0;
         }
     }
 

@@ -1,9 +1,12 @@
 package com.example.ars.models;
 
+import com.google.gson.annotations.SerializedName;
+
 public class Area {
     private Integer id;
     private String name;
     private Integer regionId;
+    @SerializedName("region")
     private Region region;
 
     public Integer getId() { return id; }

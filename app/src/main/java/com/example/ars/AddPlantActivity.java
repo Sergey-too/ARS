@@ -153,7 +153,7 @@ public class AddPlantActivity extends AppCompatActivity {
 
         actvPlantType.setOnItemClickListener((parent, view, position, id) -> {
             Category selected = categories.get(position);
-            selectedCategoryId = selected.getId().intValue();
+            selectedCategoryId = selected.getId();
             tilCategory.setError(null);
 
             actvPlantName.setText("");
@@ -166,7 +166,6 @@ public class AddPlantActivity extends AppCompatActivity {
 
         actvPlantName.setOnItemClickListener((parent, view, position, id) -> {
             tilCrop.setError(null);
-            // Получаем объект напрямую из адаптера, чтобы избежать проблем при фильтрации списка
             PlantListItem selected = (PlantListItem) parent.getItemAtPosition(position);
 
             if (selected.isIndividual) {
