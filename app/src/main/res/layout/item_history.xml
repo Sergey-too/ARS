@@ -67,27 +67,7 @@
             android:layout_height="wrap_content"
             android:text="Участок: Южный сектор"
             android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:id="@+id/tvWeather"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Загрузка погоды..."
-            android:textSize="14sp"
-            android:textStyle="italic"
-            android:textColor="#F57C00"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:id="@+id/tvHistoryDetails"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Работа выполнена в соответствии с климатическими нормами региона."
-            android:textSize="13sp"
-            android:textColor="#5D4037"
-            android:lineSpacingExtra="4dp" />
+            android:textColor="#666666" />
 
     </LinearLayout>
 

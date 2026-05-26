@@ -1,14 +1,12 @@
 package com.example.ars.models;
 
 public class TaskItem {
-    private Integer userCropId;
     private String cropName;
     private String variety;
     private String areaName;
     private Integer actionTypeId;
     private String actionName;
     private String dueDate;
-    private String lastDoneAt;
     private Boolean isOverdue;
 
     public String getCropName() { return cropName; }
@@ -28,9 +26,6 @@ public class TaskItem {
 
     public String getDueDate() { return dueDate; }
     public void setDueDate(String dueDate) { this.dueDate = dueDate; }
-
-    public String getLastDoneAt() { return lastDoneAt; }
-    public void setLastDoneAt(String lastDoneAt) { this.lastDoneAt = lastDoneAt; }
 
     public Boolean getIsOverdue() { return isOverdue; }
     public void setIsOverdue(Boolean isOverdue) { this.isOverdue = isOverdue; }

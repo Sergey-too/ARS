@@ -20,16 +20,21 @@ public class GardenHistory implements Serializable {
 
     private String variety;
 
-    @SerializedName("watering_interval") private Integer wateringInterval;
-    @SerializedName("fertilizing_interval") private Integer fertilizingInterval;
-    @SerializedName("soil_care_interval") private Integer soilCareInterval;
-    @SerializedName("protection_interval") private Integer protectionInterval;
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
 
-    // Геттеры
     public Integer getActionTypeId() { return actionTypeId; }
+    public void setActionTypeId(Integer actionTypeId) { this.actionTypeId = actionTypeId; }
+
     public String getCropName() { return cropName; }
-    public String getVariety() { return variety; }
+    public void setCropName(String cropName) { this.cropName = cropName; }
+
     public String getAreaName() { return areaName; }
-    public Integer getWateringInterval() { return wateringInterval; }
-    public Integer getFertilizingInterval() { return fertilizingInterval; }
+    public void setAreaName(String areaName) { this.areaName = areaName; }
+
+    public String getDoneAt() { return doneAt; }
+    public void setDoneAt(String doneAt) { this.doneAt = doneAt; }
+
+    public String getVariety() { return variety; }
+    public void setVariety(String variety) { this.variety = variety; }
 }

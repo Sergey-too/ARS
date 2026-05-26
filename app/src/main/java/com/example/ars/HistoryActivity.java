@@ -2,6 +2,7 @@ package com.example.ars;
 
 import android.app.DatePickerDialog;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.os.Bundle;
@@ -21,7 +22,6 @@ import com.example.ars.adapters.HistoryAdapter;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.History;
-import com.example.ars.models.WeatherData;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
@@ -33,7 +33,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -105,16 +104,11 @@ public class HistoryActivity extends AppCompatActivity {
         apiService.getHistory(userId).enqueue(new Callback<List<History>>() {
             @Override
             public void onResponse(Call<List<History>> call, Response<List<History>> response) {
+                progressBar.setVisibility(View.GONE);
                 if (response.isSuccessful() && response.body() != null) {
                     allHistory = response.body();
-                    if (allHistory.isEmpty()) {
-                        progressBar.setVisibility(View.GONE);
-                        applyFilters();
-                    } else {
-                        fetchWeatherForHistory();
-                    }
+                    applyFilters();
                 } else {
-                    progressBar.setVisibility(View.GONE);
                     Toast.makeText(HistoryActivity.this, "Нет данных", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -125,58 +119,6 @@ public class HistoryActivity extends AppCompatActivity {
                 Toast.makeText(HistoryActivity.this, "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    private void fetchWeatherForHistory() {
-        AtomicInteger loadedCount = new AtomicInteger(0);
-        int total = allHistory.size();
-
-        for (History item : allHistory) {
-            if (item.getDoneAt() == null) {
-                loadedCount.incrementAndGet();
-                continue;
-            }
-
-            String dateOnly = item.getDoneAt().split("[T ]")[0];
-
-            Integer regionIdObj = item.getRegionId();
-            int regionId = (regionIdObj != null && regionIdObj > 0) ? regionIdObj : 1;
-
-            apiService.getWeatherByDate(regionId, dateOnly).enqueue(new Callback<WeatherData>() {
-                @Override
-                public void onResponse(Call<WeatherData> call, Response<WeatherData> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        WeatherData w = response.body();
-                        item.setTemperature(w.getTemperatureMin() + ".." + w.getTemperatureMax());
-                        item.setHumidity(w.getHumidityMin() + ".." + w.getHumidityMax());
-                        item.setPrecipitation(w.getPrecipitation());
-                    } else {
-                        item.setTemperature("--");
-                        item.setHumidity("--");
-                        item.setPrecipitation("--");
-                    }
-                    if (loadedCount.incrementAndGet() >= total) {
-                        runOnUiThread(() -> {
-                            progressBar.setVisibility(View.GONE);
-                            applyFilters();
-                        });
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<WeatherData> call, Throwable t) {
-                    item.setTemperature("--");
-                    item.setHumidity("--");
-                    item.setPrecipitation("--");
-                    if (loadedCount.incrementAndGet() >= total) {
-                        runOnUiThread(() -> {
-                            progressBar.setVisibility(View.GONE);
-                            applyFilters();
-                        });
-                    }
-                }
-            });
-        }
     }
 
     private void applyFilters() {
@@ -231,33 +173,50 @@ public class HistoryActivity extends AppCompatActivity {
             return;
         }
 
+        // Вертикальный PDF (A4 портрет: 595x842)
         PdfDocument document = new PdfDocument();
-        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(842, 595, 1).create();
+        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
         PdfDocument.Page page = document.startPage(pageInfo);
         Canvas canvas = page.getCanvas();
         Paint paint = new Paint();
         Paint borderPaint = new Paint();
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeWidth(1f);
+        borderPaint.setColor(Color.GRAY);
 
+        // Заголовок
         paint.setTextSize(18f);
         paint.setFakeBoldText(true);
-        canvas.drawText("ОТЧЕТ ПО ВЫПОЛНЕННЫМ РАБОТАМ", 50, 40, paint);
+        paint.setColor(Color.parseColor("#2E7D32"));
+        canvas.drawText("ОТЧЕТ ПО РАБОТАМ", 50, 40, paint);
 
         paint.setTextSize(10f);
         paint.setFakeBoldText(false);
-        canvas.drawText("Сформирован: " + new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(new Date()), 50, 60, paint);
+        paint.setColor(Color.BLACK);
+        canvas.drawText("Сформирован: " + new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(new Date()), 50, 65, paint);
 
+        Paint linePaint = new Paint();
+        linePaint.setColor(Color.parseColor("#2E7D32"));
+        linePaint.setStrokeWidth(2f);
+        canvas.drawLine(25, 75, 570, 75, linePaint);
+
+        // Заголовки таблицы (убраны поля погоды)
         int startX = 25;
-        int startY = 85;
+        int startY = 95;
         int rowHeight = 28;
-        int[] colWidths = {70, 90, 80, 80, 80, 60, 65, 65};
-        String[] headers = {"Дата", "Растение", "Сорт", "Участок", "Действие", "Температура", "Влажность", "Осадки"};
+        int[] colWidths = {70, 120, 100, 100, 80};
+        String[] headers = {"Дата", "Растение", "Сорт", "Участок", "Действие"};
+
+        Paint headerBg = new Paint();
+        headerBg.setColor(Color.parseColor("#E8F5E9"));
 
         paint.setFakeBoldText(true);
-        paint.setTextSize(9f);
+        paint.setTextSize(10f);
+        paint.setColor(Color.BLACK);
+
         int currentX = startX;
         for (int i = 0; i < headers.length; i++) {
+            canvas.drawRect(currentX, startY, currentX + colWidths[i], startY + rowHeight, headerBg);
             canvas.drawRect(currentX, startY, currentX + colWidths[i], startY + rowHeight, borderPaint);
             float textWidth = paint.measureText(headers[i]);
             canvas.drawText(headers[i], currentX + (colWidths[i] - textWidth) / 2, startY + 19, paint);
@@ -269,7 +228,7 @@ public class HistoryActivity extends AppCompatActivity {
         int y = startY + rowHeight;
 
         for (History item : filteredList) {
-            if (y + rowHeight > 570) {
+            if (y + rowHeight > 800) {
                 document.finishPage(page);
                 page = document.startPage(pageInfo);
                 canvas = page.getCanvas();
@@ -278,6 +237,7 @@ public class HistoryActivity extends AppCompatActivity {
                 currentX = startX;
                 paint.setFakeBoldText(true);
                 for (int i = 0; i < headers.length; i++) {
+                    canvas.drawRect(currentX, startY, currentX + colWidths[i], startY + rowHeight, headerBg);
                     canvas.drawRect(currentX, startY, currentX + colWidths[i], startY + rowHeight, borderPaint);
                     float textWidth = paint.measureText(headers[i]);
                     canvas.drawText(headers[i], currentX + (colWidths[i] - textWidth) / 2, startY + 19, paint);
@@ -292,36 +252,21 @@ public class HistoryActivity extends AppCompatActivity {
             String area = item.getAreaName() != null ? item.getAreaName() : "---";
             String action = item.getActionName() != null ? item.getActionName() : "---";
 
-            String temperature = "--";
-            if (item.getTemperature() != null && !item.getTemperature().isEmpty() && !item.getTemperature().equals("--")) {
-                temperature = item.getTemperature() + "°C";
-            }
-
-            String humidity = "--";
-            if (item.getHumidity() != null && !item.getHumidity().isEmpty() && !item.getHumidity().equals("--")) {
-                humidity = item.getHumidity() + "%";
-            }
-
-            String precipitation = "--";
-            if (item.getPrecipitation() != null && !item.getPrecipitation().isEmpty() && !item.getPrecipitation().equals("--")) {
-                precipitation = item.getPrecipitation() + "мм";
-            }
-
-            String[] rowData = {date, crop, variety, area, action, temperature, humidity, precipitation};
+            String[] rowData = {date, crop, variety, area, action};
 
             currentX = startX;
             for (int i = 0; i < rowData.length; i++) {
                 canvas.drawRect(currentX, y, currentX + colWidths[i], y + rowHeight, borderPaint);
-
-                String text = rowData[i];
-                if (text.length() > 14 && i > 0) {
-                    text = text.substring(0, 12) + "..";
-                }
-                canvas.drawText(text, currentX + 4, y + 18, paint);
+                canvas.drawText(rowData[i], currentX + 4, y + 18, paint);
                 currentX += colWidths[i];
             }
             y += rowHeight;
         }
+
+        canvas.drawLine(25, y + 5, 570, y + 5, linePaint);
+        paint.setTextSize(10f);
+        paint.setFakeBoldText(true);
+        canvas.drawText("Всего записей: " + filteredList.size(), 50, y + 25, paint);
 
         document.finishPage(page);
 

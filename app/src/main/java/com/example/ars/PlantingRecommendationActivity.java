@@ -191,11 +191,19 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
         List<UserCrop> activeCropsToRecommend = new ArrayList<>();
 
-        Log.d("RECOMMEND", "userCrops size: " + userCrops.size());
-        Log.d("RECOMMEND", "weatherByRegion size: " + weatherByRegion.size());
-        Log.d("RECOMMEND", "plantedKeys: " + plantedKeys.toString());
+        int currentMonth = calendar.get(Calendar.MONTH) + 1;
+        boolean isWinter = (currentMonth == 12 || currentMonth == 1 || currentMonth == 2);
+
         for (UserCrop uc : userCrops) {
             if (uc.getArea() == null || uc.getCrop() == null) {
+                continue;
+            }
+
+            boolean hasPlantedDate = uc.getPlantedAt() != null && !uc.getPlantedAt().isEmpty();
+            boolean hasHarvestedDate = uc.getHarvestedAt() != null && !uc.getHarvestedAt().isEmpty();
+
+            if (hasPlantedDate && hasHarvestedDate) {
+                Log.d("RECOMMEND", "Пропускаем " + uc.getCrop().getName() + " - уже запланировано с датами");
                 continue;
             }
 
@@ -211,6 +219,31 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             }
 
             activeCropsToRecommend.add(uc);
+        }
+
+        if (isWinter) {
+            List<UserCrop> filteredCrops = new ArrayList<>();
+            for (UserCrop uc : activeCropsToRecommend) {
+                Crop crop = uc.getCrop();
+                // Если растение нельзя сажать через рассаду - пропускаем
+                if (crop.getCanSeedlings() == null || !crop.getCanSeedlings()) {
+                    Log.d("RECOMMEND", "Пропускаем " + crop.getName() + " - зимой нельзя сажать без рассады");
+                    continue;
+                }
+                filteredCrops.add(uc);
+            }
+            activeCropsToRecommend = filteredCrops;
+
+            if (activeCropsToRecommend.isEmpty()) {
+                runOnUiThread(() -> {
+                    showLoading(false);
+                    tvEmpty.setVisibility(View.VISIBLE);
+                    rvRecommendations.setVisibility(View.GONE);
+                    tvResultsTitle.setVisibility(View.GONE);
+                    tvEmpty.setText("Зимой можно сажать только растения через рассаду");
+                });
+                return;
+            }
         }
 
         if (activeCropsToRecommend.isEmpty()) {
@@ -356,8 +389,6 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
             }
             calendar.add(Calendar.DAY_OF_YEAR, 1);
         }
-        Log.d("RECOMMEND", "activeCropsToRecommend size: " + activeCropsToRecommend.size());
-        Log.d("RECOMMEND", "final recommendations size: " + recommendations.size());
 
         runOnUiThread(() -> {
             showLoading(false);
