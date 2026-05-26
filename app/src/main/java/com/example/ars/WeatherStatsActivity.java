@@ -20,6 +20,8 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
+import com.github.mikephil.charting.highlight.Highlight;
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +73,7 @@ public class WeatherStatsActivity extends AppCompatActivity {
                     actvRegion.setAdapter(adapter);
 
                     for (Region r : regions) {
-                        if (r.getId() == 1L) {
+                        if (r.getId() == 1) {
                             actvRegion.setText(r.getName(), false);
                             loadComparisonData(r.getId());
                             break;
@@ -93,6 +95,8 @@ public class WeatherStatsActivity extends AppCompatActivity {
             public void onResponse(Call<List<WeatherComparisonDTO>> call, Response<List<WeatherComparisonDTO>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     updateCharts(response.body());
+                } else {
+                    Toast.makeText(WeatherStatsActivity.this, "Нет данных для отображения", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -104,52 +108,103 @@ public class WeatherStatsActivity extends AppCompatActivity {
     }
 
     private void updateCharts(List<WeatherComparisonDTO> dataList) {
-        for (WeatherComparisonDTO d : dataList) {
-            Log.d("DEBUG_DATA", "Месяц: " + d.getMonthName() +
-                    " | Факт Темп: " + d.getAvgFactTemp() +
-                    " | Факт Влажн: " + d.getAvgFactHumidity());
+        if (dataList == null || dataList.isEmpty()) {
+            Toast.makeText(this, "Нет данных для отображения", Toast.LENGTH_SHORT).show();
+            return;
         }
+
         ArrayList<Entry> tempFactEntries = new ArrayList<>();
         ArrayList<Entry> tempNormEntries = new ArrayList<>();
         ArrayList<Entry> humFactEntries = new ArrayList<>();
         ArrayList<Entry> humNormEntries = new ArrayList<>();
+        ArrayList<String> monthLabelsList = new ArrayList<>();
 
-        final String[] monthLabels = new String[dataList.size()];
+        for (WeatherComparisonDTO d : dataList) {
+            boolean hasTempFact = d.getAvgFactTemp() != null;
+            boolean hasTempNorm = d.getNormalTemp() != null;
+            boolean hasHumFact = d.getAvgFactHumidity() != null;
+            boolean hasHumNorm = d.getNormalHumidity() != null;
 
-        for (int i = 0; i < dataList.size(); i++) {
-            WeatherComparisonDTO d = dataList.get(i);
+            if (!hasTempFact && !hasTempNorm && !hasHumFact && !hasHumNorm) {
+                continue;
+            }
 
-            tempFactEntries.add(new Entry(i, d.getAvgFactTemp().floatValue()));
-            tempNormEntries.add(new Entry(i, d.getNormalTemp().floatValue()));
+            monthLabelsList.add(d.getMonthName());
 
-            humFactEntries.add(new Entry(i, d.getAvgFactHumidity().floatValue()));
-            humNormEntries.add(new Entry(i, d.getNormalHumidity().floatValue()));
+            tempFactEntries.add(hasTempFact ?
+                    new Entry(monthLabelsList.size() - 1, d.getAvgFactTemp().floatValue()) :
+                    new Entry(monthLabelsList.size() - 1, Float.NaN));
+            tempNormEntries.add(hasTempNorm ?
+                    new Entry(monthLabelsList.size() - 1, d.getNormalTemp().floatValue()) :
+                    new Entry(monthLabelsList.size() - 1, Float.NaN));
 
-            monthLabels[i] = d.getMonthName();
+            humFactEntries.add(hasHumFact ?
+                    new Entry(monthLabelsList.size() - 1, d.getAvgFactHumidity().floatValue()) :
+                    new Entry(monthLabelsList.size() - 1, Float.NaN));
+            humNormEntries.add(hasHumNorm ?
+                    new Entry(monthLabelsList.size() - 1, d.getNormalHumidity().floatValue()) :
+                    new Entry(monthLabelsList.size() - 1, Float.NaN));
         }
 
-        renderLineChart(tempChart, tempFactEntries, tempNormEntries, "Температура (°C)", monthLabels, Color.RED);
-        renderLineChart(humChart, humFactEntries, humNormEntries, "Влажность (%)", monthLabels, Color.BLUE);
+        if (monthLabelsList.isEmpty()) {
+            Toast.makeText(this, "Нет данных для отображения", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final String[] monthLabels = monthLabelsList.toArray(new String[0]);
+
+        renderLineChart(tempChart,
+                filterValidEntries(tempFactEntries),
+                filterValidEntries(tempNormEntries),
+                "Температура (°C)", monthLabels, Color.RED);
+
+        renderLineChart(humChart,
+                filterValidEntries(humFactEntries),
+                filterValidEntries(humNormEntries),
+                "Влажность (%)", monthLabels, Color.BLUE);
     }
 
     private void renderLineChart(LineChart chart, ArrayList<Entry> fact, ArrayList<Entry> norm, String label, String[] labels, int color) {
         chart.clear();
 
-        LineDataSet factSet = new LineDataSet(fact, "Факт");
-        factSet.setColor(color);
-        factSet.setCircleColor(color);
-        factSet.setLineWidth(3f);
-        factSet.setCircleRadius(4f);
-        factSet.setDrawValues(false);
+        if (fact.size() < 2 && norm.size() < 2) {
+            chart.setNoDataText("Недостаточно данных для построения графика");
+            chart.invalidate();
+            return;
+        }
 
-        LineDataSet normSet = new LineDataSet(norm, "Норма");
-        normSet.setColor(Color.GRAY);
-        normSet.setCircleColor(Color.GRAY);
-        normSet.setLineWidth(2f);
-        normSet.enableDashedLine(10f, 5f, 0f);
-        normSet.setDrawValues(false);
+        LineData lineData = new LineData();
 
-        LineData lineData = new LineData(factSet, normSet);
+        if (fact.size() >= 2) {
+            LineDataSet factSet = new LineDataSet(fact, "Факт");
+            factSet.setColor(color);
+            factSet.setCircleColor(color);
+            factSet.setLineWidth(3f);
+            factSet.setCircleRadius(4f);
+            factSet.setDrawValues(false);
+            factSet.setDrawCircles(true);
+            factSet.setDrawCircleHole(false);
+            lineData.addDataSet(factSet);
+        }
+
+        if (norm.size() >= 2) {
+            LineDataSet normSet = new LineDataSet(norm, "Норма");
+            normSet.setColor(Color.GRAY);
+            normSet.setCircleColor(Color.GRAY);
+            normSet.setLineWidth(2f);
+            normSet.enableDashedLine(10f, 5f, 0f);
+            normSet.setDrawValues(false);
+            normSet.setDrawCircles(true);
+            normSet.setDrawCircleHole(false);
+            lineData.addDataSet(normSet);
+        }
+
+        if (lineData.getDataSetCount() == 0) {
+            chart.setNoDataText("Нет данных");
+            chart.invalidate();
+            return;
+        }
+
         chart.setData(lineData);
 
         XAxis xAxis = chart.getXAxis();
@@ -158,6 +213,7 @@ public class WeatherStatsActivity extends AppCompatActivity {
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setLabelRotationAngle(-45f);
         xAxis.setYOffset(5f);
+        xAxis.setDrawGridLines(true);
 
         Legend legend = chart.getLegend();
         legend.setEnabled(true);
@@ -169,12 +225,21 @@ public class WeatherStatsActivity extends AppCompatActivity {
         legend.setForm(Legend.LegendForm.CIRCLE);
 
         chart.setExtraBottomOffset(25f);
-
         chart.getAxisRight().setEnabled(false);
         chart.getDescription().setEnabled(false);
 
         chart.notifyDataSetChanged();
         chart.animateX(800);
         chart.invalidate();
+    }
+
+    private ArrayList<Entry> filterValidEntries(ArrayList<Entry> entries) {
+        ArrayList<Entry> filtered = new ArrayList<>();
+        for (Entry e : entries) {
+            if (!Float.isNaN(e.getY())) {
+                filtered.add(e);
+            }
+        }
+        return filtered;
     }
 }
