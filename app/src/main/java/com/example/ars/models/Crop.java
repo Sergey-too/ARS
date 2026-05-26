@@ -10,12 +10,13 @@ public class Crop implements Serializable {
     private String category;
     private String description;
 
-    @SerializedName("minTemp") private Float minTemp;
-    @SerializedName("maxTemp") private Float maxTemp;
-    @SerializedName("maxWind") private Float maxWind;
-    @SerializedName("minHumidity") private Integer minHumidity;
-    @SerializedName("maxHumidity") private Integer maxHumidity;
-    @SerializedName("neededPrecipitation") private Float neededPrecipitation;
+    @SerializedName("minTemp") private Short minTemp;      // smallint → Short
+    @SerializedName("maxTemp") private Short maxTemp;      // smallint → Short
+    @SerializedName("maxWind") private Short maxWind;      // smallint → Short
+    @SerializedName("minHumidity") private Integer minHumidity;  // smallint → Integer
+    @SerializedName("maxHumidity") private Integer maxHumidity;  // smallint → Integer
+    @SerializedName("neededPrecipitation") private Short neededPrecipitation;  // smallint → Short
+
     @SerializedName("sowingDepth") private Integer sowingDepth;
     @SerializedName("daysToGermination") private Integer daysToGermination;
     @SerializedName("daysToHarvest") private Integer daysToHarvest;
@@ -39,18 +40,25 @@ public class Crop implements Serializable {
     public void setCategory(String category) { this.category = category; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public Float getMinTemp() { return minTemp; }
-    public void setMinTemp(Float minTemp) { this.minTemp = minTemp; }
-    public Float getMaxTemp() { return maxTemp; }
-    public void setMaxTemp(Float maxTemp) { this.maxTemp = maxTemp; }
-    public Float getMaxWind() { return maxWind; }
-    public void setMaxWind(Float maxWind) { this.maxWind = maxWind; }
+
+    public Short getMinTemp() { return minTemp; }
+    public void setMinTemp(Short minTemp) { this.minTemp = minTemp; }
+
+    public Short getMaxTemp() { return maxTemp; }
+    public void setMaxTemp(Short maxTemp) { this.maxTemp = maxTemp; }
+
+    public Short getMaxWind() { return maxWind; }
+    public void setMaxWind(Short maxWind) { this.maxWind = maxWind; }
+
     public Integer getMinHumidity() { return minHumidity; }
     public void setMinHumidity(Integer minHumidity) { this.minHumidity = minHumidity; }
+
     public Integer getMaxHumidity() { return maxHumidity; }
     public void setMaxHumidity(Integer maxHumidity) { this.maxHumidity = maxHumidity; }
-    public Float getNeededPrecipitation() { return neededPrecipitation; }
-    public void setNeededPrecipitation(Float neededPrecipitation) { this.neededPrecipitation = neededPrecipitation; }
+
+    public Short getNeededPrecipitation() { return neededPrecipitation; }
+    public void setNeededPrecipitation(Short neededPrecipitation) { this.neededPrecipitation = neededPrecipitation; }
+
     public Integer getSowingDepth() { return sowingDepth; }
     public void setSowingDepth(Integer sowingDepth) { this.sowingDepth = sowingDepth; }
     public Integer getDaysToGermination() { return daysToGermination; }

@@ -7,7 +7,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.ars.R;
-import com.example.ars.TasksActivity;
 import com.example.ars.models.TaskItem;
 import com.google.android.material.button.MaterialButton;
 import java.text.ParseException;
@@ -21,9 +20,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.ViewHolder> {
     private List<TaskItem> tasks;
     private OnTaskCompleteListener listener;
 
-    private SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-    private SimpleDateFormat outputDate = new SimpleDateFormat("dd MMMM", new Locale("ru"));
-    private SimpleDateFormat outputDay = new SimpleDateFormat("EEEE", new Locale("ru"));
+    private SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+    private SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.US);
 
     public interface OnTaskCompleteListener {
         void onTaskComplete(TaskItem task);
@@ -57,18 +55,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.ViewHolder> {
         holder.tvDate.setText(formattedDate);
         holder.tvDayOfWeek.setText(dayOfWeek);
 
-        if (holder.itemView.getContext() instanceof TasksActivity) {
-            TasksActivity activity = (TasksActivity) holder.itemView.getContext();
-            holder.tvActionType.setText(activity.getCategoryNameById(item.getActionTypeId()));
-        } else {
-            holder.tvActionType.setText(item.getActionName());
-        }
+        String actionWithEmoji = getActionWithEmoji(item.getActionTypeId(), item.getActionName());
+        holder.tvActionType.setText(actionWithEmoji);
 
         holder.tvCropName.setText(item.getDisplayName());
         holder.tvAreaName.setText("Участок: " + item.getAreaName());
 
         if (item.getLastDoneAt() != null && !item.getLastDoneAt().isEmpty()) {
-            holder.tvLastDone.setText("Последний раз: " + item.getLastDoneAt());
+            holder.tvLastDone.setText("Последний раз: " + formatDate(item.getLastDoneAt()));
         } else {
             holder.tvLastDone.setText("Ни разу не выполнялось");
         }
@@ -76,7 +70,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.ViewHolder> {
         if (item.getIsOverdue() != null && item.getIsOverdue()) {
             holder.tvStatus.setVisibility(View.VISIBLE);
             holder.tvStatus.setText("Просрочено");
-            holder.tvStatus.setTextColor(holder.itemView.getContext().getColor(R.color.color_error));
         } else {
             holder.tvStatus.setVisibility(View.GONE);
         }
@@ -88,11 +81,24 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.ViewHolder> {
         });
     }
 
+    private String getActionWithEmoji(Integer actionTypeId, String actionName) {
+        if (actionTypeId == null) return actionName != null ? actionName : "Уход";
+        switch (actionTypeId) {
+            case 1: return "Посадка";
+            case 2: return "Полив";
+            case 3: return "Удобрение";
+            case 4: return "Уход за почвой";
+            case 5: return "Защита";
+            case 6: return "Сбор урожая";
+            default: return actionName != null ? actionName : "Уход";
+        }
+    }
+
     private String formatDate(String dateStr) {
         if (dateStr == null || dateStr.isEmpty()) return "";
         try {
             Date date = inputFormat.parse(dateStr);
-            return outputDate.format(date);
+            return outputFormat.format(date);
         } catch (ParseException e) {
             return dateStr;
         }
@@ -102,7 +108,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.ViewHolder> {
         if (dateStr == null || dateStr.isEmpty()) return "";
         try {
             Date date = inputFormat.parse(dateStr);
-            String day = outputDay.format(date);
+            SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", new Locale("ru"));
+            String day = dayFormat.format(date);
             return day.substring(0, 1).toUpperCase() + day.substring(1);
         } catch (ParseException e) {
             return "";

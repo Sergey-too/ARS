@@ -199,12 +199,12 @@ public class EditPlantActivityUser extends AppCompatActivity {
         currentCrop.setVariety(etVariety.getText().toString().trim());
         currentCrop.setDescription(etDescription.getText().toString().trim());
 
-        currentCrop.setMinTemp(parseFloat(etMinTemp));
-        currentCrop.setMaxTemp(parseFloat(etMaxTemp));
+        currentCrop.setMinTemp(parseShort(etMinTemp));
+        currentCrop.setMaxTemp(parseShort(etMaxTemp));
         currentCrop.setMinHumidity(parseInteger(etMinHumidity));
         currentCrop.setMaxHumidity(parseInteger(etMaxHumidity));
-        currentCrop.setNeededPrecipitation(parseFloat(etNeededPrecipitation));
-        currentCrop.setMaxWind(parseFloat(etMaxWind));
+        currentCrop.setNeededPrecipitation(parseShort(etNeededPrecipitation));
+        currentCrop.setMaxWind(parseShort(etMaxWind));
         currentCrop.setSowingDepth(parseInteger(etSowingDepth));
         currentCrop.setDaysToGermination(parseInteger(etDaysToGermination));
         currentCrop.setDaysToHarvest(parseInteger(etDaysToHarvest));
@@ -270,11 +270,22 @@ public class EditPlantActivityUser extends AppCompatActivity {
         }
     }
 
-    private Integer parseInteger(TextInputEditText et) {
-        if (et == null || TextUtils.isEmpty(et.getText().toString().trim())) return null;
+    private Short parseShort(TextInputEditText et) {
+        String s = et.getText().toString().trim();
+        if (s.isEmpty()) return null;
         try {
-            return Integer.parseInt(et.getText().toString().trim());
-        } catch (Exception e) {
+            return Short.parseShort(s.replace(",", "."));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(TextInputEditText et) {
+        String s = et.getText().toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
             return null;
         }
     }

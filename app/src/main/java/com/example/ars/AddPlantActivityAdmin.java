@@ -200,12 +200,12 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
 
         crop.setPhotoPath(serverImageUrl);
 
-        crop.setMinTemp(parseSafeFloat(etMinTemp));
-        crop.setMaxTemp(parseSafeFloat(etMaxTemp));
+        crop.setMinTemp(parseSafeShort(etMinTemp));
+        crop.setMaxTemp(parseSafeShort(etMaxTemp));
         crop.setMinHumidity(parseSafeInt(etMinHumidity));
         crop.setMaxHumidity(parseSafeInt(etMaxHumidity));
-        crop.setNeededPrecipitation(parseSafeFloat(etNeededPrecipitation));
-        crop.setMaxWind(parseSafeFloat(etMaxWind));
+        crop.setNeededPrecipitation(parseSafeShort(etNeededPrecipitation));
+        crop.setMaxWind(parseSafeShort(etMaxWind));
         crop.setSowingDepth(parseSafeInt(etSowingDepth));
         crop.setDaysToGermination(parseSafeInt(etDaysToGermination));
         crop.setDaysToHarvest(parseSafeInt(etDaysToHarvest));
@@ -319,6 +319,15 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
         String text = et.getText().toString().trim();
         if (text.isEmpty()) return null;
         try { return Float.parseFloat(text.replace(",", ".")); }
+        catch (NumberFormatException e) { return null; }
+    }
+    private Short parseSafeShort(TextInputEditText et) {
+        if (et == null) return null;
+        String text = et.getText().toString().trim();
+        if (text.isEmpty()) return null;
+        try {
+            return Short.parseShort(text.replace(",", "."));
+        }
         catch (NumberFormatException e) { return null; }
     }
 

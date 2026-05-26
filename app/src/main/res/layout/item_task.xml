@@ -111,7 +111,7 @@
             app:backgroundTint="#4CAF50"
             app:cornerRadius="12dp"
             android:stateListAnimator="@null"
-            android:elevation="0dp" />Ф
+            android:elevation="0dp" />
 
     </LinearLayout>
 

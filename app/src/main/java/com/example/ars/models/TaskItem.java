@@ -9,6 +9,8 @@ public class TaskItem {
     private String dueDate;
     private Boolean isOverdue;
 
+    private String lastDoneAt;
+
     public String getCropName() { return cropName; }
     public void setCropName(String cropName) { this.cropName = cropName; }
 
@@ -29,6 +31,8 @@ public class TaskItem {
 
     public Boolean getIsOverdue() { return isOverdue; }
     public void setIsOverdue(Boolean isOverdue) { this.isOverdue = isOverdue; }
+    public String getLastDoneAt() { return lastDoneAt; }
+    public void setLastDoneAt(String lastDoneAt) { this.lastDoneAt = lastDoneAt; }
 
     public String getDisplayName() {
         return (variety != null && !variety.isEmpty()) ? cropName + " (" + variety + ")" : cropName;

@@ -152,8 +152,8 @@ public class AddPlantActivityUser extends AppCompatActivity {
 
         Float minT = parseViewFloat(etMinTemp);
         Float maxT = parseViewFloat(etMaxTemp);
-        Integer minH = parseViewInt(etMinHumidity);
-        Integer maxH = parseViewInt(etMaxHumidity);
+        Integer minH = parseInteger(etMinHumidity);
+        Integer maxH = parseInteger(etMaxHumidity);
 
         if (minT != null && maxT != null && minT > maxT) {
             etMinTemp.setError("Мин. температура выше максимальной");
@@ -237,22 +237,22 @@ public class AddPlantActivityUser extends AppCompatActivity {
         crop.setVariety(etVariety.getText().toString().trim());
         crop.setDescription(etDescription.getText().toString().trim());
 
-        crop.setMinTemp(parseViewFloat(etMinTemp));
-        crop.setMaxTemp(parseViewFloat(etMaxTemp));
-        crop.setMaxWind(parseViewFloat(etMaxWind));
-        crop.setNeededPrecipitation(parseViewFloat(etPrecipitation));
-        crop.setSowingDepth(parseViewInt(etSowingDepth));
+        crop.setMinTemp(parseShort(etMinTemp));
+        crop.setMaxTemp(parseShort(etMaxTemp));
+        crop.setMaxWind(parseShort(etMaxWind));
+        crop.setNeededPrecipitation(parseShort(etPrecipitation));
+        crop.setSowingDepth(parseInteger(etSowingDepth));
 
-        crop.setMinHumidity(parseViewInt(etMinHumidity));
-        crop.setMaxHumidity(parseViewInt(etMaxHumidity));
+        crop.setMinHumidity(parseInteger(etMinHumidity));
+        crop.setMaxHumidity(parseInteger(etMaxHumidity));
 
-        crop.setDaysToGermination(parseViewInt(etGermination));
-        crop.setDaysToHarvest(parseViewInt(etHarvest));
+        crop.setDaysToGermination(parseInteger(etGermination));
+        crop.setDaysToHarvest(parseInteger(etHarvest));
 
-        crop.setWateringInterval(parseViewInt(etWatering));
-        crop.setFertilizingInterval(parseViewInt(etFertilizing));
-        crop.setSoilCareInterval(parseViewInt(etSoilCare));
-        crop.setProtectionInterval(parseViewInt(etProtection));
+        crop.setWateringInterval(parseInteger(etWatering));
+        crop.setFertilizingInterval(parseInteger(etFertilizing));
+        crop.setSoilCareInterval(parseInteger(etSoilCare));
+        crop.setProtectionInterval(parseInteger(etProtection));
 
         crop.setCanSeedlings(cbCanSeedlings.isChecked());
         crop.setCanDirectSow(cbCanDirectSow.isChecked());
@@ -397,15 +397,28 @@ public class AddPlantActivityUser extends AppCompatActivity {
     }
 
     private boolean isNegative(TextInputEditText et) {
-        Integer val = parseViewInt(et);
+        Integer val = parseInteger(et);
         return val != null && val < 0;
     }
 
-    private Integer parseViewInt(EditText editText) {
-        String text = editText.getText().toString().trim();
-        if (text.isEmpty()) return null;
-        try { return Integer.parseInt(text); }
-        catch (NumberFormatException e) { return null; }
+    private Short parseShort(TextInputEditText et) {
+        String s = et.getText().toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return Short.parseShort(s.replace(",", "."));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(TextInputEditText et) {
+        String s = et.getText().toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private Float parseViewFloat(EditText editText) {

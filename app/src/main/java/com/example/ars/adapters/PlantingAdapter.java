@@ -48,13 +48,17 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         PlantingRecommendation rec = recommendations.get(position);
 
-        // Основная информация
         holder.tvDate.setText(rec.getDate());
         holder.tvDayOfWeek.setText(rec.getDayOfWeek());
-        holder.tvCropName.setText(rec.getCropName());
+
+        String displayName = rec.getCropName();
+        if (rec.getVariety() != null && !rec.getVariety().isEmpty() && !rec.getVariety().equals("Обычный")) {
+            displayName = rec.getCropName() + " (" + rec.getVariety() + ")";
+        }
+        holder.tvCropName.setText(displayName);
+
         holder.tvRegion.setText(rec.getAreaName());
 
-        // Данные для таблицы
         if (rec.getTempCurrent() != null) {
             holder.tvTempCurrent.setText(rec.getTempCurrent());
         }

@@ -38,7 +38,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
 
     private static final String TAG = "EditPlantAdmin";
 
-    // Поля ввода
     private TextInputEditText etPlantName, etVariety, etDescription;
     private TextInputEditText etMinTemp, etMaxTemp;
     private TextInputEditText etMinHumidity, etMaxHumidity;
@@ -64,7 +63,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
     private Crop currentCrop;
     private String selectedPhotoUri = "";
 
-    // Лаунчер для выбора фото
     private ActivityResultLauncher<Intent> photoLauncher;
 
     @Override
@@ -325,14 +323,14 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
         crop.setCategory(selectedCategoryName);
         crop.setDescription(etDescription.getText().toString().trim());
 
-        crop.setMinTemp(parseFloat(etMinTemp));
-        crop.setMaxTemp(parseFloat(etMaxTemp));
+        crop.setMinTemp(parseShort(etMinTemp));
+        crop.setMaxTemp(parseShort(etMaxTemp));
 
         crop.setMinHumidity(parseInteger(etMinHumidity));
         crop.setMaxHumidity(parseInteger(etMaxHumidity));
 
-        crop.setNeededPrecipitation(parseFloat(etPrecipitation));
-        crop.setMaxWind(parseFloat(etMaxWind));
+        crop.setNeededPrecipitation(parseShort(etPrecipitation));
+        crop.setMaxWind(parseShort(etMaxWind));
 
         crop.setSowingDepth(parseInteger(etSowingDepth));
 
@@ -438,6 +436,16 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
         if (s.isEmpty()) return null;
         try {
             return Float.parseFloat(s.replace(",", "."));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Short parseShort(TextInputEditText et) {
+        String s = et.getText().toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return Short.parseShort(s.replace(",", "."));
         } catch (NumberFormatException e) {
             return null;
         }
