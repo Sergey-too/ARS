@@ -20,6 +20,7 @@ import com.example.ars.models.Category;
 import com.example.ars.models.Crop;
 import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.models.UserCrop;
+import com.example.ars.models.WeatherData;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -398,7 +399,7 @@ public class AddPlantActivity extends AppCompatActivity {
             return;
         }
 
-        checkDuplicateAndAdd();
+        checkWeatherBeforeAdd();
     }
 
     private void checkDuplicateAndAdd() {
@@ -494,5 +495,143 @@ public class AddPlantActivity extends AppCompatActivity {
                 .setPositiveButton("Да", (dialog, which) -> finish())
                 .setNegativeButton("Нет", null)
                 .show();
+    }
+
+    private void checkWeatherBeforeAdd() {
+        if (selectedAreaId == null) {
+            tilArea.setError("Выберите участок");
+            return;
+        }
+
+        String plantingDateStr = etPlantingDate.getText().toString().trim();
+        String harvestDateStr = etHarvestDate.getText().toString().trim();
+
+        if (plantingDateStr.isEmpty() || harvestDateStr.isEmpty()) {
+            checkDuplicateAndAdd();
+            return;
+        }
+
+        Area selectedArea = null;
+        for (Area area : userAreas) {
+            if (area.getId().equals(selectedAreaId)) {
+                selectedArea = area;
+                break;
+            }
+        }
+
+        if (selectedArea == null || selectedArea.getRegionId() == null) {
+            checkDuplicateAndAdd();
+            return;
+        }
+
+        Integer regionId = selectedArea.getRegionId();
+
+        SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+        SimpleDateFormat apiFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+
+        try {
+            java.util.Date plantingDate = uiFormat.parse(plantingDateStr);
+            String plantingDateApi = apiFormat.format(plantingDate);
+
+            apiService.getWeatherByDate(regionId, plantingDateApi).enqueue(new Callback<WeatherData>() {
+                @Override
+                public void onResponse(Call<WeatherData> call, Response<WeatherData> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        WeatherData weather = response.body();
+                        checkWeatherConditions(weather, plantingDateStr);
+                    } else {
+                        checkDuplicateAndAdd();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<WeatherData> call, Throwable t) {
+                    checkDuplicateAndAdd();
+                }
+            });
+        } catch (Exception e) {
+            checkDuplicateAndAdd();
+        }
+    }
+
+    private void checkWeatherConditions(WeatherData weather, String plantingDateStr) {
+        boolean hasWarning = false;
+        StringBuilder warningMessage = new StringBuilder();
+
+        Crop crop = selectedCropData;
+        if (crop == null) {
+            checkDuplicateAndAdd();
+            return;
+        }
+
+        double tempMin = parseDoubleSafe(weather.getTemperatureMin());
+        double tempMax = parseDoubleSafe(weather.getTemperatureMax());
+
+        if (crop.getMinTemp() != null && tempMin < crop.getMinTemp()) {
+            hasWarning = true;
+            warningMessage.append("Слишком холодно! Минимальная температура ")
+                    .append(String.format(Locale.US, "%.1f°C", tempMin))
+                    .append(" ниже нормы (").append(crop.getMinTemp()).append("°C)\n");
+        }
+
+        if (crop.getMaxTemp() != null && tempMax > crop.getMaxTemp()) {
+            hasWarning = true;
+            warningMessage.append("Слишком жарко! Максимальная температура ")
+                    .append(String.format(Locale.US, "%.1f°C", tempMax))
+                    .append(" выше нормы (").append(crop.getMaxTemp()).append("°C)\n");
+        }
+
+        double humidity = parseDoubleSafe(weather.getHumidityMin());
+        if (crop.getMinHumidity() != null && humidity < crop.getMinHumidity()) {
+            hasWarning = true;
+            warningMessage.append("Низкая влажность! ").append(String.format(Locale.US, "%.0f%%", humidity))
+                    .append(" ниже нормы (").append(crop.getMinHumidity()).append("%)\n");
+        }
+        if (crop.getMaxHumidity() != null && humidity > crop.getMaxHumidity()) {
+            hasWarning = true;
+            warningMessage.append("Высокая влажность! ").append(String.format(Locale.US, "%.0f%%", humidity))
+                    .append(" выше нормы (").append(crop.getMaxHumidity()).append("%)\n");
+        }
+
+        double wind = parseDoubleSafe(weather.getWindMax());
+        if (crop.getMaxWind() != null && wind > crop.getMaxWind()) {
+            hasWarning = true;
+            warningMessage.append("Сильный ветер! ")
+                    .append(String.format(Locale.US, "%.1f м/с", wind))
+                    .append(" выше нормы (").append(crop.getMaxWind()).append(" м/с)\n");
+        }
+
+        double precipitation = parseDoubleSafe(weather.getPrecipitation());
+        if (crop.getNeededPrecipitation() != null && precipitation > crop.getNeededPrecipitation()) {
+            hasWarning = true;
+            warningMessage.append("Много осадков! ")
+                    .append(String.format(Locale.US, "%.1f мм", precipitation))
+                    .append(" больше нормы (").append(crop.getNeededPrecipitation()).append(" мм)\n");
+        }
+
+        if (hasWarning) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Неблагоприятная погода")
+                    .setMessage("Дата посадки: " + plantingDateStr + "\n\n" + warningMessage.toString() + "\nВы уверены, что хотите посадить растение в таких условиях?")
+                    .setPositiveButton("Да, посадить", (dialog, which) -> checkDuplicateAndAdd())
+                    .setNegativeButton("Отмена", null)
+                    .show();
+        } else {
+            new AlertDialog.Builder(this)
+                    .setTitle("Погода подходит!")
+                    .setMessage("На " + plantingDateStr + " погодные условия благоприятны для посадки " + crop.getName() + ".\n\nДобавить растение?")
+                    .setPositiveButton("Да, добавить", (dialog, which) -> checkDuplicateAndAdd())
+                    .setNegativeButton("Отмена", null)
+                    .show();
+        }
+    }
+
+    private double parseDoubleSafe(String value) {
+        if (value == null || value.isEmpty()) return 0.0;
+        try {
+            return Double.parseDouble(value.replace(",", "."));
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 }

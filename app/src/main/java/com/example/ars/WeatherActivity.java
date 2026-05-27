@@ -3,12 +3,19 @@ package com.example.ars;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.ars.adapters.WeatherAdapter;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.google.android.material.button.MaterialButton;
@@ -27,6 +34,7 @@ public class WeatherActivity extends AppCompatActivity {
 
     private String selectedRegion = "Минск";
     private ApiService apiService;
+    private WeatherAdapter weatherAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +48,8 @@ public class WeatherActivity extends AppCompatActivity {
             startActivity(new Intent(WeatherActivity.this, PlantsActivity.class));
             finish();
         });
+
+        weatherAdapter = new WeatherAdapter();
 
         loadRegions();
 
@@ -60,7 +70,6 @@ public class WeatherActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(WeatherActivity.this,
                             "Регионы не найдены в базе данных", Toast.LENGTH_SHORT).show();
-
                     TextView tvRegionInfo = findViewById(R.id.tvRegionInfo);
                     if (tvRegionInfo != null) tvRegionInfo.setText("Регионы не загружены");
                 }
@@ -141,81 +150,87 @@ public class WeatherActivity extends AppCompatActivity {
         TextView tvUpdated = findViewById(R.id.tvUpdated);
         if (tvUpdated != null) tvUpdated.setText("Данные обновлены: " + currentTime);
 
-        if (weatherList != null) {
-            for (int i = 0; i < Math.min(6, weatherList.size()); i++) {
-                WeatherData weather = weatherList.get(i);
-                updateWeatherRow(i + 1, weather);
+        if (weatherList != null && !weatherList.isEmpty()) {
+            LinearLayout container = findViewById(R.id.llWeatherContainer);
+            container.removeAllViews();
+
+            for (WeatherData weather : weatherList) {
+                View cardView = createWeatherCard(weather);
+                container.addView(cardView);
             }
+        } else {
+            Toast.makeText(this, "Нет данных о погоде", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void updateWeatherRow(int rowNumber, WeatherData weather) {
-        int dateId = getResources().getIdentifier("tvDate" + rowNumber, "id", getPackageName());
-        int tempId = getResources().getIdentifier("tvTemp" + rowNumber, "id", getPackageName());
-        int windId = getResources().getIdentifier("tvWind" + rowNumber, "id", getPackageName());
-        int pressureId = getResources().getIdentifier("tvPressure" + rowNumber, "id", getPackageName());
-        int humidityId = getResources().getIdentifier("tvHumidity" + rowNumber, "id", getPackageName());
-        int precipId = getResources().getIdentifier("tvPrecipitation" + rowNumber, "id", getPackageName());
+    private View createWeatherCard(WeatherData weather) {
+        View card = LayoutInflater.from(this).inflate(R.layout.item_weather_card, null);
 
-        TextView tvDate = findViewById(dateId);
-        TextView tvTemp = findViewById(tempId);
-        TextView tvWind = findViewById(windId);
-        TextView tvPressure = findViewById(pressureId);
-        TextView tvHumidity = findViewById(humidityId);
-        TextView tvPrecip = findViewById(precipId);
+        TextView tvDate = card.findViewById(R.id.tvDate);
+        TextView tvDayOfWeek = card.findViewById(R.id.tvDayOfWeek);
+        TextView tvTemp = card.findViewById(R.id.tvTemp);
+        TextView tvWind = card.findViewById(R.id.tvWind);
+        TextView tvPressure = card.findViewById(R.id.tvPressure);
+        TextView tvHumidity = card.findViewById(R.id.tvHumidity);
+        TextView tvPrecipitation = card.findViewById(R.id.tvPrecipitation);
 
-        if (tvDate != null) {
-            tvDate.setText(formatDate(weather.getDate()));
-        }
+        String formattedDate = formatDate(weather.getDate());
+        String dayOfWeek = formatDayOfWeek(weather.getDate());
 
-        try {
-            if (tvTemp != null) {
-                float tMin = Float.parseFloat(weather.getTemperatureMin());
-                float tMax = Float.parseFloat(weather.getTemperatureMax());
-                String tempRange = String.format(Locale.getDefault(), "%.1f..%.1f°C", tMin, tMax);
-                tvTemp.setText(tempRange);
-            }
+        tvDate.setText(formattedDate);
+        tvDayOfWeek.setText(dayOfWeek);
 
-            if (tvWind != null) {
-                float wMin = Float.parseFloat(weather.getWindMin());
-                float wMax = Float.parseFloat(weather.getWindMax());
-                String windRange = String.format(Locale.getDefault(), "%.1f..%.1f м/с", wMin, wMax);
-                tvWind.setText(windRange);
-            }
+        double tempMin = parseDouble(weather.getTemperatureMin());
+        double tempMax = parseDouble(weather.getTemperatureMax());
+        tvTemp.setText(String.format(Locale.getDefault(), "%.1f...%.1f°C", tempMin, tempMax));
 
-            if (tvPressure != null) {
-                tvPressure.setText(weather.getPressure() + " мм");
-            }
+        double windMin = parseDouble(weather.getWindMin());
+        double windMax = parseDouble(weather.getWindMax());
+        tvWind.setText(String.format(Locale.getDefault(), "%.1f...%.1f м/с", windMin, windMax));
 
-            if (humidityId != 0 && tvHumidity != null) {
-                float hMin = Float.parseFloat(weather.getHumidityMin());
-                float hMax = Float.parseFloat(weather.getHumidityMax());
-                String humRange = String.format(Locale.getDefault(), "%.0f..%.0f%%", hMin, hMax);
-                tvHumidity.setText(humRange);
-            }
+        String pressure = weather.getPressure() != null ? weather.getPressure() : "--";
+        tvPressure.setText(pressure + " гПа");
 
-            if (precipId != 0 && tvPrecip != null) {
-                float precipVal = Float.parseFloat(weather.getPrecipitation());
-                String precip = String.format(Locale.getDefault(), "%.1f мм", precipVal);
-                tvPrecip.setText(precip);
-            }
+        double humMin = parseDouble(weather.getHumidityMin());
+        double humMax = parseDouble(weather.getHumidityMax());
+        tvHumidity.setText(String.format(Locale.getDefault(), "%.0f...%.0f%%", humMin, humMax));
 
-        } catch (NumberFormatException e) {
-            Log.e("WeatherError", "Ошибка парсинга чисел погоды: " + e.getMessage());
-        }
+        double precipitation = parseDouble(weather.getPrecipitation());
+        tvPrecipitation.setText(String.format(Locale.getDefault(), "%.1f мм", precipitation));
+
+        return card;
     }
 
     private String formatDate(String rawDate) {
         if (rawDate == null || rawDate.isEmpty()) return "--";
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-            Date date = inputFormat.parse(rawDate);
-
             SimpleDateFormat outputFormat = new SimpleDateFormat("d MMMM", new Locale("ru"));
+            Date date = inputFormat.parse(rawDate);
             return date != null ? outputFormat.format(date) : rawDate;
         } catch (Exception e) {
-            Log.e("WeatherError", "Ошибка форматирования даты: " + rawDate);
             return rawDate;
+        }
+    }
+
+    private String formatDayOfWeek(String rawDate) {
+        if (rawDate == null || rawDate.isEmpty()) return "";
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", new Locale("ru"));
+            Date date = inputFormat.parse(rawDate);
+            return date != null ? dayFormat.format(date) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private double parseDouble(String value) {
+        if (value == null || value.isEmpty()) return 0.0;
+        try {
+            return Double.parseDouble(value.replace(",", "."));
+        } catch (NumberFormatException e) {
+            return 0.0;
         }
     }
 }

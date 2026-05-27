@@ -59,7 +59,6 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         RecyclerView rvPlants = findViewById(R.id.rvPlants);
         rvPlants.setLayoutManager(new LinearLayoutManager(this));
 
-        // Инициализация адаптера
         adapter = new AdminPlantAdapter(new ArrayList<>(), plant -> {
             Intent intent = new Intent(this, EditPlantActivityAdmin.class);
             intent.putExtra("CROP_ID", plant.getId());
@@ -67,7 +66,6 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         });
         rvPlants.setAdapter(adapter);
 
-        // Кнопка сортировки
         MaterialButton btnSortAlpha = findViewById(R.id.btnSortAlpha);
         btnSortAlpha.setOnClickListener(v -> {
             isAscending = !isAscending;
@@ -75,7 +73,6 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
             Toast.makeText(this, isAscending ? "А-Я" : "Я-А", Toast.LENGTH_SHORT).show();
         });
 
-        // FAB добавления
         FloatingActionButton fabAdd = findViewById(R.id.fabAddPlant);
         fabAdd.setOnClickListener(v -> {
             startActivityForResult(new Intent(this, AddPlantActivityAdmin.class), 100);
@@ -83,7 +80,7 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
 
         setupSearch();
         loadCategories();
-        loadPlants(); // Загружаем данные
+        loadPlants();
     }
 
     private void setupSearch() {
@@ -147,15 +144,12 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         List<Crop> filteredList = new ArrayList<>();
 
         for (Crop item : allPlants) {
-            // Безопасное получение данных (защита от null)
             String name = (item.getName() != null) ? item.getName().toLowerCase() : "";
             String variety = (item.getVariety() != null) ? item.getVariety().toLowerCase() : "";
             String category = (item.getCategory() != null) ? item.getCategory() : "";
 
-            // Фильтр по поиску (имя или сорт)
             boolean matchesSearch = name.contains(query) || variety.contains(query);
 
-            // Фильтр по категории
             boolean matchesCategory = currentCategory.equals("Все категории") || category.equals(currentCategory);
 
             if (matchesSearch && matchesCategory) {
@@ -179,5 +173,11 @@ public class PlantsListActivityAdmin extends AppCompatActivity {
         if (resultCode == RESULT_OK) {
             loadPlants();
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadPlants();
     }
 }

@@ -46,7 +46,10 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
             etSowingDepth, etDaysToGermination, etDaysToHarvest,
             etWateringInterval, etFertilizingInterval, etSoilCareInterval, etProtectionInterval;
 
-    private TextInputLayout tilPlantName, tilCategory;
+    private TextInputLayout tilPlantName, tilCategory, tilVariety, tilDescription,
+            tilMinTemp, tilMaxTemp, tilMinHumidity, tilMaxHumidity, tilNeededPrecipitation,
+            tilMaxWind, tilSowingDepth, tilDaysToGermination, tilDaysToHarvest,
+            tilWateringInterval, tilFertilizingInterval, tilSoilCareInterval, tilProtectionInterval;
 
     private AutoCompleteTextView actvCategory;
     private CheckBox cbCanSeedlings, cbCanDirectSow;
@@ -99,6 +102,21 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
 
         tilPlantName = findViewById(R.id.tilPlantName);
         tilCategory = findViewById(R.id.tilCategory);
+        tilVariety = findViewById(R.id.tilVariety);
+        tilDescription = findViewById(R.id.tilDescription);
+        tilMinTemp = findViewById(R.id.tilMinTemp);
+        tilMaxTemp = findViewById(R.id.tilMaxTemp);
+        tilMinHumidity = findViewById(R.id.tilMinHumidity);
+        tilMaxHumidity = findViewById(R.id.tilMaxHumidity);
+        tilNeededPrecipitation = findViewById(R.id.tilNeededPrecipitation);
+        tilMaxWind = findViewById(R.id.tilMaxWind);
+        tilSowingDepth = findViewById(R.id.tilSowingDepth);
+        tilDaysToGermination = findViewById(R.id.tilDaysToGermination);
+        tilDaysToHarvest = findViewById(R.id.tilDaysToHarvest);
+        tilWateringInterval = findViewById(R.id.tilWateringInterval);
+        tilFertilizingInterval = findViewById(R.id.tilFertilizingInterval);
+        tilSoilCareInterval = findViewById(R.id.tilSoilCareInterval);
+        tilProtectionInterval = findViewById(R.id.tilProtectionInterval);
 
         actvCategory = findViewById(R.id.actvCategory);
         cbCanSeedlings = findViewById(R.id.cbCanSeedlings);
@@ -121,7 +139,6 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
                         if (selectedImageUri != null) {
                             ivSelectedPhoto.setImageURI(selectedImageUri);
                             llPhotoPlaceholder.setVisibility(View.GONE);
-
                             selectedImagePath = getRealPathFromURI(selectedImageUri);
                             Log.d("PHOTO_DEBUG", "Успешно выбран файл по пути: " + selectedImagePath);
                         }
@@ -171,7 +188,6 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     String serverImageUrl = response.body();
                     Log.d("UPLOAD_SUCCESS", "Файл успешно сохранен на сервере: " + serverImageUrl);
-
                     saveCropToDatabase(serverImageUrl);
                 } else {
                     resetButton();
@@ -197,7 +213,6 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
         crop.setVariety(etVariety.getText().toString().trim());
         crop.setCategory(selectedCategoryName);
         crop.setDescription(etDescription.getText().toString().trim());
-
         crop.setPhotoPath(serverImageUrl);
 
         crop.setMinTemp(parseSafeShort(etMinTemp));
@@ -212,8 +227,8 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
 
         crop.setWateringInterval(parseSafeInt(etWateringInterval));
         crop.setFertilizingInterval(parseSafeInt(etFertilizingInterval));
-        if (etSoilCareInterval != null) crop.setSoilCareInterval(parseSafeInt(etSoilCareInterval));
-        if (etProtectionInterval != null) crop.setProtectionInterval(parseSafeInt(etProtectionInterval));
+        crop.setSoilCareInterval(parseSafeInt(etSoilCareInterval));
+        crop.setProtectionInterval(parseSafeInt(etProtectionInterval));
 
         crop.setCanSeedlings(cbCanSeedlings.isChecked());
         crop.setCanDirectSow(cbCanDirectSow.isChecked());
@@ -223,16 +238,24 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
             public void onResponse(Call<Crop> call, Response<Crop> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(AddPlantActivityAdmin.this, "Растение успешно добавлено!", Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);
                     finish();
                 } else {
                     resetButton();
-                    Toast.makeText(AddPlantActivityAdmin.this, "Ошибка сервера при добавлении записи", Toast.LENGTH_LONG).show();
+                    String error = "Ошибка: " + response.code();
+                    try {
+                        if (response.errorBody() != null) {
+                            error = response.errorBody().string();
+                        }
+                    } catch (Exception e) {}
+                    Toast.makeText(AddPlantActivityAdmin.this, error, Toast.LENGTH_LONG).show();
                 }
             }
+
             @Override
             public void onFailure(Call<Crop> call, Throwable t) {
                 resetButton();
-                Toast.makeText(AddPlantActivityAdmin.this, "Ошибка сети при обращении к базе данных", Toast.LENGTH_LONG).show();
+                Toast.makeText(AddPlantActivityAdmin.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -254,6 +277,7 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
                     actvCategory.setAdapter(adapter);
                 }
             }
+
             @Override
             public void onFailure(Call<List<Category>> call, Throwable t) {
                 Toast.makeText(AddPlantActivityAdmin.this, "Не удалось загрузить категории", Toast.LENGTH_SHORT).show();
@@ -266,9 +290,28 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
 
         tilPlantName.setError(null);
         tilCategory.setError(null);
+        tilVariety.setError(null);
+        tilDescription.setError(null);
+        tilMinTemp.setError(null);
+        tilMaxTemp.setError(null);
+        tilMinHumidity.setError(null);
+        tilMaxHumidity.setError(null);
+        tilNeededPrecipitation.setError(null);
+        tilMaxWind.setError(null);
+        tilSowingDepth.setError(null);
+        tilDaysToGermination.setError(null);
+        tilDaysToHarvest.setError(null);
+        tilWateringInterval.setError(null);
+        tilFertilizingInterval.setError(null);
+        tilSoilCareInterval.setError(null);
+        tilProtectionInterval.setError(null);
 
-        if (TextUtils.isEmpty(etPlantName.getText().toString().trim())) {
-            tilPlantName.setError("Введите название");
+        String plantName = etPlantName.getText().toString().trim();
+        if (TextUtils.isEmpty(plantName)) {
+            tilPlantName.setError("Введите название растения");
+            isValid = false;
+        } else if (plantName.length() > 100) {
+            tilPlantName.setError("Название не должно превышать 100 символов");
             isValid = false;
         }
 
@@ -277,36 +320,168 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
             isValid = false;
         }
 
-        Float minT = parseSafeFloat(etMinTemp);
-        Float maxT = parseSafeFloat(etMaxTemp);
-        if (minT != null && maxT != null && minT > maxT) {
-            Toast.makeText(this, "Мин. температура не может быть выше макс.", Toast.LENGTH_SHORT).show();
+        String variety = etVariety.getText().toString().trim();
+        if (!TextUtils.isEmpty(variety) && variety.length() > 100) {
+            tilVariety.setError("Сорт не должен превышать 100 символов");
             isValid = false;
         }
 
-        Integer minH = parseSafeInt(etMinHumidity);
-        Integer maxH = parseSafeInt(etMaxHumidity);
-        if ((minH != null && (minH < 0 || minH > 100)) || (maxH != null && (maxH < 0 || maxH > 100))) {
-            Toast.makeText(this, "Влажность должна быть от 0 до 100%", Toast.LENGTH_SHORT).show();
+        String description = etDescription.getText().toString().trim();
+        if (!TextUtils.isEmpty(description) && description.length() > 500) {
+            tilDescription.setError("Описание не должно превышать 500 символов");
             isValid = false;
         }
 
-        if (minH != null && maxH != null && minH > maxH) {
-            Toast.makeText(this, "Мин. влажность не может быть выше макс.", Toast.LENGTH_SHORT).show();
+        if (TextUtils.isEmpty(etMinTemp.getText().toString().trim())) {
+            tilMinTemp.setError("Укажите мин. температуру");
             isValid = false;
         }
 
-        if (isNegative(etWateringInterval) || isNegative(etSowingDepth) || isNegative(etDaysToHarvest)) {
-            Toast.makeText(this, "Значения не могут быть отрицательными", Toast.LENGTH_SHORT).show();
+        if (TextUtils.isEmpty(etMaxTemp.getText().toString().trim())) {
+            tilMaxTemp.setError("Укажите макс. температуру");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etMinHumidity.getText().toString().trim())) {
+            tilMinHumidity.setError("Укажите мин. влажность");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etMaxHumidity.getText().toString().trim())) {
+            tilMaxHumidity.setError("Укажите макс. влажность");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etNeededPrecipitation.getText().toString().trim())) {
+            tilNeededPrecipitation.setError("Укажите количество осадков");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etMaxWind.getText().toString().trim())) {
+            tilMaxWind.setError("Укажите макс. скорость ветра");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etSowingDepth.getText().toString().trim())) {
+            tilSowingDepth.setError("Укажите глубину посева");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etDaysToGermination.getText().toString().trim())) {
+            tilDaysToGermination.setError("Укажите дни до всходов");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etDaysToHarvest.getText().toString().trim())) {
+            tilDaysToHarvest.setError("Укажите дни до урожая");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etWateringInterval.getText().toString().trim())) {
+            tilWateringInterval.setError("Укажите интервал полива");
+            isValid = false;
+        }
+
+        if (TextUtils.isEmpty(etFertilizingInterval.getText().toString().trim())) {
+            tilFertilizingInterval.setError("Укажите интервал удобрения");
+            isValid = false;
+        }
+
+        if (!cbCanSeedlings.isChecked() && !cbCanDirectSow.isChecked()) {
+            Toast.makeText(this, "Выберите хотя бы один способ посадки", Toast.LENGTH_SHORT).show();
+            isValid = false;
+        }
+
+        Short minTemp = parseSafeShort(etMinTemp);
+        Short maxTemp = parseSafeShort(etMaxTemp);
+        if (minTemp != null && maxTemp != null && minTemp > maxTemp) {
+            tilMinTemp.setError("Мин. температура не может быть выше макс.");
+            tilMaxTemp.setError("Макс. температура не может быть ниже мин.");
+            isValid = false;
+        }
+
+        if (minTemp != null && (minTemp < -50 || minTemp > 60)) {
+            tilMinTemp.setError("Температура должна быть в диапазоне -50...60°C");
+            isValid = false;
+        }
+
+        if (maxTemp != null && (maxTemp < -50 || maxTemp > 60)) {
+            tilMaxTemp.setError("Температура должна быть в диапазоне -50...60°C");
+            isValid = false;
+        }
+
+        Integer minHumidity = parseSafeInt(etMinHumidity);
+        Integer maxHumidity = parseSafeInt(etMaxHumidity);
+
+        if (minHumidity != null && (minHumidity < 0 || minHumidity > 100)) {
+            tilMinHumidity.setError("Влажность должна быть от 0 до 100%");
+            isValid = false;
+        }
+        if (maxHumidity != null && (maxHumidity < 0 || maxHumidity > 100)) {
+            tilMaxHumidity.setError("Влажность должна быть от 0 до 100%");
+            isValid = false;
+        }
+        if (minHumidity != null && maxHumidity != null && minHumidity > maxHumidity) {
+            tilMinHumidity.setError("Мин. влажность не может быть выше макс.");
+            tilMaxHumidity.setError("Макс. влажность не может быть ниже мин.");
+            isValid = false;
+        }
+
+        Short precipitation = parseSafeShort(etNeededPrecipitation);
+        if (precipitation != null && (precipitation < 0 || precipitation > 1000)) {
+            tilNeededPrecipitation.setError("Осадки должны быть в диапазоне 0...1000 мм");
+            isValid = false;
+        }
+
+        Short maxWind = parseSafeShort(etMaxWind);
+        if (maxWind != null && (maxWind < 0 || maxWind > 50)) {
+            tilMaxWind.setError("Скорость ветра должна быть 0...50 м/с");
+            isValid = false;
+        }
+
+        Integer sowingDepth = parseSafeInt(etSowingDepth);
+        if (sowingDepth != null && (sowingDepth < 0 || sowingDepth > 50)) {
+            tilSowingDepth.setError("Глубина посадки должна быть 0...50 см");
+            isValid = false;
+        }
+
+        Integer daysToGermination = parseSafeInt(etDaysToGermination);
+        if (daysToGermination != null && (daysToGermination < 0 || daysToGermination > 365)) {
+            tilDaysToGermination.setError("Должно быть 0...365 дней");
+            isValid = false;
+        }
+
+        Integer daysToHarvest = parseSafeInt(etDaysToHarvest);
+        if (daysToHarvest != null && (daysToHarvest < 0 || daysToHarvest > 730)) {
+            tilDaysToHarvest.setError("Должно быть 0...730 дней");
+            isValid = false;
+        }
+
+        Integer wateringInterval = parseSafeInt(etWateringInterval);
+        if (wateringInterval != null && (wateringInterval < 0 || wateringInterval > 365)) {
+            tilWateringInterval.setError("Интервал должен быть 0...365 дней");
+            isValid = false;
+        }
+
+        Integer fertilizingInterval = parseSafeInt(etFertilizingInterval);
+        if (fertilizingInterval != null && (fertilizingInterval < 0 || fertilizingInterval > 365)) {
+            tilFertilizingInterval.setError("Интервал должен быть 0...365 дней");
+            isValid = false;
+        }
+
+        Integer soilCareInterval = parseSafeInt(etSoilCareInterval);
+        if (soilCareInterval != null && (soilCareInterval < 0 || soilCareInterval > 365)) {
+            tilSoilCareInterval.setError("Интервал должен быть 0...365 дней");
+            isValid = false;
+        }
+
+        Integer protectionInterval = parseSafeInt(etProtectionInterval);
+        if (protectionInterval != null && (protectionInterval < 0 || protectionInterval > 365)) {
+            tilProtectionInterval.setError("Интервал должен быть 0...365 дней");
             isValid = false;
         }
 
         return isValid;
-    }
-
-    private boolean isNegative(TextInputEditText et) {
-        Integer val = parseSafeInt(et);
-        return val != null && val < 0;
     }
 
     private void resetButton() {
@@ -321,6 +496,7 @@ public class AddPlantActivityAdmin extends AppCompatActivity {
         try { return Float.parseFloat(text.replace(",", ".")); }
         catch (NumberFormatException e) { return null; }
     }
+
     private Short parseSafeShort(TextInputEditText et) {
         if (et == null) return null;
         String text = et.getText().toString().trim();

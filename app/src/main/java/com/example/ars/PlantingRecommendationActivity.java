@@ -368,19 +368,19 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
                         rec.setCropName(plantName);
                         rec.setVariety(varietyName);
 
-                        rec.setTempCurrent(String.format("%.0f-%.0f°C", tempMin, tempMax));
+                        rec.setTempCurrent(String.format("%.0f...%.0f°C", tempMin, tempMax));
                         rec.setHumidityCurrent(String.format("%.0f%%", humMin));
                         rec.setPrecipCurrent(String.format("%.1f мм", precipitation));
                         rec.setWindCurrent(String.format("%.1f м/с", windMax));
 
                         if (minTempVal != null && maxTempVal != null) {
-                            rec.setTempRequired(String.format("%d-%d°C", minTempVal, maxTempVal));
+                            rec.setTempRequired(String.format("%d...%d°C", minTempVal, maxTempVal));
                         } else {
                             rec.setTempRequired("—");
                         }
 
                         if (minHumidityVal != null && maxHumidityVal != null) {
-                            rec.setHumidityRequired(String.format("%d-%d%%", minHumidityVal, maxHumidityVal));
+                            rec.setHumidityRequired(String.format("%d...%d%%", minHumidityVal, maxHumidityVal));
                         } else {
                             rec.setHumidityRequired("—");
                         }
@@ -460,7 +460,7 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
         if (minTemp != null && maxTemp != null) {
             if (tempMin >= minTemp && tempMax <= maxTemp) {
-                sb.append(String.format("Температура: %.0f..%.0f°C (оптимум: %d-%d°C) ✓\n",
+                sb.append(String.format("Температура: %.0f..%.0f°C (оптиамльная: %d-%d°C) ✓\n",
                         tempMin, tempMax, minTemp, maxTemp));
             } else {
                 sb.append(String.format("Температура: %.0f..%.0f°C (нужно: %d-%d°C) ✗\n",
@@ -472,7 +472,7 @@ public class PlantingRecommendationActivity extends AppCompatActivity {
 
         if (minHum != null && maxHum != null) {
             if (hum >= minHum && hum <= maxHum) {
-                sb.append(String.format("Влажность: %.0f%% (оптимум: %d-%d%%) ✓\n",
+                sb.append(String.format("Влажность: %.0f%% (оптиамльная: %d-%d%%) ✓\n",
                         hum, minHum, maxHum));
             } else {
                 sb.append(String.format("Влажность: %.0f%% (нужно: %d-%d%%) ✗\n",

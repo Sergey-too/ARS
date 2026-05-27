@@ -1,6 +1,7 @@
 package com.example.ars;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Toast;
@@ -14,8 +15,12 @@ import com.example.ars.models.TaskItem;
 import com.example.ars.utils.SharedPreferencesHelper;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -32,6 +37,10 @@ public class TasksActivity extends AppCompatActivity {
     private List<TaskItem> allTasks = new ArrayList<>();
     private List<TaskItem> filteredTasks = new ArrayList<>();
     private String selectedAction = "Все работы";
+
+    private List<TaskItem> overdueTasks = new ArrayList<>();
+    private List<TaskItem> todayTasks = new ArrayList<>();
+    private List<TaskItem> futureTasks = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,39 +67,64 @@ public class TasksActivity extends AppCompatActivity {
         actvCategoryFilter.setText("Все работы", false);
 
         rvTasks.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new TaskAdapter(filteredTasks, this::onTaskComplete);
+        adapter = new TaskAdapter(this::onTaskComplete);
         rvTasks.setAdapter(adapter);
 
         loadTasks();
     }
 
     private void applyFilter() {
-        filteredTasks.clear();
+        overdueTasks.clear();
+        todayTasks.clear();
+        futureTasks.clear();
 
-        if (selectedAction.equals("Все работы")) {
-            filteredTasks.addAll(allTasks);
-        } else {
-            for (TaskItem task : allTasks) {
-                String actionName = getActionNameById(task.getActionTypeId());
-                if (actionName.equals(selectedAction)) {
-                    filteredTasks.add(task);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        Date todayDate = calendar.getTime();
+
+        for (TaskItem task : allTasks) {
+            boolean matchesAction = selectedAction.equals("Все работы") ||
+                    getActionNameById(task.getActionTypeId()).equals(selectedAction);
+
+            if (!matchesAction) continue;
+
+            String taskDateStr = task.getDueDate();
+            if (taskDateStr == null || taskDateStr.isEmpty()) {
+                futureTasks.add(task);
+                continue;
+            }
+
+            try {
+                Date taskDate = sdf.parse(taskDateStr);
+                if (taskDate != null) {
+                    if (taskDate.before(todayDate)) {
+                        overdueTasks.add(task);
+                    } else if (taskDate.equals(todayDate)) {
+                        todayTasks.add(task);
+                    } else {
+                        futureTasks.add(task);
+                    }
+                } else {
+                    futureTasks.add(task);
                 }
+            } catch (Exception e) {
+                futureTasks.add(task);
             }
         }
 
-        adapter.updateData(filteredTasks);
+        adapter.setGroupedData(overdueTasks, todayTasks, futureTasks);
 
-        if (filteredTasks.isEmpty() && allTasks.isEmpty()) {
-            tvEmpty.setVisibility(android.view.View.VISIBLE);
-            rvTasks.setVisibility(android.view.View.GONE);
+        if (overdueTasks.isEmpty() && todayTasks.isEmpty() && futureTasks.isEmpty()) {
+            tvEmpty.setVisibility(View.VISIBLE);
+            rvTasks.setVisibility(View.GONE);
             tvEmpty.setText("Нет задач на текущую неделю");
-        } else if (filteredTasks.isEmpty()) {
-            tvEmpty.setVisibility(android.view.View.VISIBLE);
-            rvTasks.setVisibility(android.view.View.GONE);
-            tvEmpty.setText("Нет задач по выбранному фильтру");
         } else {
-            tvEmpty.setVisibility(android.view.View.GONE);
-            rvTasks.setVisibility(android.view.View.VISIBLE);
+            tvEmpty.setVisibility(View.GONE);
+            rvTasks.setVisibility(View.VISIBLE);
         }
     }
 

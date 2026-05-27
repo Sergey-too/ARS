@@ -173,7 +173,6 @@ public class HistoryActivity extends AppCompatActivity {
             return;
         }
 
-        // Вертикальный PDF (A4 портрет: 595x842)
         PdfDocument document = new PdfDocument();
         PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
         PdfDocument.Page page = document.startPage(pageInfo);
@@ -184,7 +183,6 @@ public class HistoryActivity extends AppCompatActivity {
         borderPaint.setStrokeWidth(1f);
         borderPaint.setColor(Color.GRAY);
 
-        // Заголовок
         paint.setTextSize(18f);
         paint.setFakeBoldText(true);
         paint.setColor(Color.parseColor("#2E7D32"));
@@ -200,7 +198,6 @@ public class HistoryActivity extends AppCompatActivity {
         linePaint.setStrokeWidth(2f);
         canvas.drawLine(25, 75, 570, 75, linePaint);
 
-        // Заголовки таблицы (убраны поля погоды)
         int startX = 25;
         int startY = 95;
         int rowHeight = 28;
@@ -227,6 +224,9 @@ public class HistoryActivity extends AppCompatActivity {
         paint.setTextSize(9f);
         int y = startY + rowHeight;
 
+        SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+
         for (History item : filteredList) {
             if (y + rowHeight > 800) {
                 document.finishPage(page);
@@ -246,18 +246,39 @@ public class HistoryActivity extends AppCompatActivity {
                 paint.setFakeBoldText(false);
             }
 
-            String date = item.getDoneAt() != null ? item.getDoneAt().split("[T ]")[0] : "----";
+            String dateStr = item.getDoneAt() != null ? item.getDoneAt() : "----";
+            String formattedDate = "----";
+            try {
+                Date date = inputFormat.parse(dateStr);
+                formattedDate = outputFormat.format(date);
+            } catch (Exception e) {
+                try {
+                    SimpleDateFormat altInputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                    Date date = altInputFormat.parse(dateStr);
+                    formattedDate = outputFormat.format(date);
+                } catch (Exception ex) {
+                    formattedDate = dateStr;
+                }
+            }
+
             String crop = item.getCropName() != null ? item.getCropName() : "---";
             String variety = item.getVariety() != null ? item.getVariety() : "---";
             String area = item.getAreaName() != null ? item.getAreaName() : "---";
             String action = item.getActionName() != null ? item.getActionName() : "---";
 
-            String[] rowData = {date, crop, variety, area, action};
+            String[] rowData = {formattedDate, crop, variety, area, action};
 
             currentX = startX;
             for (int i = 0; i < rowData.length; i++) {
                 canvas.drawRect(currentX, y, currentX + colWidths[i], y + rowHeight, borderPaint);
-                canvas.drawText(rowData[i], currentX + 4, y + 18, paint);
+                String text = rowData[i];
+                if (paint.measureText(text) > colWidths[i] - 8) {
+                    while (paint.measureText(text + "...") > colWidths[i] - 8 && text.length() > 3) {
+                        text = text.substring(0, text.length() - 1);
+                    }
+                    text = text + "...";
+                }
+                canvas.drawText(text, currentX + 4, y + 18, paint);
                 currentX += colWidths[i];
             }
             y += rowHeight;
