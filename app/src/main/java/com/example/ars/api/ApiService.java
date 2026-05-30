@@ -9,6 +9,7 @@ import com.example.ars.models.Crop;
 import com.example.ars.models.DeleteResponse;
 import com.example.ars.models.GardenHistory;
 import com.example.ars.models.History;
+import com.example.ars.models.IndividualCompatibilityDTO;
 import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.models.Region;
 import com.example.ars.models.SupportMessage;
@@ -157,6 +158,12 @@ public interface ApiService {
 
     @DELETE("/api/my-crops/{id}")
     Call<Void> deleteUserCrop(@Path("id") int id);
+
+    @GET("/api/individual-compatibility/matrix/{userId}")
+    Call<List<IndividualCompatibilityDTO>> getIndividualCompatibilityMatrix(@Path("userId") int userId);
+
+    @POST("/api/individual-compatibility/update")
+    Call<Void> updateIndividualCompatibility(@Body IndividualCompatibilityDTO dto);
 
     // Areas
     @GET("/api/areas/user/{userId}")

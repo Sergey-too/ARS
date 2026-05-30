@@ -7,20 +7,22 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.ars.R;
-import com.example.ars.models.CompatibilityDTO;
+import com.example.ars.models.IndividualCompatibilityDTO;
 import java.util.List;
 
-public class CompatibilityAdapter extends RecyclerView.Adapter<CompatibilityAdapter.ViewHolder> {
+public class IndividualCompatibilityAdapter extends RecyclerView.Adapter<IndividualCompatibilityAdapter.ViewHolder> {
 
-    private List<CompatibilityDTO> list;
+    private List<IndividualCompatibilityDTO> data;
+    private List<String> cropNames;
     private OnCellClickListener listener;
 
     public interface OnCellClickListener {
-        void onCellClick(CompatibilityDTO item, int position);
+        void onCellClick(int crop1Id, int crop2Id, int currentStatus, int position);
     }
 
-    public CompatibilityAdapter(List<CompatibilityDTO> list, OnCellClickListener listener) {
-        this.list = list;
+    public IndividualCompatibilityAdapter(List<IndividualCompatibilityDTO> data, List<String> cropNames, OnCellClickListener listener) {
+        this.data = data;
+        this.cropNames = cropNames;
         this.listener = listener;
     }
 
@@ -34,10 +36,11 @@ public class CompatibilityAdapter extends RecyclerView.Adapter<CompatibilityAdap
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        CompatibilityDTO item = list.get(position);
+        IndividualCompatibilityDTO item = data.get(position);
 
         int color;
-        switch (item.getStatus()) {
+        int status = item.getCompatibility() != null ? item.getCompatibility() : 1;
+        switch (status) {
             case 4: color = Color.parseColor("#4CAF50"); break;
             case 3: color = Color.parseColor("#FFEB3B"); break;
             case 2: color = Color.parseColor("#F44336"); break;
@@ -47,19 +50,31 @@ public class CompatibilityAdapter extends RecyclerView.Adapter<CompatibilityAdap
 
         holder.colorView.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onCellClick(item, position);
+                listener.onCellClick(item.getCrop1Id(), item.getCrop2Id(), status, position);
             }
         });
     }
 
-    @Override
-    public int getItemCount() {
-        return list != null ? list.size() : 0;
+    public void updateCell(int position, int newStatus) {
+        data.get(position).setCompatibility(newStatus);
+        notifyItemChanged(position);
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public String getCropNameByPosition(int index) {
+        if (index >= 0 && index < cropNames.size()) {
+            return cropNames.get(index);
+        }
+        return "";
+    }
+
+    @Override
+    public int getItemCount() {
+        return data != null ? data.size() : 0;
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
         View colorView;
-        public ViewHolder(View itemView) {
+        ViewHolder(View itemView) {
             super(itemView);
             colorView = itemView.findViewById(R.id.compatibilityStatusColor);
         }

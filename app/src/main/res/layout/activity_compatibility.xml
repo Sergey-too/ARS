@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_gradient_green"
-    tools:context=".CompatibilityActivity">
+    tools:context=".UnifiedCompatibilityActivity">
 
     <ImageView
         android:id="@+id/btnBack"
@@ -41,7 +41,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Совместимость"
+            android:text="Совместимость растений"
             android:textColor="@color/color_text_white"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -67,21 +67,41 @@
             android:layout_height="match_parent"
             android:padding="12dp">
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilCompatibilityType"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Тип совместимости"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <AutoCompleteTextView
+                    android:id="@+id/actvCompatibilityType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <View
                 android:id="@+id/corner"
+                android:layout_marginTop="12dp"
                 android:layout_width="75dp"
                 android:layout_height="80dp"
                 android:background="#E8F5E9"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tilCompatibilityType"
                 app:layout_constraintStart_toStartOf="parent" />
 
             <HorizontalScrollView
                 android:id="@+id/headerScroll"
                 android:layout_width="0dp"
+                android:layout_marginTop="12dp"
                 android:layout_height="80dp"
                 android:scrollbars="none"
                 android:background="#F1F8E9"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tilCompatibilityType"
                 app:layout_constraintStart_toEndOf="@id/corner"
                 app:layout_constraintEnd_toEndOf="parent">
 
