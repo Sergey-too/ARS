@@ -10,12 +10,12 @@ public class Crop implements Serializable {
     private String category;
     private String description;
 
-    @SerializedName("minTemp") private Short minTemp;      // smallint → Short
-    @SerializedName("maxTemp") private Short maxTemp;      // smallint → Short
-    @SerializedName("maxWind") private Short maxWind;      // smallint → Short
-    @SerializedName("minHumidity") private Integer minHumidity;  // smallint → Integer
-    @SerializedName("maxHumidity") private Integer maxHumidity;  // smallint → Integer
-    @SerializedName("neededPrecipitation") private Short neededPrecipitation;  // smallint → Short
+    @SerializedName("minTemp") private Short minTemp;
+    @SerializedName("maxTemp") private Short maxTemp;
+    @SerializedName("maxWind") private Short maxWind;
+    @SerializedName("minHumidity") private Integer minHumidity;
+    @SerializedName("maxHumidity") private Integer maxHumidity;
+    @SerializedName("neededPrecipitation") private Short neededPrecipitation;
 
     @SerializedName("sowingDepth") private Integer sowingDepth;
     @SerializedName("daysToGermination") private Integer daysToGermination;

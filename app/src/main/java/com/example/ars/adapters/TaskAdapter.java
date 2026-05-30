@@ -51,6 +51,46 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
+    public void updateTasks(List<TaskItem> tasks) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        Date todayDate = new Date();
+
+        overdueTasks.clear();
+        todayTasks.clear();
+        futureTasks.clear();
+
+        for (TaskItem task : tasks) {
+            if (task.getDueDate() == null || task.getDueDate().isEmpty()) {
+                futureTasks.add(task);
+                continue;
+            }
+
+            try {
+                Date taskDate = sdf.parse(task.getDueDate());
+                if (taskDate != null) {
+                    if (taskDate.before(todayDate)) {
+                        overdueTasks.add(task);
+                    } else if (dateEquals(taskDate, todayDate)) {
+                        todayTasks.add(task);
+                    } else {
+                        futureTasks.add(task);
+                    }
+                } else {
+                    futureTasks.add(task);
+                }
+            } catch (Exception e) {
+                futureTasks.add(task);
+            }
+        }
+
+        notifyDataSetChanged();
+    }
+
+    private boolean dateEquals(Date d1, Date d2) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        return sdf.format(d1).equals(sdf.format(d2));
+    }
+
     @Override
     public int getItemViewType(int position) {
         int overdueSize = overdueTasks.size();
@@ -142,7 +182,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
                 taskHolder.tvAreaName.setText("Участок: " + (task.getAreaName() != null ? task.getAreaName() : "---"));
 
-                if (getTaskAtPosition(position) == getTaskAtPosition(position) && isOverdue(task)) {
+                if (isOverdue(task)) {
                     taskHolder.tvStatus.setVisibility(View.VISIBLE);
                     taskHolder.tvStatus.setText("Просрочено");
                     taskHolder.tvStatus.setTextColor(0xFFF44336);
@@ -246,7 +286,6 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     static class HeaderViewHolder extends RecyclerView.ViewHolder {
         TextView tvHeader, tvCount;
-        CardView cardView;
         LinearLayout container;
         int headerType;
 
@@ -255,37 +294,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             this.headerType = headerType;
             tvHeader = itemView.findViewById(R.id.tvHeader);
             tvCount = itemView.findViewById(R.id.tvCount);
-            cardView = (CardView) itemView;
             container = itemView.findViewById(R.id.container);
-        }
-
-        void setColors(Context context) {
-            switch (headerType) {
-                case TYPE_HEADER_OVERDUE:
-                    GradientDrawable gradient = new GradientDrawable(
-                            GradientDrawable.Orientation.TOP_BOTTOM,
-                            new int[]{Color.parseColor("#EF5350"), Color.parseColor("#E53935")}
-                    );
-                    gradient.setCornerRadius(16f);
-                    container.setBackground(gradient);
-                    break;
-                case TYPE_HEADER_TODAY:
-                    GradientDrawable gradient2 = new GradientDrawable(
-                            GradientDrawable.Orientation.TOP_BOTTOM,
-                            new int[]{Color.parseColor("#66BB6A"), Color.parseColor("#43A047")}
-                    );
-                    gradient2.setCornerRadius(16f);
-                    container.setBackground(gradient2);
-                    break;
-                case TYPE_HEADER_FUTURE:
-                    GradientDrawable gradient3 = new GradientDrawable(
-                            GradientDrawable.Orientation.TOP_BOTTOM,
-                            new int[]{Color.parseColor("#42A5F5"), Color.parseColor("#1E88E5")}
-                    );
-                    gradient3.setCornerRadius(16f);
-                    container.setBackground(gradient3);
-                    break;
-            }
         }
     }
 }
