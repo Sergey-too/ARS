@@ -4,8 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_gradient_green"
-    tools:context=".PlantingRecommendationActivity">
+    android:background="@drawable/bg_gradient_green">
 
     <LinearLayout
         android:id="@+id/headerSection"
@@ -22,15 +21,15 @@
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_marginBottom="8dp"
-            android:src="@drawable/ic_plant"
+            android:src="@drawable/ic_menu"
             app:tint="@color/color_text_white" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Рекомендации по посадке"
+            android:text="Мои категории"
             android:textColor="@color/color_text_white"
-            android:textSize="24sp"
+            android:textSize="26sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -66,72 +65,49 @@
             android:layout_height="match_parent"
             android:padding="16dp">
 
-            <TextView
-                android:id="@+id/tvResultsTitle"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilSearch"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Рекомендуемые дни для посадки"
-                android:textColor="@color/color_text_dark"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:visibility="gone"
+                android:hint="Поиск по названию"
+                app:boxStrokeColor="@color/color_input_border"
+                app:endIconMode="clear_text"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:startIconDrawable="@drawable/ic_search">
 
-            <TextView
-                android:id="@+id/tvEmpty"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:gravity="center"
-                android:padding="32dp"
-                android:text="Анализируем условия для ваших участков..."
-                android:textColor="@color/color_text_gray"
-                android:textSize="14sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSearch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvRecommendations"
-                android:layout_width="0dp"
+                android:id="@+id/rvCategories"
+                android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_marginTop="12dp"
                 android:clipToPadding="false"
                 android:paddingBottom="70dp"
-                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/tilSearch"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvResultsTitle" />
-
-            <ProgressBar
-                android:id="@+id/progressBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                tools:listitem="@layout/item_category" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnRefresh"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddCategory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_margin="24dp"
+        android:src="@drawable/ic_add"
         app:backgroundTint="@color/color_blue_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:cornerRadius="28dp"
-        app:icon="@drawable/ic_refresh"
-        app:iconGravity="textStart"
-        app:iconPadding="0dp"
-        app:iconTint="@color/color_button_text_primary"
+        app:tint="@color/color_button_text_primary"
         app:elevation="12dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

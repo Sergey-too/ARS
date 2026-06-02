@@ -7,6 +7,7 @@ import com.example.ars.models.Category;
 import com.example.ars.models.CompatibilityDTO;
 import com.example.ars.models.Crop;
 import com.example.ars.models.DeleteResponse;
+import com.example.ars.models.Garden;
 import com.example.ars.models.GardenHistory;
 import com.example.ars.models.History;
 import com.example.ars.models.IndividualCompatibilityDTO;
@@ -16,6 +17,7 @@ import com.example.ars.models.SupportMessage;
 import com.example.ars.models.SupportRequest;
 import com.example.ars.models.TaskItem;
 import com.example.ars.models.User;
+import com.example.ars.models.UserCategory;
 import com.example.ars.models.UserCrop;
 import com.example.ars.models.WeatherAlert;
 import com.example.ars.models.WeatherComparisonDTO;
@@ -273,6 +275,37 @@ public interface ApiService {
     //WeatherAlert
     @GET("api/alerts/check/{userId}")
     Call<List<WeatherAlert>> checkAlerts(@Path("userId") int userId);
+
+    // Gardens
+    @GET("/api/gardens/user/{userId}")
+    Call<List<Garden>> getUserGardens(@Path("userId") int userId);
+
+    @POST("/api/gardens")
+    Call<Garden> createGarden(@Body Garden garden);
+
+    @PUT("/api/gardens/{id}")
+    Call<Garden> updateGarden(@Path("id") int id, @Body Garden garden);
+
+    @DELETE("/api/gardens/{id}")
+    Call<Void> deleteGarden(@Path("id") int id);
+
+    @POST("/api/gardens/{gardenId}/areas")
+    Call<Void> addAreaToGarden(@Path("gardenId") int gardenId, @Body Map<String, Integer> request);
+
+    @DELETE("/api/gardens/{gardenId}/areas/{areaId}")
+    Call<Void> removeAreaFromGarden(@Path("gardenId") int gardenId, @Path("areaId") int areaId);
+
+    // User Categories
+    @GET("/api/user-categories/user/{userId}")
+    Call<List<UserCategory>> getUserCategories(@Path("userId") int userId);
+
+    @POST("/api/user-categories")
+    Call<UserCategory> createUserCategory(@Body UserCategory category);
+
+    @DELETE("/api/user-categories/{id}")
+    Call<Void> deleteUserCategory(@Path("id") int id);
+    @PUT("/api/user-categories/{id}")
+    Call<UserCategory> updateUserCategory(@Path("id") int id, @Body UserCategory category);
 
     class LoginRequest {
         private String identifier;

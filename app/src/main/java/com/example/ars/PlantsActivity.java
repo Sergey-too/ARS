@@ -238,16 +238,15 @@ public class PlantsActivity extends AppCompatActivity {
 
         findViewById(R.id.btnMenu1).setOnClickListener(v -> {
             closeSideMenu();
-            startActivity(new Intent(this, PlantingRecommendationActivity.class));
+            startActivity(new Intent(this, UserCategoriesActivity.class));
         });
         findViewById(R.id.btnMenu2).setOnClickListener(v -> {
             closeSideMenu();
             startActivity(new Intent(this, WeatherActivity.class));
         });
-        findViewById(R.id.btnMenu3).setOnClickListener(v -> showDeleteAllConfirmationDialog());
-        findViewById(R.id.btnMenu4).setOnClickListener(v -> {
+        findViewById(R.id.btnMenu3).setOnClickListener(v -> {
             closeSideMenu();
-            startActivity(new Intent(this, AreasActivity.class));
+            startActivity(new Intent(this, GardensActivity.class));
         });
         findViewById(R.id.btnMenu5).setOnClickListener(v -> logout());
         findViewById(R.id.btnMenu6).setOnClickListener(v -> {
@@ -273,33 +272,6 @@ public class PlantsActivity extends AppCompatActivity {
         findViewById(R.id.btnMenu11).setOnClickListener(v -> {
             closeSideMenu();
             startActivity(new Intent(this, HistoryActivity.class));
-        });
-    }
-
-    private void showDeleteAllConfirmationDialog() {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Удаление")
-                .setMessage("Очистить вашу коллекцию?")
-                .setPositiveButton("Да", (d, w) -> deleteAllPlants())
-                .setNegativeButton("Нет", null)
-                .show();
-    }
-
-    private void deleteAllPlants() {
-        apiService.deleteAllUserCrops(prefsHelper.getUser().getId()).enqueue(new Callback<java.util.Map<String, Object>>() {
-            @Override
-            public void onResponse(@NonNull Call<java.util.Map<String, Object>> call, @NonNull Response<java.util.Map<String, Object>> response) {
-                if (response.isSuccessful()) {
-                    combinedList.clear();
-                    adapter.updateData(combinedList);
-                    closeSideMenu();
-                    Toast.makeText(PlantsActivity.this, "Все растения удалены", Toast.LENGTH_SHORT).show();
-                }
-            }
-            @Override
-            public void onFailure(@NonNull Call<java.util.Map<String, Object>> call, @NonNull Throwable t) {
-                Toast.makeText(PlantsActivity.this, "Ошибка удаления: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
         });
     }
 

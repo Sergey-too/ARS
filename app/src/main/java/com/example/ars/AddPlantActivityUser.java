@@ -24,6 +24,7 @@ import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Category;
 import com.example.ars.models.IndividualUserCrop;
+import com.example.ars.models.UserCategory;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -60,7 +61,9 @@ public class AddPlantActivityUser extends AppCompatActivity {
     private MaterialButton btnAddPlant;
 
     private List<Category> categories = new ArrayList<>();
+    private List<UserCategory> userCategories = new ArrayList<>();
     private Integer selectedCategoryId = null;
+    private Integer selectedUserCategoryId = null;
     private String selectedCategoryName = "";
     private String selectedImagePath = null;
     private String serverPhotoUrl = "";
@@ -77,6 +80,7 @@ public class AddPlantActivityUser extends AppCompatActivity {
         initViews();
         setupListeners();
         loadCategories();
+        loadUserCategories();
 
         if (getIntent().hasExtra("CROP_ID")) {
             editingCropId = getIntent().getIntExtra("CROP_ID", -1);
@@ -132,6 +136,20 @@ public class AddPlantActivityUser extends AppCompatActivity {
         btnAddPlant = findViewById(R.id.btnAddPlant);
     }
 
+    private void loadUserCategories() {
+        apiService.getUserCategories(prefsHelper.getUser().getId()).enqueue(new Callback<List<UserCategory>>() {
+            @Override
+            public void onResponse(Call<List<UserCategory>> call, Response<List<UserCategory>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    userCategories = response.body();
+                    updateCategoryDropdown();
+                }
+            }
+            @Override
+            public void onFailure(Call<List<UserCategory>> call, Throwable t) {}
+        });
+    }
+
     private void setupListeners() {
         findViewById(R.id.btnBack).setOnClickListener(v -> showExitDialog());
 
@@ -158,6 +176,57 @@ public class AddPlantActivityUser extends AppCompatActivity {
         btnAddPlant.setOnClickListener(v -> validateAndSave());
     }
 
+    private void updateCategoryDropdown() {
+        List<String> displayNames = new ArrayList<>();
+
+        // Добавляем системные категории
+        for (Category c : categories) {
+            displayNames.add(c.getName());
+        }
+
+        // Добавляем пользовательские категории (без разделителя)
+        for (UserCategory uc : userCategories) {
+            displayNames.add(uc.getName());
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, displayNames);
+        actvCategory.setAdapter(adapter);
+
+        actvCategory.setOnItemClickListener((parent, view, position, id) -> {
+            String selectedName = (String) parent.getItemAtPosition(position);
+
+            // Проверяем, является ли это пользовательской категорией
+            UserCategory foundUserCategory = null;
+            for (UserCategory uc : userCategories) {
+                if (uc.getName().equals(selectedName)) {
+                    foundUserCategory = uc;
+                    break;
+                }
+            }
+
+            if (foundUserCategory != null) {
+                selectedUserCategoryId = foundUserCategory.getId();
+                selectedCategoryId = null;
+                selectedCategoryName = foundUserCategory.getName();
+            } else {
+                // Системная категория
+                Category selected = null;
+                for (Category c : categories) {
+                    if (c.getName().equals(selectedName)) {
+                        selected = c;
+                        break;
+                    }
+                }
+                if (selected != null) {
+                    selectedCategoryId = selected.getId().intValue();
+                    selectedUserCategoryId = null;
+                    selectedCategoryName = selected.getName();
+                }
+            }
+            tilCategory.setError(null);
+        });
+    }
+
     private void validateAndSave() {
         boolean isValid = true;
 
@@ -166,7 +235,7 @@ public class AddPlantActivityUser extends AppCompatActivity {
             isValid = false;
         }
 
-        if (selectedCategoryId == null) {
+        if (selectedCategoryId == null && selectedUserCategoryId == null) {
             tilCategory.setError("Выберите категорию");
             isValid = false;
         }
@@ -357,8 +426,16 @@ public class AddPlantActivityUser extends AppCompatActivity {
 
         IndividualUserCrop crop = new IndividualUserCrop();
         crop.setUserId(prefsHelper.getUser().getId());
-        crop.setCategoryId(selectedCategoryId);
+
+        // Устанавливаем категорию (системную или пользовательскую)
+        if (selectedCategoryId != null) {
+            crop.setCategoryId(selectedCategoryId);
+        } else if (selectedUserCategoryId != null) {
+            crop.setUserCategoryId(selectedUserCategoryId);
+        }
+
         crop.setLocalPhotoPath(serverPhotoUrl);
+        crop.setIsCustom(true); // Помечаем как пользовательское растение
 
         crop.setName(etName.getText().toString().trim());
         crop.setVariety(etVariety.getText().toString().trim());
@@ -437,8 +514,20 @@ public class AddPlantActivityUser extends AppCompatActivity {
         cbCanSeedlings.setChecked(crop.getCanSeedlings() != null && crop.getCanSeedlings());
         cbCanDirectSow.setChecked(crop.getCanDirectSow() != null && crop.getCanDirectSow());
 
-        selectedCategoryId = crop.getCategoryId();
-        if (selectedCategoryId != null) {
+        // Определяем тип категории
+        if (crop.getUserCategoryId() != null) {
+            selectedUserCategoryId = crop.getUserCategoryId();
+            selectedCategoryId = null;
+            for (UserCategory uc : userCategories) {
+                if (uc.getId().equals(selectedUserCategoryId)) {
+                    actvCategory.setText(uc.getName(), false);
+                    selectedCategoryName = uc.getName();
+                    break;
+                }
+            }
+        } else if (crop.getCategoryId() != null) {
+            selectedCategoryId = crop.getCategoryId();
+            selectedUserCategoryId = null;
             for (Category c : categories) {
                 if (c.getId().equals(Long.valueOf(selectedCategoryId))) {
                     actvCategory.setText(c.getName(), false);
@@ -450,10 +539,12 @@ public class AddPlantActivityUser extends AppCompatActivity {
 
         if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
             serverPhotoUrl = crop.getLocalPhotoPath();
-            if (serverPhotoUrl.startsWith("http") || serverPhotoUrl.startsWith("/")) {
-                ivSelectedPhoto.setImageURI(Uri.parse(serverPhotoUrl));
-            }
             llPhotoPlaceholder.setVisibility(View.GONE);
+            // Пытаемся загрузить фото по URL
+            if (serverPhotoUrl.startsWith("http") || serverPhotoUrl.startsWith("/uploads")) {
+                // Для загрузки изображения с сервера нужна дополнительная логика
+                // Пока просто показываем плейсхолдер
+            }
         }
     }
 
@@ -464,16 +555,6 @@ public class AddPlantActivityUser extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     categories = response.body();
                     updateCategoryDropdown();
-
-                    if (editingCropId != null && selectedCategoryId != null) {
-                        for (Category c : categories) {
-                            if (c.getId().equals(Long.valueOf(selectedCategoryId))) {
-                                actvCategory.setText(c.getName(), false);
-                                selectedCategoryName = c.getName();
-                                break;
-                            }
-                        }
-                    }
                 }
             }
 
@@ -481,19 +562,6 @@ public class AddPlantActivityUser extends AppCompatActivity {
             public void onFailure(Call<List<Category>> call, Throwable t) {
                 Toast.makeText(AddPlantActivityUser.this, "Ошибка загрузки категорий", Toast.LENGTH_SHORT).show();
             }
-        });
-    }
-
-    private void updateCategoryDropdown() {
-        List<String> names = new ArrayList<>();
-        for (Category c : categories) names.add(c.getName());
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, names);
-        actvCategory.setAdapter(adapter);
-        actvCategory.setOnItemClickListener((parent, view, position, id) -> {
-            Category selected = categories.get(position);
-            selectedCategoryId = selected.getId().intValue();
-            selectedCategoryName = selected.getName();
-            tilCategory.setError(null);
         });
     }
 

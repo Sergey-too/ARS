@@ -57,7 +57,18 @@ public class PlantingAdapter extends RecyclerView.Adapter<PlantingAdapter.ViewHo
         }
         holder.tvCropName.setText(displayName);
 
-        holder.tvRegion.setText(rec.getAreaName());
+        String locationText = "";
+        if (rec.getAreaName() != null && !rec.getAreaName().isEmpty()) {
+            locationText = rec.getAreaName();
+            if (rec.getGardenName() != null && !rec.getGardenName().isEmpty()) {
+                locationText = rec.getAreaName() + " - " + rec.getGardenName();
+            }
+        } else if (rec.getGardenName() != null && !rec.getGardenName().isEmpty()) {
+            locationText = rec.getGardenName();
+        } else {
+            locationText = "---";
+        }
+        holder.tvRegion.setText(locationText);
 
         if (rec.getTempCurrent() != null) {
             holder.tvTempCurrent.setText(rec.getTempCurrent());

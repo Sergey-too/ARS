@@ -33,8 +33,21 @@ public class IndividualUserCrop implements Serializable {
     @SerializedName("soilCareInterval") private Integer soilCareInterval;
     @SerializedName("protectionInterval") private Integer protectionInterval;
 
+    // НОВЫЕ ПОЛЯ
+    @SerializedName("userCategoryId")
+    private Integer userCategoryId;
+
+    @SerializedName("isCustom")
+    private Boolean isCustom = true;
+
+    @SerializedName("createdAt")
+    private String createdAt;
+
+    private UserCategory userCategory; // для связи с категорией
+
     public IndividualUserCrop() {}
 
+    // Getters and Setters...
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -100,4 +113,22 @@ public class IndividualUserCrop implements Serializable {
 
     public Integer getProtectionInterval() { return protectionInterval; }
     public void setProtectionInterval(Integer protectionInterval) { this.protectionInterval = protectionInterval; }
+
+    // Новые геттеры/сеттеры
+    public Integer getUserCategoryId() { return userCategoryId; }
+    public void setUserCategoryId(Integer userCategoryId) { this.userCategoryId = userCategoryId; }
+
+    public Boolean getIsCustom() { return isCustom != null ? isCustom : true; }
+    public void setIsCustom(Boolean isCustom) { this.isCustom = isCustom; }
+
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public UserCategory getUserCategory() { return userCategory; }
+    public void setUserCategory(UserCategory userCategory) { this.userCategory = userCategory; }
+
+    // Вспомогательный метод
+    public boolean isCustomPlant() {
+        return isCustom != null && isCustom;
+    }
 }

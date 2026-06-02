@@ -8,8 +8,8 @@ public class TaskItem {
     private String actionName;
     private String dueDate;
     private Boolean isOverdue;
-
     private String lastDoneAt;
+    private String gardenName;
 
     public String getCropName() { return cropName; }
     public void setCropName(String cropName) { this.cropName = cropName; }
@@ -34,6 +34,8 @@ public class TaskItem {
     public String getLastDoneAt() { return lastDoneAt; }
     public void setLastDoneAt(String lastDoneAt) { this.lastDoneAt = lastDoneAt; }
 
+    public String getGardenName() { return gardenName; }
+    public void setGardenName(String gardenName) { this.gardenName = gardenName;}
     public String getDisplayName() {
         return (variety != null && !variety.isEmpty()) ? cropName + " (" + variety + ")" : cropName;
     }

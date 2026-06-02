@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -132,6 +133,23 @@
                         android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilGarden"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="Огород"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tilArea">
+                    <AutoCompleteTextView
+                        android:id="@+id/actvGarden"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <TextView
                     android:id="@+id/tvDateHint"
                     android:layout_width="0dp"
@@ -142,7 +160,7 @@
                     android:textStyle="bold"
                     android:textColor="@color/color_green_primary"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tilArea" />
+                    app:layout_constraintTop_toBottomOf="@+id/tilGarden" />
 
                 <TextView
                     android:id="@+id/tvDateInfo"
@@ -177,7 +195,6 @@
                         android:drawablePadding="12dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Поле даты сбора -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilHarvestDate"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -241,6 +258,7 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/tvPlantDescription" />
+
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>

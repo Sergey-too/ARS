@@ -1,5 +1,6 @@
 package com.example.ars;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -241,6 +242,12 @@ public class TasksActivity extends AppCompatActivity {
 
         while (iterator.hasNext()) {
             TaskItem task = iterator.next();
+
+            String key = (task.getCropName() + "|" + task.getAreaName()).toLowerCase().trim();
+            UserCrop uc = cropCache.get(key);
+            if (uc != null && uc.getGarden() != null) {
+                task.setGardenName(uc.getGarden().getName());
+            }
 
             if (task.getActionTypeId() == null || task.getActionTypeId() != 2) {
                 continue;
@@ -565,6 +572,12 @@ public class TasksActivity extends AppCompatActivity {
         rec.setAreaName(uc.getArea().getName());
         rec.setAreaId(uc.getAreaId());
 
+        if (uc.getGarden() != null) {
+            rec.setGardenName(uc.getGarden().getName());
+        } else {
+            rec.setGardenName("");
+        }
+
         double tempMin = parseDouble(wd.getTemperatureMin());
         double tempMax = parseDouble(wd.getTemperatureMax());
 
@@ -591,6 +604,19 @@ public class TasksActivity extends AppCompatActivity {
     }
 
     private void onPlantClick(PlantingRecommendation item) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        String currentDate = sdf.format(new Date());
+        String plantingDate = item.getDate();
+
+        if (plantingDate.compareTo(currentDate) > 0) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Нельзя посадить")
+                    .setMessage("Нельзя посадить растение на перед.")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
+
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Посадка")
                 .setMessage("Посадить " + item.getCropName() + " на участке " + item.getAreaName() + "?")

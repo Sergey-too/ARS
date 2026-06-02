@@ -70,7 +70,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".PlantingRecommendationActivity"
+            android:name=".UserCategoriesActivity"
             android:exported="false" />
 
         <activity
@@ -139,6 +139,10 @@
 
         <activity
             android:name=".EditPlantActivityUser"
+            android:exported="false" />
+
+        <activity
+            android:name=".GardensActivity"
             android:exported="false" />
     </application>
 

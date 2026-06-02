@@ -9,6 +9,7 @@ public class UserCrop implements Serializable {
     private Integer cropId;
     private Integer individualCropId;
     private Integer areaId;
+    private Integer gardenId;
     private String status;
 
     @SerializedName("plantedAt")
@@ -20,6 +21,7 @@ public class UserCrop implements Serializable {
     private Crop crop;
     private IndividualUserCrop individualCrop;
     private Area area;
+    private Garden garden;  // НОВОЕ ПОЛЕ
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -35,6 +37,9 @@ public class UserCrop implements Serializable {
 
     public Integer getAreaId() { return areaId; }
     public void setAreaId(Integer areaId) { this.areaId = areaId; }
+
+    public Integer getGardenId() { return gardenId; }
+    public void setGardenId(Integer gardenId) { this.gardenId = gardenId; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -53,6 +58,9 @@ public class UserCrop implements Serializable {
 
     public Area getArea() { return area; }
     public void setArea(Area area) { this.area = area; }
+
+    public Garden getGarden() { return garden; }
+    public void setGarden(Garden garden) { this.garden = garden; }
 
     public String getName() {
         if (crop != null) return crop.getName();

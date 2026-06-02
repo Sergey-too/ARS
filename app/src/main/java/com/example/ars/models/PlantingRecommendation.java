@@ -6,6 +6,7 @@ public class PlantingRecommendation {
     private String cropName;
     private String variety;
     private String areaName;
+    private String gardenName;
     private Integer cropId;
     private Integer areaId;
     private Integer userCropId;
@@ -21,6 +22,7 @@ public class PlantingRecommendation {
     private String windCurrent;
     private String windRequired;
 
+    // Getters and Setters
     public String getDate() { return date; }
     public void setDate(String date) { this.date = date; }
 
@@ -32,6 +34,9 @@ public class PlantingRecommendation {
 
     public String getAreaName() { return areaName; }
     public void setAreaName(String areaName) { this.areaName = areaName; }
+
+    public String getGardenName() { return gardenName; }
+    public void setGardenName(String gardenName) { this.gardenName = gardenName; }
 
     public Integer getCropId() { return cropId; }
     public void setCropId(Integer cropId) { this.cropId = cropId; }

@@ -180,7 +180,19 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (task.getVariety() != null && !task.getVariety().isEmpty()) {
                     taskHolder.tvCropName.setText(task.getCropName() + " (" + task.getVariety() + ")");
                 }
-                taskHolder.tvAreaName.setText("Участок: " + (task.getAreaName() != null ? task.getAreaName() : "---"));
+
+                String locationText = "";
+                if (task.getAreaName() != null && !task.getAreaName().isEmpty()) {
+                    locationText = task.getAreaName();
+                    if (task.getGardenName() != null && !task.getGardenName().isEmpty()) {
+                        locationText = task.getAreaName() + " - " + task.getGardenName();
+                    }
+                } else if (task.getGardenName() != null && !task.getGardenName().isEmpty()) {
+                    locationText = task.getGardenName();
+                } else {
+                    locationText = "---";
+                }
+                taskHolder.tvAreaName.setText("Место: " + locationText);
 
                 if (isOverdue(task)) {
                     taskHolder.tvStatus.setVisibility(View.VISIBLE);
