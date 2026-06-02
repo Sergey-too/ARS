@@ -24,6 +24,7 @@ import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.History;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -45,6 +46,7 @@ public class HistoryActivity extends AppCompatActivity {
     private HistoryAdapter adapter;
     private ProgressBar progressBar;
     private ExtendedFloatingActionButton fabExportPdf;
+    private TabLayout tabLayout;
 
     private List<History> allHistory = new ArrayList<>();
     private List<History> filteredList = new ArrayList<>();
@@ -52,6 +54,7 @@ public class HistoryActivity extends AppCompatActivity {
     private Long dateStartMs = null;
     private Long dateEndMs = null;
     private String selectedAction = "Все работы";
+    private int currentTab = 0; // 0 - все работы, 1 - только посадки
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,13 +65,31 @@ public class HistoryActivity extends AppCompatActivity {
         prefsHelper = new SharedPreferencesHelper(this);
         progressBar = findViewById(R.id.progressBar);
         fabExportPdf = findViewById(R.id.fabExportPdf);
+        tabLayout = findViewById(R.id.tabLayout);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         fabExportPdf.setOnClickListener(v -> generatePdf());
 
+        setupTabs();
         setupRecyclerView();
         setupFilters();
         loadHistory();
+    }
+
+    private void setupTabs() {
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                currentTab = tab.getPosition();
+                applyFilters();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
     }
 
     private void setupRecyclerView() {
@@ -126,6 +147,10 @@ public class HistoryActivity extends AppCompatActivity {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
 
         for (History item : allHistory) {
+            if (currentTab == 1 && item.getActionTypeId() != 1) {
+                continue; 
+            }
+
             boolean matchesDate = true;
             boolean matchesAction = selectedAction.equals("Все работы") ||
                     (item.getActionName() != null && item.getActionName().equals(selectedAction));
@@ -173,6 +198,16 @@ public class HistoryActivity extends AppCompatActivity {
             return;
         }
 
+        String reportType;
+        String fileNamePrefix;
+        if (currentTab == 1) {
+            reportType = "ОТЧЕТ ПО ПОСАДКАМ";
+            fileNamePrefix = "PlantingReport";
+        } else {
+            reportType = "ОТЧЕТ ПО РАБОТАМ";
+            fileNamePrefix = "HistoryReport";
+        }
+
         PdfDocument document = new PdfDocument();
         PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
         PdfDocument.Page page = document.startPage(pageInfo);
@@ -186,20 +221,39 @@ public class HistoryActivity extends AppCompatActivity {
         paint.setTextSize(18f);
         paint.setFakeBoldText(true);
         paint.setColor(Color.parseColor("#2E7D32"));
-        canvas.drawText("ОТЧЕТ ПО РАБОТАМ", 50, 40, paint);
+        canvas.drawText(reportType, 50, 40, paint);
 
         paint.setTextSize(10f);
         paint.setFakeBoldText(false);
         paint.setColor(Color.BLACK);
         canvas.drawText("Сформирован: " + new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(new Date()), 50, 65, paint);
 
+        int yOffset = 80;
+        if (dateStartMs != null || dateEndMs != null) {
+            paint.setTextSize(9f);
+            paint.setColor(Color.GRAY);
+            String dateFilter = "";
+            if (dateStartMs != null && dateEndMs != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                dateFilter = "Период: " + sdf.format(new Date(dateStartMs)) + " - " + sdf.format(new Date(dateEndMs));
+            } else if (dateStartMs != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                dateFilter = "С: " + sdf.format(new Date(dateStartMs));
+            } else if (dateEndMs != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                dateFilter = "По: " + sdf.format(new Date(dateEndMs));
+            }
+            canvas.drawText(dateFilter, 50, yOffset, paint);
+            yOffset += 15;
+        }
+
         Paint linePaint = new Paint();
         linePaint.setColor(Color.parseColor("#2E7D32"));
         linePaint.setStrokeWidth(2f);
-        canvas.drawLine(25, 75, 570, 75, linePaint);
+        canvas.drawLine(25, yOffset, 570, yOffset, linePaint);
 
         int startX = 25;
-        int startY = 95;
+        int startY = yOffset + 15;
         int rowHeight = 28;
         int[] colWidths = {70, 120, 100, 100, 80};
         String[] headers = {"Дата", "Растение", "Сорт", "Участок", "Действие"};
@@ -293,7 +347,7 @@ public class HistoryActivity extends AppCompatActivity {
 
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
-            String fileName = "HistoryReport_" + sdf.format(new Date()) + ".pdf";
+            String fileName = fileNamePrefix + "_" + sdf.format(new Date()) + ".pdf";
 
             File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             if (!dir.exists()) {
