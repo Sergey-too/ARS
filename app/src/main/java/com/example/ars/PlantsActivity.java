@@ -19,6 +19,7 @@ import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Crop;
 import com.example.ars.models.UserCrop;
 import com.example.ars.utils.SharedPreferencesHelper;
+import com.example.ars.utils.WeatherBackgroundUpdater;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -41,6 +42,7 @@ public class PlantsActivity extends AppCompatActivity {
     private boolean isLoading = false;
 
     private List<UserPlantAdapter.PlantItem> combinedList = new ArrayList<>();
+    private boolean hasUpdatedWeather = false; // Флаг для однократного обновления
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +73,9 @@ public class PlantsActivity extends AppCompatActivity {
                 startActivity(new Intent(this, AddPlantActivity.class))
         );
 
+        // Фоновое обновление погоды при запуске
+        updateWeatherInBackground();
+
         loadAllData();
     }
 
@@ -78,6 +83,27 @@ public class PlantsActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadAllData();
+    }
+
+    private void updateWeatherInBackground() {
+        // Проверяем, обновляли ли уже сегодня
+        android.content.SharedPreferences prefs = getSharedPreferences("weather_prefs", MODE_PRIVATE);
+        String lastUpdateDate = prefs.getString("last_weather_update", "");
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                .format(new java.util.Date());
+
+        if (lastUpdateDate.equals(today)) {
+            Log.d("Weather", "Сегодня погода уже обновлялась");
+            return;
+        }
+
+        // Сохраняем дату обновления
+        prefs.edit().putString("last_weather_update", today).apply();
+
+        // Запускаем фоновое обновление
+        Log.d("Weather", "Запуск фонового обновления погоды");
+        WeatherBackgroundUpdater updater = new WeatherBackgroundUpdater(this);
+        updater.updateAllData();
     }
 
     private void setupSideMenu() {

@@ -12,36 +12,37 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.ars.adapters.WeatherAdapter;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
+import com.example.ars.models.Region;
+import com.example.ars.models.WeatherData;
+import com.example.ars.utils.WeatherCacheManager;
 import com.google.android.material.button.MaterialButton;
+
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import com.example.ars.models.Region;
-import com.example.ars.models.WeatherResponse;
-import com.example.ars.models.WeatherData;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class WeatherActivity extends AppCompatActivity {
 
     private String selectedRegion = "Минск";
-    private ApiService apiService;
-    private WeatherAdapter weatherAdapter;
+    private WeatherCacheManager cacheManager;
+    private LinearLayout container;
+    private TextView tvRegionInfo;
+    private TextView tvUpdated;
+    private AutoCompleteTextView actvRegion;
+    private List<Region> regionsList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weather);
 
-        apiService = RetrofitClient.getApiService();
+        cacheManager = new WeatherCacheManager(this);
 
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> {
@@ -49,44 +50,58 @@ public class WeatherActivity extends AppCompatActivity {
             finish();
         });
 
-        weatherAdapter = new WeatherAdapter();
-
-        loadRegions();
+        container = findViewById(R.id.llWeatherContainer);
+        tvRegionInfo = findViewById(R.id.tvRegionInfo);
+        tvUpdated = findViewById(R.id.tvUpdated);
+        actvRegion = findViewById(R.id.actvRegion);
 
         MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
         btnRefresh.setOnClickListener(v -> {
-            loadWeatherForRegion(selectedRegion);
+            // Обновить из кэша (перезагрузить)
+            loadFromCache();
         });
 
-        loadWeatherForRegion(selectedRegion);
+        loadFromCache();
     }
 
-    private void loadRegions() {
-        apiService.getRegions().enqueue(new Callback<List<Region>>() {
+    private void loadFromCache() {
+        cacheManager.hasCachedRegions(new WeatherCacheManager.CacheCallback<Boolean>() {
             @Override
-            public void onResponse(Call<List<Region>> call, Response<List<Region>> response) {
-                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
-                    updateRegionDropdown(response.body());
+            public void onSuccess(Boolean hasCache) {
+                if (hasCache) {
+                    cacheManager.getCachedRegions(new WeatherCacheManager.CacheCallback<List<Region>>() {
+                        @Override
+                        public void onSuccess(List<Region> cachedRegions) {
+                            if (cachedRegions != null && !cachedRegions.isEmpty()) {
+                                regionsList = cachedRegions;
+                                updateRegionDropdown(regionsList);
+                                loadWeatherFromCache(selectedRegion);
+                            } else {
+                                showNoDataMessage();
+                            }
+                        }
+
+                        @Override
+                        public void onError(String error) {
+                            showNoDataMessage();
+                        }
+                    });
                 } else {
+                    showNoDataMessage();
                     Toast.makeText(WeatherActivity.this,
-                            "Регионы не найдены в базе данных", Toast.LENGTH_SHORT).show();
-                    TextView tvRegionInfo = findViewById(R.id.tvRegionInfo);
-                    if (tvRegionInfo != null) tvRegionInfo.setText("Регионы не загружены");
+                            "Данные еще не загружены. Подключитесь к интернету и перезапустите приложение.",
+                            Toast.LENGTH_LONG).show();
                 }
             }
 
             @Override
-            public void onFailure(Call<List<Region>> call, Throwable t) {
-                Log.e("API", "Ошибка загрузки регионов: " + t.getMessage());
-                Toast.makeText(WeatherActivity.this,
-                        "Ошибка загрузки регионов", Toast.LENGTH_SHORT).show();
+            public void onError(String error) {
+                showNoDataMessage();
             }
         });
     }
 
     private void updateRegionDropdown(List<Region> regions) {
-        AutoCompleteTextView actvRegion = findViewById(R.id.actvRegion);
-
         ArrayAdapter<Region> regionAdapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_dropdown_item_1line,
@@ -98,74 +113,96 @@ public class WeatherActivity extends AppCompatActivity {
             Region region = (Region) parent.getItemAtPosition(position);
             selectedRegion = region.getName();
             updateRegionInfo();
-            loadWeatherForRegion(selectedRegion);
+            loadWeatherFromCache(selectedRegion);
         });
 
         if (!regions.isEmpty()) {
             actvRegion.setText(regions.get(0).getName(), false);
             selectedRegion = regions.get(0).getName();
             updateRegionInfo();
-            loadWeatherForRegion(selectedRegion);
         }
     }
 
     private void updateRegionInfo() {
-        TextView tvRegionInfo = findViewById(R.id.tvRegionInfo);
-        if (tvRegionInfo != null) tvRegionInfo.setText("Выбран регион: " + selectedRegion);
+        if (tvRegionInfo != null) {
+            tvRegionInfo.setText("Выбран регион: " + selectedRegion);
+        }
     }
 
-    private void loadWeatherForRegion(String region) {
-        apiService.getWeatherForRegion(region).enqueue(new Callback<WeatherResponse>() {
-            @Override
-            public void onResponse(Call<WeatherResponse> call, Response<WeatherResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    WeatherResponse weatherResponse = response.body();
-                    updateWeatherUI(weatherResponse);
+    private void loadWeatherFromCache(String region) {
+        Integer regionId = getRegionIdByName(region);
+        if (regionId == null) {
+            showNoDataMessage();
+            return;
+        }
 
-                    if (weatherResponse.isTestData()) {
-                        Toast.makeText(WeatherActivity.this,
-                                "Используются тестовые данные о погоде", Toast.LENGTH_SHORT).show();
+        cacheManager.getForecast(regionId, new WeatherCacheManager.CacheCallback<List<WeatherData>>() {
+            @Override
+            public void onSuccess(List<WeatherData> cachedWeather) {
+                if (cachedWeather != null && !cachedWeather.isEmpty()) {
+                    updateWeatherUI(cachedWeather);
+                    if (tvUpdated != null) {
+                        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+                        tvUpdated.setText("Данные из кэша: " + sdf.format(new Date()));
                     }
                 } else {
-                    Toast.makeText(WeatherActivity.this,
-                            "Не удалось загрузить данные о погоде", Toast.LENGTH_SHORT).show();
+                    showNoDataMessage();
                 }
             }
 
             @Override
-            public void onFailure(Call<WeatherResponse> call, Throwable t) {
-                Log.e("API", "Ошибка загрузки погоды: " + t.getMessage());
-                Toast.makeText(WeatherActivity.this,
-                        "Ошибка сети при загрузке погоды", Toast.LENGTH_SHORT).show();
+            public void onError(String error) {
+                showNoDataMessage();
             }
         });
     }
 
-    private void updateWeatherUI(WeatherResponse response) {
-        List<WeatherData> weatherList = response.getWeather();
+    private Integer getRegionIdByName(String regionName) {
+        for (Region r : regionsList) {
+            if (r.getName().equalsIgnoreCase(regionName)) {
+                return r.getId();
+            }
+        }
+        return null;
+    }
 
-        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
-        String currentTime = sdf.format(new Date());
+    private void updateWeatherUI(List<WeatherData> weatherList) {
+        if (container == null) return;
+        container.removeAllViews();
 
-        TextView tvUpdated = findViewById(R.id.tvUpdated);
-        if (tvUpdated != null) tvUpdated.setText("Данные обновлены: " + currentTime);
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, 6);
+        String sixDaysLater = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.getTime());
 
-        if (weatherList != null && !weatherList.isEmpty()) {
-            LinearLayout container = findViewById(R.id.llWeatherContainer);
-            container.removeAllViews();
-
-            for (WeatherData weather : weatherList) {
+        int displayedCount = 0;
+        for (WeatherData weather : weatherList) {
+            String date = weather.getDate();
+            if (date != null && date.compareTo(today) >= 0 && date.compareTo(sixDaysLater) <= 0) {
                 View cardView = createWeatherCard(weather);
                 container.addView(cardView);
+                displayedCount++;
             }
-        } else {
-            Toast.makeText(this, "Нет данных о погоде", Toast.LENGTH_SHORT).show();
+        }
+
+        if (displayedCount == 0) {
+            showNoDataMessage();
+        }
+    }
+
+    private void showNoDataMessage() {
+        if (container != null) {
+            container.removeAllViews();
+            TextView tvEmpty = new TextView(this);
+            tvEmpty.setText("Нет данных о погоде на ближайшие дни");
+            tvEmpty.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            tvEmpty.setPadding(50, 50, 50, 50);
+            container.addView(tvEmpty);
         }
     }
 
     private View createWeatherCard(WeatherData weather) {
         View card = LayoutInflater.from(this).inflate(R.layout.item_weather_card, null);
-
         TextView tvDate = card.findViewById(R.id.tvDate);
         TextView tvDayOfWeek = card.findViewById(R.id.tvDayOfWeek);
         TextView tvTemp = card.findViewById(R.id.tvTemp);
