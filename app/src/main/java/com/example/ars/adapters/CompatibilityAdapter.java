@@ -36,8 +36,10 @@ public class CompatibilityAdapter extends RecyclerView.Adapter<CompatibilityAdap
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         CompatibilityDTO item = list.get(position);
 
+        // Исправление: проверка на null
+        int status = item.getStatus() != null ? item.getStatus() : 1;
         int color;
-        switch (item.getStatus()) {
+        switch (status) {
             case 4: color = Color.parseColor("#4CAF50"); break;
             case 3: color = Color.parseColor("#FFEB3B"); break;
             case 2: color = Color.parseColor("#F44336"); break;

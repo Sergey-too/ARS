@@ -193,7 +193,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginBottom="8dp"
-                    android:text="Удалить все записи"
+                    android:text="Грядки"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
                     app:icon="@drawable/ic_close"

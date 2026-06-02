@@ -2,6 +2,7 @@ package com.example.ars;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -125,12 +126,14 @@ public class TasksActivity extends AppCompatActivity {
         tvTitle.setText("Задачи на неделю");
         rvTasks.setVisibility(View.VISIBLE);
         rvRecommendations.setVisibility(View.GONE);
+        findViewById(R.id.tilCategory).setVisibility(View.VISIBLE);
     }
 
     private void showPlantingView() {
         tvTitle.setText("Рекомендации по посадке");
         rvTasks.setVisibility(View.GONE);
         rvRecommendations.setVisibility(View.VISIBLE);
+        findViewById(R.id.tilCategory).setVisibility(View.GONE);
     }
 
     private void loadAllData() {
@@ -604,20 +607,44 @@ public class TasksActivity extends AppCompatActivity {
     }
 
     private void onPlantClick(PlantingRecommendation item) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        String currentDate = sdf.format(new Date());
-        String plantingDate = item.getDate();
+        try {
+            Calendar today = Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
 
-        if (plantingDate.compareTo(currentDate) > 0) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Нельзя посадить")
-                    .setMessage("Нельзя посадить растение на перед.")
-                    .setPositiveButton("OK", null)
-                    .show();
-            return;
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM", new Locale("ru"));
+            Date recDate = sdf.parse(item.getDate());
+
+            Calendar recCalendar = Calendar.getInstance();
+            recCalendar.setTime(recDate);
+            recCalendar.set(Calendar.YEAR, today.get(Calendar.YEAR));
+            recCalendar.set(Calendar.HOUR_OF_DAY, 0);
+            recCalendar.set(Calendar.MINUTE, 0);
+            recCalendar.set(Calendar.SECOND, 0);
+            recCalendar.set(Calendar.MILLISECOND, 0);
+
+            Log.d("DATE_CHECK", "Сегодня: " + today.getTime());
+            Log.d("DATE_CHECK", "Дата посадки: " + recCalendar.getTime());
+            Log.d("DATE_CHECK", "after: " + recCalendar.getTime().after(today.getTime()));
+
+            if (recCalendar.getTime().after(today.getTime())) {
+                Log.d("DATE_CHECK", "Показываем диалог ошибки");
+                AlertDialog dialog = new AlertDialog.Builder(this)
+                        .setTitle("Нельзя посадить")
+                        .setMessage("Нельзя посадить растение в будущем. Выберите сегодняшний или прошедший день.")
+                        .setPositiveButton("OK", null)
+                        .show();
+                return;
+            }
+        } catch (Exception e) {
+            Log.e("DATE_CHECK", "Ошибка: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        new androidx.appcompat.app.AlertDialog.Builder(this)
+        Log.d("DATE_CHECK", "Показываем диалог посадки");
+        new AlertDialog.Builder(this)
                 .setTitle("Посадка")
                 .setMessage("Посадить " + item.getCropName() + " на участке " + item.getAreaName() + "?")
                 .setPositiveButton("Да", (d, w) -> performPlanting(item))
@@ -639,21 +666,21 @@ public class TasksActivity extends AppCompatActivity {
         apiService.plantCrop(request).enqueue(new retrofit2.Callback<Map<String, Object>>() {
             @Override
             public void onResponse(retrofit2.Call<Map<String, Object>> call, retrofit2.Response<Map<String, Object>> response) {
+                showLoading(false);
                 if (response.isSuccessful()) {
                     Toast.makeText(TasksActivity.this, "Растение посажено!", Toast.LENGTH_SHORT).show();
                     if (currentTab == 1) {
                         loadPlantingData();
                     }
                 } else {
-                    showLoading(false);
-                    Toast.makeText(TasksActivity.this, "Ошибка", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(TasksActivity.this, "Ошибка: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(retrofit2.Call<Map<String, Object>> call, Throwable t) {
                 showLoading(false);
-                Toast.makeText(TasksActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+                Toast.makeText(TasksActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }

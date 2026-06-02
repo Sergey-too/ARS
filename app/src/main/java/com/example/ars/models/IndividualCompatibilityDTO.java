@@ -9,7 +9,7 @@ public class IndividualCompatibilityDTO {
     @SerializedName("crop2Id")
     private Integer crop2Id;
 
-    @SerializedName("compatibility")
+    @SerializedName("status")
     private Integer compatibility;
 
     @SerializedName("userId")
@@ -31,8 +31,8 @@ public class IndividualCompatibilityDTO {
     public Integer getCrop2Id() { return crop2Id; }
     public void setCrop2Id(Integer crop2Id) { this.crop2Id = crop2Id; }
 
-    public Integer getCompatibility() { return compatibility; }
-    public void setCompatibility(Integer compatibility) { this.compatibility = compatibility; }
+    public Integer getStatus() { return compatibility; }
+    public void setStatus(Integer compatibility) { this.compatibility = compatibility; }
 
     public Integer getUserId() { return userId; }
     public void setUserId(Integer userId) { this.userId = userId; }

@@ -38,8 +38,8 @@ public class IndividualCompatibilityAdapter extends RecyclerView.Adapter<Individ
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         IndividualCompatibilityDTO item = data.get(position);
 
+        int status = item.getStatus() != null ? item.getStatus() : 1;  // getStatus()
         int color;
-        int status = item.getCompatibility() != null ? item.getCompatibility() : 1;
         switch (status) {
             case 4: color = Color.parseColor("#4CAF50"); break;
             case 3: color = Color.parseColor("#FFEB3B"); break;
@@ -56,7 +56,7 @@ public class IndividualCompatibilityAdapter extends RecyclerView.Adapter<Individ
     }
 
     public void updateCell(int position, int newStatus) {
-        data.get(position).setCompatibility(newStatus);
+        data.get(position).setStatus(newStatus);
         notifyItemChanged(position);
     }
 

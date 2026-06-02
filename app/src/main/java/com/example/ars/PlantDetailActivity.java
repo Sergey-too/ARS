@@ -1,8 +1,6 @@
 package com.example.ars;
 
-import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -17,6 +15,7 @@ import com.example.ars.models.Category;
 import com.example.ars.models.Crop;
 import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.models.UserCrop;
+import com.example.ars.models.UserCategory;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.squareup.picasso.Picasso;
 
@@ -29,19 +28,17 @@ import retrofit2.Response;
 
 public class PlantDetailActivity extends AppCompatActivity {
 
-    private static final String BASE_IMAGE_URL = "http://192.168.100.15:8080";
-
     private ApiService apiService;
-    private int cropDataId;       // ID самого растения для загрузки его свойств
-    private int userCropRowId;    // ID строки из таблицы user_crops для удаления связи
+    private int userCropRowId;
     private boolean isIndividual;
     private SharedPreferencesHelper prefsHelper;
+    private UserCrop currentUserCrop;
 
     private TextView tvName, tvDesc;
     private TextView tvValTemp, tvValHum, tvValWind, tvValPrec, tvValDepth,
             tvValSeedlings, tvValDirectSow, tvValGerm, tvValHarvest,
             tvValWaterInt, tvValFertInt, tvValSoilInt, tvValCategory, tvValProtect;
-    private View labelCategory;
+    private TextView tvLocation; // добавим поле для отображения участка и огорода
     private ImageView ivPhoto;
 
     @Override
@@ -53,16 +50,11 @@ public class PlantDetailActivity extends AppCompatActivity {
         RetrofitClient.initialize(prefsHelper);
         apiService = RetrofitClient.getApiService();
 
-        // Получаем ID строки связи из таблицы user_crops ([id])
         userCropRowId = getIntent().getIntExtra("user_crop_id", -1);
         int individualCropId = getIntent().getIntExtra("individual_crop_id", -1);
         isIndividual = getIntent().getBooleanExtra("is_individual", false);
 
-        if (isIndividual && individualCropId != -1) {
-            cropDataId = individualCropId;
-        } else if (!isIndividual && userCropRowId != -1) {
-            cropDataId = userCropRowId;
-        } else {
+        if (userCropRowId == -1) {
             Toast.makeText(this, "Ошибка: ID растения не передан", Toast.LENGTH_SHORT).show();
             finish();
             return;
@@ -95,48 +87,44 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvValSoilInt = findViewById(R.id.tvValSoilInt);
         tvValProtect = findViewById(R.id.tvValProtect);
         tvValCategory = findViewById(R.id.tvValCategory);
-        labelCategory = findViewById(R.id.labelCategory);
+
+        tvLocation = findViewById(R.id.tvLocation); // если есть в разметке
     }
 
     private void loadData() {
-        if (isIndividual) {
-            apiService.getUserCropById(cropDataId).enqueue(new Callback<IndividualUserCrop>() {
-                @Override
-                public void onResponse(Call<IndividualUserCrop> call, Response<IndividualUserCrop> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        renderIndividual(response.body());
-                    } else {
-                        Toast.makeText(PlantDetailActivity.this, "Растение не найдено", Toast.LENGTH_SHORT).show();
-                    }
-                }
-                @Override
-                public void onFailure(Call<IndividualUserCrop> call, Throwable t) {
-                    Toast.makeText(PlantDetailActivity.this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
-                }
-            });
-        } else {
-            if (prefsHelper.getUser() == null) return;
+        if (prefsHelper.getUser() == null) return;
 
-            apiService.getUserCrops(prefsHelper.getUser().getId()).enqueue(new Callback<List<UserCrop>>() {
-                @Override
-                public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        for (UserCrop uc : response.body()) {
-                            if (uc.getId() == cropDataId) {
+        apiService.getUserCrops(prefsHelper.getUser().getId()).enqueue(new Callback<List<UserCrop>>() {
+            @Override
+            public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    for (UserCrop uc : response.body()) {
+                        if (uc.getId().equals(userCropRowId)) {
+                            currentUserCrop = uc;
+                            if (isIndividual && uc.getIndividualCrop() != null) {
+                                renderIndividual(uc);
+                            } else if (!isIndividual && uc.getCrop() != null) {
                                 renderSystem(uc);
-                                return;
+                            } else {
+                                Toast.makeText(PlantDetailActivity.this, "Данные растения не найдены", Toast.LENGTH_SHORT).show();
                             }
+                            return;
                         }
-                        Toast.makeText(PlantDetailActivity.this, "Растение не найдено", Toast.LENGTH_SHORT).show();
                     }
+                    Toast.makeText(PlantDetailActivity.this, "Растение не найдено", Toast.LENGTH_SHORT).show();
                 }
-                @Override
-                public void onFailure(Call<List<UserCrop>> call, Throwable t) {}
-            });
-        }
+            }
+
+            @Override
+            public void onFailure(Call<List<UserCrop>> call, Throwable t) {
+                Toast.makeText(PlantDetailActivity.this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void renderIndividual(IndividualUserCrop crop) {
+    private void renderIndividual(UserCrop uc) {
+        IndividualUserCrop crop = uc.getIndividualCrop();
+
         String displayName = crop.getName();
         if (crop.getVariety() != null && !crop.getVariety().isEmpty()) {
             displayName += " (" + crop.getVariety() + ")";
@@ -144,15 +132,29 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvName.setText(displayName);
         tvDesc.setText(crop.getDescription() != null ? crop.getDescription() : "Описание отсутствует");
 
-        // Исправлено: Подгружаем фото индивидуального растения по сети через серверный URL
-        if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
-            String fullPhotoUrl = crop.getLocalPhotoPath();
-            if (!fullPhotoUrl.startsWith("http")) {
-                fullPhotoUrl = BASE_IMAGE_URL + fullPhotoUrl;
+        // Отображение участка и огорода
+        if (tvLocation != null) {
+            String location = "";
+            if (uc.getArea() != null) {
+                location = uc.getArea().getName();
+                if (uc.getGarden() != null) {
+                    location += " - " + uc.getGarden().getName();
+                }
+            } else {
+                location = "Не указан";
             }
+            tvLocation.setText(location);
+            tvLocation.setVisibility(View.VISIBLE);
+        }
 
+        // Фото
+        if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
+            String photoUrl = crop.getLocalPhotoPath();
+            if (!photoUrl.startsWith("http")) {
+                photoUrl = RetrofitClient.BASE_URL + photoUrl;
+            }
             Picasso.get()
-                    .load(fullPhotoUrl)
+                    .load(photoUrl)
                     .placeholder(R.drawable.ic_plant)
                     .error(R.drawable.ic_plant)
                     .into(ivPhoto);
@@ -160,6 +162,7 @@ public class PlantDetailActivity extends AppCompatActivity {
             ivPhoto.setImageResource(R.drawable.ic_plant);
         }
 
+        // Параметры
         if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
             tvValTemp.setText(crop.getMinTemp() + " - " + crop.getMaxTemp() + " °C");
         } else {
@@ -184,29 +187,54 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvValSoilInt.setText(crop.getSoilCareInterval() != null ? crop.getSoilCareInterval() + " дн." : "--");
         tvValProtect.setText(crop.getProtectionInterval() != null ? crop.getProtectionInterval() + " дн." : "--");
 
+        // Категория (системная)
         if (crop.getCategoryId() != null && crop.getCategoryId() > 0) {
-            loadCategoryName(crop.getCategoryId());
+            loadSystemCategoryName(crop.getCategoryId());
         } else {
             tvValCategory.setText("Не указана");
+        }
+
+        TextView tvUserCategory = findViewById(R.id.tvValCategory);
+        if (tvUserCategory != null && crop.getUserCategoryId() != null && crop.getUserCategoryId() > 0) {
+            loadUserCategoryName(crop.getUserCategoryId(), tvUserCategory);
+        } else if (tvUserCategory != null) {
+            tvUserCategory.setText("Не указана");
         }
     }
 
     private void renderSystem(UserCrop uc) {
-        if (uc.getCrop() == null) return;
-        Crop c = uc.getCrop();
+        Crop crop = uc.getCrop();
 
-        String displayName = c.getName();
-        if (c.getVariety() != null && !c.getVariety().isEmpty()) {
-            displayName += " (" + c.getVariety() + ")";
+        String displayName = crop.getName();
+        if (crop.getVariety() != null && !crop.getVariety().isEmpty()) {
+            displayName += " (" + crop.getVariety() + ")";
         }
         tvName.setText(displayName);
-        tvDesc.setText(c.getDescription() != null ? c.getDescription() : "Описание отсутствует");
+        tvDesc.setText(crop.getDescription() != null ? crop.getDescription() : "Описание отсутствует");
 
-        if (c.getPhotoPath() != null && !c.getPhotoPath().isEmpty()) {
-            String fullPhotoUrl = BASE_IMAGE_URL + c.getPhotoPath();
+        // Отображение участка и огорода
+        if (tvLocation != null) {
+            String location = "";
+            if (uc.getArea() != null) {
+                location = uc.getArea().getName();
+                if (uc.getGarden() != null) {
+                    location += " - " + uc.getGarden().getName();
+                }
+            } else {
+                location = "Не указан";
+            }
+            tvLocation.setText(location);
+            tvLocation.setVisibility(View.VISIBLE);
+        }
 
+        // Фото
+        if (crop.getPhotoPath() != null && !crop.getPhotoPath().isEmpty()) {
+            String photoUrl = crop.getPhotoPath();
+            if (!photoUrl.startsWith("http")) {
+                photoUrl = RetrofitClient.BASE_URL + photoUrl;
+            }
             Picasso.get()
-                    .load(fullPhotoUrl)
+                    .load(photoUrl)
                     .placeholder(R.drawable.ic_plant)
                     .error(R.drawable.ic_plant)
                     .into(ivPhoto);
@@ -214,40 +242,46 @@ public class PlantDetailActivity extends AppCompatActivity {
             ivPhoto.setImageResource(R.drawable.ic_plant);
         }
 
-        if (c.getMinTemp() != null && c.getMaxTemp() != null) {
-            tvValTemp.setText(c.getMinTemp() + " - " + c.getMaxTemp() + " °C");
+        // Параметры
+        if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
+            tvValTemp.setText(crop.getMinTemp() + " - " + crop.getMaxTemp() + " °C");
         } else {
             tvValTemp.setText("Не указана");
         }
 
-        if (c.getMinHumidity() != null && c.getMaxHumidity() != null) {
-            tvValHum.setText(c.getMinHumidity() + " - " + c.getMaxHumidity() + " %");
+        if (crop.getMinHumidity() != null && crop.getMaxHumidity() != null) {
+            tvValHum.setText(crop.getMinHumidity() + " - " + crop.getMaxHumidity() + " %");
         } else {
             tvValHum.setText("Не указана");
         }
 
-        tvValWind.setText(c.getMaxWind() != null ? c.getMaxWind() + " м/с" : "--");
-        tvValPrec.setText(c.getNeededPrecipitation() != null ? c.getNeededPrecipitation() + " мм" : "--");
-        tvValDepth.setText(c.getSowingDepth() != null ? c.getSowingDepth() + " см" : "--");
-        tvValSeedlings.setText(c.getCanSeedlings() != null && c.getCanSeedlings() ? "Да" : "Нет");
-        tvValDirectSow.setText(c.getCanDirectSow() != null && c.getCanDirectSow() ? "Да" : "Нет");
-        tvValGerm.setText(c.getDaysToGermination() != null ? c.getDaysToGermination() + " дн." : "--");
-        tvValHarvest.setText(c.getDaysToHarvest() != null ? c.getDaysToHarvest() + " дн." : "--");
-        tvValWaterInt.setText(c.getWateringInterval() != null ? c.getWateringInterval() + " дн." : "--");
-        tvValFertInt.setText(c.getFertilizingInterval() != null ? c.getFertilizingInterval() + " дн." : "--");
-        tvValSoilInt.setText(c.getSoilCareInterval() != null ? c.getSoilCareInterval() + " дн." : "--");
-        tvValProtect.setText(c.getProtectionInterval() != null ? c.getProtectionInterval() + " дн." : "--");
+        tvValWind.setText(crop.getMaxWind() != null ? crop.getMaxWind() + " м/с" : "--");
+        tvValPrec.setText(crop.getNeededPrecipitation() != null ? crop.getNeededPrecipitation() + " мм" : "--");
+        tvValDepth.setText(crop.getSowingDepth() != null ? crop.getSowingDepth() + " см" : "--");
+        tvValSeedlings.setText(crop.getCanSeedlings() != null && crop.getCanSeedlings() ? "Да" : "Нет");
+        tvValDirectSow.setText(crop.getCanDirectSow() != null && crop.getCanDirectSow() ? "Да" : "Нет");
+        tvValGerm.setText(crop.getDaysToGermination() != null ? crop.getDaysToGermination() + " дн." : "--");
+        tvValHarvest.setText(crop.getDaysToHarvest() != null ? crop.getDaysToHarvest() + " дн." : "--");
+        tvValWaterInt.setText(crop.getWateringInterval() != null ? crop.getWateringInterval() + " дн." : "--");
+        tvValFertInt.setText(crop.getFertilizingInterval() != null ? crop.getFertilizingInterval() + " дн." : "--");
+        tvValSoilInt.setText(crop.getSoilCareInterval() != null ? crop.getSoilCareInterval() + " дн." : "--");
+        tvValProtect.setText(crop.getProtectionInterval() != null ? crop.getProtectionInterval() + " дн." : "--");
 
-        tvValCategory.setText(c.getCategory() != null ? c.getCategory() : "--");
+        tvValCategory.setText(crop.getCategory() != null ? crop.getCategory() : "--");
+
+        TextView tvUserCategory = findViewById(R.id.tvValCategory);
+        if (tvUserCategory != null) {
+            tvUserCategory.setText("--");
+        }
     }
 
-    private void loadCategoryName(int categoryId) {
+    private void loadSystemCategoryName(int categoryId) {
         apiService.getCategories().enqueue(new Callback<List<Category>>() {
             @Override
             public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     for (Category category : response.body()) {
-                        if (category.getId() == categoryId) {
+                        if (category.getId().equals(Long.valueOf(categoryId))) {
                             tvValCategory.setText(category.getName());
                             return;
                         }
@@ -257,9 +291,34 @@ public class PlantDetailActivity extends AppCompatActivity {
                     tvValCategory.setText("Ошибка");
                 }
             }
+
             @Override
             public void onFailure(Call<List<Category>> call, Throwable t) {
                 tvValCategory.setText("Ошибка");
+            }
+        });
+    }
+
+    private void loadUserCategoryName(int userCategoryId, TextView targetTextView) {
+        apiService.getUserCategories(prefsHelper.getUser().getId()).enqueue(new Callback<List<UserCategory>>() {
+            @Override
+            public void onResponse(Call<List<UserCategory>> call, Response<List<UserCategory>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    for (UserCategory category : response.body()) {
+                        if (category.getId().equals(userCategoryId)) {
+                            targetTextView.setText(category.getName());
+                            return;
+                        }
+                    }
+                    targetTextView.setText("Не найдена");
+                } else {
+                    targetTextView.setText("Ошибка");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<UserCategory>> call, Throwable t) {
+                targetTextView.setText("Ошибка");
             }
         });
     }
@@ -279,15 +338,13 @@ public class PlantDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Проверяем наличие ID строки связи перед отправкой на бэкенд
         if (userCropRowId == -1) {
-            Toast.makeText(this, "Ошибка: не передан верный ID связи списка", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Ошибка: не передан ID растения", Toast.LENGTH_SHORT).show();
             return;
         }
 
         int userId = prefsHelper.getUser().getId();
 
-        // Передаем строго id из связующей таблицы user_crops, чтобы бэкенд стер запись только оттуда
         apiService.deleteUserCrop(userId, userCropRowId).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {

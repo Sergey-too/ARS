@@ -19,15 +19,21 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.ars.adapters.CompatibilityAdapter;
 import com.example.ars.adapters.IndividualCompatibilityAdapter;
+import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.CompatibilityDTO;
 import com.example.ars.models.IndividualCompatibilityDTO;
-import com.example.ars.models.UserCrop;
+import com.example.ars.models.IndividualUserCrop;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import retrofit2.Call;
@@ -43,6 +49,7 @@ public class CompatibilityActivity extends AppCompatActivity {
     private AutoCompleteTextView actvCompatibilityType;
     private TextInputLayout tilCompatibilityType;
 
+    private ApiService apiService;
     private int currentUserId;
     private String[] modes = {"Системная совместимость", "Мои растения"};
 
@@ -50,7 +57,6 @@ public class CompatibilityActivity extends AppCompatActivity {
     private CompatibilityAdapter commonAdapter;
 
     private List<IndividualCompatibilityDTO> individualData = new ArrayList<>();
-    private List<UserCrop> userCrops;
     private List<String> userCropNames;
     private IndividualCompatibilityAdapter individualAdapter;
 
@@ -72,6 +78,8 @@ public class CompatibilityActivity extends AppCompatActivity {
         SharedPreferencesHelper prefsHelper = new SharedPreferencesHelper(this);
         currentUserId = prefsHelper.getUser().getId();
 
+        apiService = RetrofitClient.getApiService();
+
         setupModeSpinner();
         loadCommonData();
     }
@@ -85,7 +93,7 @@ public class CompatibilityActivity extends AppCompatActivity {
             if (position == 0) {
                 loadCommonData();
             } else {
-                loadUserCrops();
+                loadIndividualData();
             }
         });
     }
@@ -154,16 +162,69 @@ public class CompatibilityActivity extends AppCompatActivity {
         setupScrollSync();
     }
 
-    private void setupIndividualTable() {
-        if (userCrops == null || userCrops.isEmpty()) return;
+    private void loadIndividualData() {
+        RetrofitClient.getApiService().getIndividualCompatibilityMatrix(currentUserId)
+                .enqueue(new Callback<List<IndividualCompatibilityDTO>>() {
+                    @Override
+                    public void onResponse(Call<List<IndividualCompatibilityDTO>> call, Response<List<IndividualCompatibilityDTO>> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            individualData = response.body();
+                            loadIndividualPlants();
+                        } else {
+                            individualData = new ArrayList<>();
+                            Toast.makeText(CompatibilityActivity.this, "Нет данных о совместимости", Toast.LENGTH_SHORT).show();
+                        }
+                    }
 
-        userCropNames = userCrops.stream()
-                .map(UserCrop::getName)
-                .sorted()
-                .collect(Collectors.toList());
+                    @Override
+                    public void onFailure(Call<List<IndividualCompatibilityDTO>> call, Throwable t) {
+                        Toast.makeText(CompatibilityActivity.this, "Ошибка загрузки связей", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void loadIndividualPlants() {
+        Set<Integer> plantIds = new HashSet<>();
+        for (IndividualCompatibilityDTO dto : individualData) {
+            if (dto.getCrop1Id() != null) plantIds.add(dto.getCrop1Id());
+            if (dto.getCrop2Id() != null) plantIds.add(dto.getCrop2Id());
+        }
+
+        if (plantIds.isEmpty()) {
+            Toast.makeText(this, "Нет растений для отображения", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        apiService.getIndividualUserCrops(currentUserId).enqueue(new Callback<List<IndividualUserCrop>>() {
+            @Override
+            public void onResponse(Call<List<IndividualUserCrop>> call, Response<List<IndividualUserCrop>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Map<Integer, String> plantIdToName = new HashMap<>();
+                    for (IndividualUserCrop crop : response.body()) {
+                        plantIdToName.put(crop.getId(), crop.getName());
+                    }
+                    setupIndividualTable(plantIds, plantIdToName);
+                } else {
+                    Toast.makeText(CompatibilityActivity.this, "Ошибка загрузки растений", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<IndividualUserCrop>> call, Throwable t) {
+                Toast.makeText(CompatibilityActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void setupIndividualTable(Set<Integer> plantIds, Map<Integer, String> plantIdToName) {
+        userCropNames = new ArrayList<>(plantIdToName.values());
+        Collections.sort(userCropNames);
 
         int n = userCropNames.size();
         int cellSize = (int) (45 * getResources().getDisplayMetrics().density);
+
+        containerTopNames.removeAllViews();
+        containerLeftNames.removeAllViews();
 
         for (String name : userCropNames) {
             TextView tvTop = new TextView(this);
@@ -189,51 +250,47 @@ public class CompatibilityActivity extends AppCompatActivity {
             containerLeftNames.addView(tvLeft);
         }
 
+        Map<Integer, String> idToName = new HashMap<>(plantIdToName);
+
+        List<Integer> orderedIds = new ArrayList<>();
+        for (String name : userCropNames) {
+            for (Map.Entry<Integer, String> entry : idToName.entrySet()) {
+                if (entry.getValue().equals(name)) {
+                    orderedIds.add(entry.getKey());
+                    break;
+                }
+            }
+        }
+
+        Map<String, Integer> compatibilityMap = new HashMap<>();
+        for (IndividualCompatibilityDTO dto : individualData) {
+            String key = dto.getCrop1Id() + "|" + dto.getCrop2Id();
+            compatibilityMap.put(key, dto.getStatus ());
+        }
+
+        List<IndividualCompatibilityDTO> fullMatrix = new ArrayList<>();
+        for (int i = 0; i < orderedIds.size(); i++) {
+            for (int j = 0; j < orderedIds.size(); j++) {
+                Integer crop1Id = orderedIds.get(i);
+                Integer crop2Id = orderedIds.get(j);
+                String crop1Name = idToName.get(crop1Id);
+                String crop2Name = idToName.get(crop2Id);
+
+                String key = crop1Id + "|" + crop2Id;
+                Integer status = compatibilityMap.getOrDefault(key, 1);
+
+                IndividualCompatibilityDTO dto = new IndividualCompatibilityDTO(crop1Id, crop2Id, status, currentUserId);
+                dto.setCrop1Name(crop1Name);
+                dto.setCrop2Name(crop2Name);
+                fullMatrix.add(dto);
+            }
+        }
+
         rvCompatibility.setLayoutManager(new GridLayoutManager(this, n));
-        individualAdapter = new IndividualCompatibilityAdapter(individualData, userCropNames, this::onIndividualCellClick);
+        individualAdapter = new IndividualCompatibilityAdapter(fullMatrix, userCropNames, this::onIndividualCellClick);
         rvCompatibility.setAdapter(individualAdapter);
 
         setupScrollSync();
-    }
-
-    private void loadUserCrops() {
-        RetrofitClient.getApiService().getUserCrops(currentUserId).enqueue(new Callback<List<UserCrop>>() {
-            @Override
-            public void onResponse(Call<List<UserCrop>> call, Response<List<UserCrop>> response) {
-                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
-                    userCrops = response.body();
-                    loadIndividualData();
-                } else {
-                    Toast.makeText(CompatibilityActivity.this, "У вас нет добавленных растений", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<UserCrop>> call, Throwable t) {
-                Toast.makeText(CompatibilityActivity.this, "Ошибка загрузки растений", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void loadIndividualData() {
-        RetrofitClient.getApiService().getIndividualCompatibilityMatrix(currentUserId)
-                .enqueue(new Callback<List<IndividualCompatibilityDTO>>() {
-                    @Override
-                    public void onResponse(Call<List<IndividualCompatibilityDTO>> call, Response<List<IndividualCompatibilityDTO>> response) {
-                        if (response.isSuccessful() && response.body() != null) {
-                            individualData = response.body();
-                        } else {
-                            individualData = new ArrayList<>();
-                        }
-                        setupIndividualTable();
-                    }
-
-                    @Override
-                    public void onFailure(Call<List<IndividualCompatibilityDTO>> call, Throwable t) {
-                        Toast.makeText(CompatibilityActivity.this, "Ошибка загрузки связей", Toast.LENGTH_SHORT).show();
-                        setupIndividualTable();
-                    }
-                });
     }
 
     private void onIndividualCellClick(int crop1Id, int crop2Id, int currentStatus, int position) {
@@ -242,8 +299,9 @@ public class CompatibilityActivity extends AppCompatActivity {
             return;
         }
 
-        String crop1Name = individualAdapter.getCropNameByPosition(position / userCrops.size());
-        String crop2Name = individualAdapter.getCropNameByPosition(position % userCrops.size());
+        int n = (int) Math.sqrt(individualAdapter.getItemCount());
+        String crop1Name = individualAdapter.getCropNameByPosition(position / n);
+        String crop2Name = individualAdapter.getCropNameByPosition(position % n);
 
         String[] statusOptions = {"Нет данных", "Конфликт", "Нейтральная", "Хорошая"};
 
