@@ -16,6 +16,7 @@ import com.example.ars.models.TaskItem;
 import com.google.android.material.button.MaterialButton;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -35,6 +36,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private SimpleDateFormat dateFormat = new SimpleDateFormat("d MMMM", new Locale("ru"));
     private SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", new Locale("ru"));
     private SimpleDateFormat lastDoneFormat = new SimpleDateFormat("d MMMM", new Locale("ru"));
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
     public interface OnTaskCompleteListener {
         void onTaskComplete(TaskItem task);
@@ -45,15 +47,20 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     public void setGroupedData(List<TaskItem> overdue, List<TaskItem> today, List<TaskItem> future) {
-        this.overdueTasks = overdue != null ? overdue : new ArrayList<>();
-        this.todayTasks = today != null ? today : new ArrayList<>();
-        this.futureTasks = future != null ? future : new ArrayList<>();
+        this.overdueTasks = overdue != null ? new ArrayList<>(overdue) : new ArrayList<>();
+        this.todayTasks = today != null ? new ArrayList<>(today) : new ArrayList<>();
+        this.futureTasks = future != null ? new ArrayList<>(future) : new ArrayList<>();
         notifyDataSetChanged();
     }
 
     public void updateTasks(List<TaskItem> tasks) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        Date todayDate = new Date();
+        // Текущая дата без времени
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        Date todayDate = cal.getTime();
 
         overdueTasks.clear();
         todayTasks.clear();
@@ -70,7 +77,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (taskDate != null) {
                     if (taskDate.before(todayDate)) {
                         overdueTasks.add(task);
-                    } else if (dateEquals(taskDate, todayDate)) {
+                    } else if (isSameDay(taskDate, todayDate)) {
                         todayTasks.add(task);
                     } else {
                         futureTasks.add(task);
@@ -86,9 +93,13 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
-    private boolean dateEquals(Date d1, Date d2) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        return sdf.format(d1).equals(sdf.format(d2));
+    private boolean isSameDay(Date date1, Date date2) {
+        Calendar cal1 = Calendar.getInstance();
+        Calendar cal2 = Calendar.getInstance();
+        cal1.setTime(date1);
+        cal2.setTime(date2);
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
     }
 
     @Override
@@ -134,9 +145,6 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        int overdueSize = overdueTasks.size();
-        int todaySize = todayTasks.size();
-
         if (holder instanceof HeaderViewHolder) {
             HeaderViewHolder headerHolder = (HeaderViewHolder) holder;
             switch (headerHolder.headerType) {
@@ -162,10 +170,14 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 String dayOfWeek = "";
                 if (task.getDueDate() != null) {
                     try {
-                        Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.getDueDate());
+                        Date date = sdf.parse(task.getDueDate());
                         if (date != null) {
                             formattedDate = dateFormat.format(date);
                             dayOfWeek = dayFormat.format(date);
+                            // Делаем заглавную букву
+                            if (dayOfWeek.length() > 0) {
+                                dayOfWeek = dayOfWeek.substring(0, 1).toUpperCase() + dayOfWeek.substring(1);
+                            }
                         }
                     } catch (Exception e) {
                         formattedDate = task.getDueDate();
@@ -176,24 +188,29 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 taskHolder.tvDate.setText(formattedDate);
                 taskHolder.tvDayOfWeek.setText(dayOfWeek);
                 taskHolder.tvActionType.setText(getActionIconAndName(task.getActionTypeId()));
-                taskHolder.tvCropName.setText(task.getCropName());
-                if (task.getVariety() != null && !task.getVariety().isEmpty()) {
-                    taskHolder.tvCropName.setText(task.getCropName() + " (" + task.getVariety() + ")");
-                }
 
+                // Отображение названия и сорта
+                String cropText = task.getCropName() != null ? task.getCropName() : "---";
+                if (task.getVariety() != null && !task.getVariety().isEmpty() && !task.getVariety().equals("Обычный")) {
+                    cropText = cropText + " (" + task.getVariety() + ")";
+                }
+                taskHolder.tvCropName.setText(cropText);
+
+                // Отображение места: огород и участок
                 String locationText = "";
-                if (task.getAreaName() != null && !task.getAreaName().isEmpty()) {
-                    locationText = task.getAreaName();
-                    if (task.getGardenName() != null && !task.getGardenName().isEmpty()) {
-                        locationText = task.getAreaName() + " - " + task.getGardenName();
-                    }
-                } else if (task.getGardenName() != null && !task.getGardenName().isEmpty()) {
+                if (task.getGardenName() != null && !task.getGardenName().isEmpty()) {
                     locationText = task.getGardenName();
+                    if (task.getAreaName() != null && !task.getAreaName().isEmpty()) {
+                        locationText = locationText + " - " + task.getAreaName();
+                    }
+                } else if (task.getAreaName() != null && !task.getAreaName().isEmpty()) {
+                    locationText = task.getAreaName();
                 } else {
                     locationText = "---";
                 }
-                taskHolder.tvAreaName.setText("Место: " + locationText);
+                taskHolder.tvAreaName.setText(locationText);
 
+                // Статус просрочки
                 if (isOverdue(task)) {
                     taskHolder.tvStatus.setVisibility(View.VISIBLE);
                     taskHolder.tvStatus.setText("Просрочено");
@@ -202,9 +219,10 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     taskHolder.tvStatus.setVisibility(View.GONE);
                 }
 
+                // Последний раз выполнялось
                 if (task.getLastDoneAt() != null && !task.getLastDoneAt().isEmpty()) {
                     try {
-                        Date lastDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.getLastDoneAt());
+                        Date lastDate = sdf.parse(task.getLastDoneAt());
                         if (lastDate != null) {
                             taskHolder.tvLastDone.setText("Последний раз: " + lastDoneFormat.format(lastDate));
                         } else {
@@ -225,9 +243,15 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private boolean isOverdue(TaskItem task) {
         if (task.getDueDate() == null) return false;
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             Date taskDate = sdf.parse(task.getDueDate());
-            Date today = new Date();
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            Date today = cal.getTime();
+
             return taskDate != null && taskDate.before(today);
         } catch (Exception e) {
             return false;
@@ -264,7 +288,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             case 2: return "Полив";
             case 3: return "Удобрение";
             case 4: return "Уход за почвой";
-            case 5: return "Защита";
+            case 5: return "️Защита";
             case 6: return "Сбор урожая";
             default: return "Уход";
         }

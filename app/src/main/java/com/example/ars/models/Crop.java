@@ -10,6 +10,7 @@ public class Crop implements Serializable {
     private String category;
     private String description;
 
+    private Category categoryObject;
     @SerializedName("minTemp") private Short minTemp;
     @SerializedName("maxTemp") private Short maxTemp;
     @SerializedName("maxWind") private Short maxWind;
@@ -79,4 +80,6 @@ public class Crop implements Serializable {
     public void setSoilCareInterval(Integer soilCareInterval) { this.soilCareInterval = soilCareInterval; }
     public Integer getProtectionInterval() { return protectionInterval; }
     public void setProtectionInterval(Integer protectionInterval) { this.protectionInterval = protectionInterval; }
+    public Category getCategoryObject() { return categoryObject; }
+    public void setCategoryObject(Category categoryObject) { this.categoryObject = categoryObject; }
 }

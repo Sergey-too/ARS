@@ -9,7 +9,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
@@ -22,9 +24,7 @@ import com.example.ars.utils.SharedPreferencesHelper;
 import com.example.ars.utils.WeatherBackgroundUpdater;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import retrofit2.Call;
@@ -42,21 +42,9 @@ public class PlantsActivity extends AppCompatActivity {
     private boolean isLoading = false;
 
     private List<UserPlantAdapter.PlantItem> combinedList = new ArrayList<>();
-    private boolean hasUpdatedWeather = false; // Флаг для однократного обновления
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        WorkManager.getInstance(this).cancelAllWork();
-        PeriodicWorkRequest alertWorkRequest =
-                new PeriodicWorkRequest.Builder(AlertWorker.class, 15, TimeUnit.MINUTES)
-                        .build();
-
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-                "AlertCheck",
-                ExistingPeriodicWorkPolicy.REPLACE,
-                alertWorkRequest
-        );
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plants);
 
@@ -64,6 +52,9 @@ public class PlantsActivity extends AppCompatActivity {
         RetrofitClient.initialize(prefsHelper);
         apiService = RetrofitClient.getApiService();
 
+        startAlertWorker();
+
+        initViews();
         setupSideMenu();
         setupRecyclerView();
         setupSimpleSearch();
@@ -73,10 +64,33 @@ public class PlantsActivity extends AppCompatActivity {
                 startActivity(new Intent(this, AddPlantActivity.class))
         );
 
-        // Фоновое обновление погоды при запуске
         updateWeatherInBackground();
-
         loadAllData();
+    }
+
+    private void initViews() {
+    }
+
+    private void startAlertWorker() {
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+        PeriodicWorkRequest alertWorkRequest = new PeriodicWorkRequest.Builder(
+                AlertWorker.class,
+                15, TimeUnit.MINUTES,
+                5, TimeUnit.MINUTES
+        )
+                .setConstraints(constraints)
+                .build();
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "AlertCheck",
+                ExistingPeriodicWorkPolicy.KEEP,
+                alertWorkRequest
+        );
+
+        Log.d("PlantsActivity", "AlertWorker запущен");
     }
 
     @Override
@@ -86,7 +100,6 @@ public class PlantsActivity extends AppCompatActivity {
     }
 
     private void updateWeatherInBackground() {
-        // Проверяем, обновляли ли уже сегодня
         android.content.SharedPreferences prefs = getSharedPreferences("weather_prefs", MODE_PRIVATE);
         String lastUpdateDate = prefs.getString("last_weather_update", "");
         String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
@@ -97,10 +110,7 @@ public class PlantsActivity extends AppCompatActivity {
             return;
         }
 
-        // Сохраняем дату обновления
         prefs.edit().putString("last_weather_update", today).apply();
-
-        // Запускаем фоновое обновление
         Log.d("Weather", "Запуск фонового обновления погоды");
         WeatherBackgroundUpdater updater = new WeatherBackgroundUpdater(this);
         updater.updateAllData();
@@ -128,7 +138,6 @@ public class PlantsActivity extends AppCompatActivity {
 
         adapter = new UserPlantAdapter(combinedList, item -> {
             Intent intent = new Intent(this, PlantDetailActivity.class);
-
             intent.putExtra("user_crop_id", item.getId());
 
             if (item.isIndividual()) {
@@ -247,6 +256,10 @@ public class PlantsActivity extends AppCompatActivity {
         findViewById(R.id.btnMenu3).setOnClickListener(v -> {
             closeSideMenu();
             startActivity(new Intent(this, GardensActivity.class));
+        });
+        findViewById(R.id.btnMenu4).setOnClickListener(v -> {
+            closeSideMenu();
+            startActivity(new Intent(this, AreasActivity.class));
         });
         findViewById(R.id.btnMenu5).setOnClickListener(v -> logout());
         findViewById(R.id.btnMenu6).setOnClickListener(v -> {

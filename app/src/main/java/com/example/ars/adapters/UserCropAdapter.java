@@ -1,4 +1,4 @@
-package com.example.ars.adapters; //растения добавленные пользователем
+package com.example.ars.adapters;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,7 +39,13 @@ public class UserCropAdapter extends RecyclerView.Adapter<UserCropAdapter.ViewHo
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         IndividualUserCrop crop = crops.get(position);
-        holder.tvName.setText(crop.getName());
+
+        String displayName = crop.getName();
+        if (crop.getVariety() != null && !crop.getVariety().isEmpty()) {
+            displayName += " (" + crop.getVariety() + ")";
+        }
+        holder.tvName.setText(displayName);
+
         holder.itemView.setOnClickListener(v -> listener.onCropClick(crop));
     }
 

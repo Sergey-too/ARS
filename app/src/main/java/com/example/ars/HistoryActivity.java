@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -25,6 +26,7 @@ import com.example.ars.models.History;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -47,6 +49,8 @@ public class HistoryActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private ExtendedFloatingActionButton fabExportPdf;
     private TabLayout tabLayout;
+    private TextInputLayout tilActionFilter;
+    private View filterDatesLayout;
 
     private List<History> allHistory = new ArrayList<>();
     private List<History> filteredList = new ArrayList<>();
@@ -54,7 +58,9 @@ public class HistoryActivity extends AppCompatActivity {
     private Long dateStartMs = null;
     private Long dateEndMs = null;
     private String selectedAction = "Все работы";
-    private int currentTab = 0; // 0 - все работы, 1 - только посадки
+    private int currentTab = 0;
+
+    private Integer createdUserCropId = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +72,8 @@ public class HistoryActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         fabExportPdf = findViewById(R.id.fabExportPdf);
         tabLayout = findViewById(R.id.tabLayout);
+        tilActionFilter = findViewById(R.id.tilActionFilter);
+        filterDatesLayout = findViewById(R.id.filterDatesLayout);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         fabExportPdf.setOnClickListener(v -> generatePdf());
@@ -81,7 +89,18 @@ public class HistoryActivity extends AppCompatActivity {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 currentTab = tab.getPosition();
-                applyFilters();
+                if (currentTab == 1) {
+                    tilActionFilter.setVisibility(View.GONE);
+                    filterDatesLayout.setVisibility(View.VISIBLE);
+                    selectedAction = "Все работы";
+                    AutoCompleteTextView actvActionFilter = findViewById(R.id.actvActionFilter);
+                    actvActionFilter.setText("", false);
+                    applyFilters();
+                } else {
+                    tilActionFilter.setVisibility(View.VISIBLE);
+                    filterDatesLayout.setVisibility(View.VISIBLE);
+                    applyFilters();
+                }
             }
 
             @Override
@@ -100,12 +119,15 @@ public class HistoryActivity extends AppCompatActivity {
     }
 
     private void setupFilters() {
-        findViewById(R.id.btnDateFrom).setOnClickListener(v -> showDatePicker(true));
-        findViewById(R.id.btnDateTo).setOnClickListener(v -> showDatePicker(false));
+        Button btnDateFrom = findViewById(R.id.btnDateFrom);
+        Button btnDateTo = findViewById(R.id.btnDateTo);
+
+        btnDateFrom.setOnClickListener(v -> showDatePicker(true));
+        btnDateTo.setOnClickListener(v -> showDatePicker(false));
 
         AutoCompleteTextView actionSpinner = findViewById(R.id.actvActionFilter);
         String[] actions = {"Все работы", "Посадка", "Полив", "Удобрение", "Сбор урожая", "Рыхление", "Защита"};
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, actions);
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, actions);
         actionSpinner.setAdapter(spinnerAdapter);
         actionSpinner.setOnItemClickListener((parent, view, position, id) -> {
             selectedAction = actions[position];
@@ -128,6 +150,13 @@ public class HistoryActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 if (response.isSuccessful() && response.body() != null) {
                     allHistory = response.body();
+
+                    for (History h : allHistory) {
+                        Log.d("HistoryDebug", "Crop: " + h.getCropName() +
+                                ", Garden: " + h.getGardenName() +
+                                ", Area: " + h.getAreaName());
+                    }
+
                     applyFilters();
                 } else {
                     Toast.makeText(HistoryActivity.this, "Нет данных", Toast.LENGTH_SHORT).show();
@@ -148,7 +177,7 @@ public class HistoryActivity extends AppCompatActivity {
 
         for (History item : allHistory) {
             if (currentTab == 1 && item.getActionTypeId() != 1) {
-                continue; 
+                continue;
             }
 
             boolean matchesDate = true;
@@ -179,13 +208,14 @@ public class HistoryActivity extends AppCompatActivity {
         new DatePickerDialog(this, (view, year, month, day) -> {
             Calendar selected = Calendar.getInstance();
             selected.set(year, month, day);
+            Button btn;
             if (isStart) {
                 dateStartMs = selected.getTimeInMillis();
-                Button btn = findViewById(R.id.btnDateFrom);
+                btn = findViewById(R.id.btnDateFrom);
                 btn.setText("С: " + day + "." + (month + 1) + "." + year);
             } else {
                 dateEndMs = selected.getTimeInMillis();
-                Button btn = findViewById(R.id.btnDateTo);
+                btn = findViewById(R.id.btnDateTo);
                 btn.setText("По: " + day + "." + (month + 1) + "." + year);
             }
             applyFilters();
@@ -255,8 +285,8 @@ public class HistoryActivity extends AppCompatActivity {
         int startX = 25;
         int startY = yOffset + 15;
         int rowHeight = 28;
-        int[] colWidths = {70, 120, 100, 100, 80};
-        String[] headers = {"Дата", "Растение", "Сорт", "Участок", "Действие"};
+        int[] colWidths = {70, 100, 90, 90, 100, 80};
+        String[] headers = {"Дата", "Растение", "Сорт", "Огород", "Участок", "Действие"};
 
         Paint headerBg = new Paint();
         headerBg.setColor(Color.parseColor("#E8F5E9"));
@@ -317,10 +347,11 @@ public class HistoryActivity extends AppCompatActivity {
 
             String crop = item.getCropName() != null ? item.getCropName() : "---";
             String variety = item.getVariety() != null ? item.getVariety() : "---";
+            String garden = item.getGardenName() != null && !item.getGardenName().isEmpty() ? item.getGardenName() : "---";
             String area = item.getAreaName() != null ? item.getAreaName() : "---";
             String action = item.getActionName() != null ? item.getActionName() : "---";
 
-            String[] rowData = {formattedDate, crop, variety, area, action};
+            String[] rowData = {formattedDate, crop, variety, garden, area, action};
 
             currentX = startX;
             for (int i = 0; i < rowData.length; i++) {

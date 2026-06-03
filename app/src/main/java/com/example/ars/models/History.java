@@ -9,11 +9,8 @@ public class History {
     private String cropName;
     private String variety;
     private String areaName;
+    private String gardenName;
     private int regionId;
-    private int wateringInterval;
-    private int fertilizingInterval;
-    private int soilCareInterval;
-    private int protectionInterval;
 
     private String temperature;
     private String humidity;
@@ -26,13 +23,12 @@ public class History {
     public String getCropName() { return cropName; }
     public String getVariety() { return variety; }
     public String getAreaName() { return areaName; }
+    public String getGardenName() { return gardenName; }
+    public void setGardenName(String gardenName) { this.gardenName = gardenName; }
     public int getActionTypeId() { return actionTypeId; }
     public int getRegionId() { return regionId; }
     public WeatherData getWeather() { return weather; }
     public void setWeather(WeatherData weather) { this.weather = weather; }
-    public int getWateringInterval() { return wateringInterval; }
-    public int getFertilizingInterval() { return fertilizingInterval; }
-    public int getSoilCareInterval() { return soilCareInterval; }
 
     public String getTemperature() { return temperature; }
     public void setTemperature(String temperature) { this.temperature = temperature; }
@@ -55,4 +51,3 @@ public class History {
         }
     }
 }
-

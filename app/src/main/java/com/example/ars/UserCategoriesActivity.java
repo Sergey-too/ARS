@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.ars.adapters.UserCategoryAdapter;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
+import com.example.ars.models.User;
 import com.example.ars.models.UserCategory;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -42,6 +43,15 @@ public class UserCategoriesActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_categories);
 
+        prefsHelper = new SharedPreferencesHelper(this);
+        User user = prefsHelper.getUser();
+        if (user == null) {
+            Toast.makeText(this, "Пользователь не авторизован", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        currentUserId = user.getId();
+
         initViews();
         setupRetrofit();
         setupRecyclerView();
@@ -56,11 +66,6 @@ public class UserCategoriesActivity extends AppCompatActivity {
     private void initViews() {
         rvCategories = findViewById(R.id.rvCategories);
         etSearch = findViewById(R.id.etSearch);
-
-        prefsHelper = new SharedPreferencesHelper(this);
-        if (prefsHelper.getUser() != null) {
-            currentUserId = prefsHelper.getUser().getId();
-        }
     }
 
     private void setupRetrofit() {
@@ -76,7 +81,6 @@ public class UserCategoriesActivity extends AppCompatActivity {
         rvCategories.setLayoutManager(new LinearLayoutManager(this));
         rvCategories.setAdapter(adapter);
 
-        // Поиск
         if (etSearch != null) {
             etSearch.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -106,10 +110,6 @@ public class UserCategoriesActivity extends AppCompatActivity {
     }
 
     private void loadCategories() {
-        if (currentUserId == 0) {
-            return;
-        }
-
         apiService.getUserCategories(currentUserId).enqueue(new Callback<List<UserCategory>>() {
             @Override
             public void onResponse(Call<List<UserCategory>> call, Response<List<UserCategory>> response) {
@@ -171,8 +171,10 @@ public class UserCategoriesActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     Toast.makeText(UserCategoriesActivity.this, "Категория создана", Toast.LENGTH_SHORT).show();
                     loadCategories();
+                } else if (response.code() == 400) {
+                    Toast.makeText(UserCategoriesActivity.this, "Такая категория уже существует", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(UserCategoriesActivity.this, "Ошибка: возможно, такая категория уже есть", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(UserCategoriesActivity.this, "Ошибка создания категории", Toast.LENGTH_SHORT).show();
                 }
             }
 

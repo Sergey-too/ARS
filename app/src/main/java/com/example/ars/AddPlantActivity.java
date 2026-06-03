@@ -29,6 +29,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +58,7 @@ public class AddPlantActivity extends AppCompatActivity {
     private String selectedUserCategoryName = null;
     private Integer selectedGardenId = null;
     private Integer selectedAreaId = null;
+    private Integer createdUserCropId = null;
 
     private class PlantListItem {
         Integer id;
@@ -404,40 +406,29 @@ public class AddPlantActivity extends AppCompatActivity {
     private boolean validateDates() {
         String plantingDateStr = etPlantingDate.getText().toString().trim();
         String harvestDateStr = etHarvestDate.getText().toString().trim();
-        if (plantingDateStr.isEmpty() && harvestDateStr.isEmpty()) {
-            return true;
-        }
-        if (plantingDateStr.isEmpty() && !harvestDateStr.isEmpty()) {
+
+        if (plantingDateStr.isEmpty()) {
             tilPlantingDate.setError("Укажите дату посадки");
-            tilHarvestDate.setError(null);
             return false;
         }
-        if (!plantingDateStr.isEmpty() && harvestDateStr.isEmpty()) {
+
+        if (harvestDateStr.isEmpty()) {
             tilHarvestDate.setError("Укажите дату сбора");
-            tilPlantingDate.setError(null);
             return false;
         }
+
         SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
         try {
             Calendar planting = Calendar.getInstance();
             planting.setTime(sdf.parse(plantingDateStr));
             Calendar harvest = Calendar.getInstance();
             harvest.setTime(sdf.parse(harvestDateStr));
+
             if (harvest.before(planting)) {
                 tilHarvestDate.setError("Дата сбора не может быть раньше даты посадки");
                 return false;
             }
-            if (selectedCropData != null) {
-                int month = planting.get(Calendar.MONTH) + 1;
-                boolean isWinter = (month == 12 || month == 1 || month == 2);
-                if (isWinter && selectedCropData.getCanDirectSow() != null && !selectedCropData.getCanDirectSow()) {
-                    tilPlantingDate.setError("Зимой это растение можно сажать только через рассаду");
-                    return false;
-                }
-                if (!validateHarvestDate(selectedCropData, planting, harvest)) {
-                    return false;
-                }
-            }
+
             tilPlantingDate.setError(null);
             tilHarvestDate.setError(null);
             return true;
@@ -445,25 +436,6 @@ public class AddPlantActivity extends AppCompatActivity {
             tilPlantingDate.setError("Неверный формат даты");
             return false;
         }
-    }
-
-    private boolean validateHarvestDate(Crop crop, Calendar plantingDate, Calendar userHarvestDate) {
-        if (crop.getDaysToHarvest() == null || crop.getDaysToHarvest() <= 0) {
-            return true;
-        }
-        Calendar expectedHarvest = (Calendar) plantingDate.clone();
-        expectedHarvest.add(Calendar.DAY_OF_YEAR, crop.getDaysToHarvest());
-        int toleranceDays = 15;
-        Calendar minHarvest = (Calendar) expectedHarvest.clone();
-        minHarvest.add(Calendar.DAY_OF_YEAR, -toleranceDays);
-        Calendar maxHarvest = (Calendar) expectedHarvest.clone();
-        maxHarvest.add(Calendar.DAY_OF_YEAR, toleranceDays);
-        if (userHarvestDate.before(minHarvest) || userHarvestDate.after(maxHarvest)) {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
-            tilHarvestDate.setError(String.format("Для '%s' сбор ожидается около %s (±%d дней)", crop.getName(), sdf.format(expectedHarvest.getTime()), toleranceDays));
-            return false;
-        }
-        return true;
     }
 
     private void addPlantToUser() {
@@ -487,7 +459,7 @@ public class AddPlantActivity extends AppCompatActivity {
         if (!validateDates()) {
             return;
         }
-        checkWeatherBeforeAdd();
+        checkDuplicateAndAdd();
     }
 
     private void checkDuplicateAndAdd() {
@@ -509,11 +481,11 @@ public class AddPlantActivity extends AppCompatActivity {
                         }
                     }
                 }
-                performAddPlant();
+                checkWeatherBeforeAdd();
             }
             @Override
             public void onFailure(Call<List<UserCrop>> call, Throwable t) {
-                performAddPlant();
+                checkWeatherBeforeAdd();
             }
         });
     }
@@ -528,28 +500,33 @@ public class AddPlantActivity extends AppCompatActivity {
         } else {
             request.put("individualCropId", selectedIndividualCropId);
         }
-        String plantingDateStr = etPlantingDate.getText().toString().trim();
-        String harvestDateStr = etHarvestDate.getText().toString().trim();
-        if (!plantingDateStr.isEmpty() && !harvestDateStr.isEmpty()) {
-            try {
-                SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
-                SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                java.util.Date plantingDate = uiFormat.parse(plantingDateStr);
-                java.util.Date harvestDate = uiFormat.parse(harvestDateStr);
-                request.put("plantedAt", serverFormat.format(plantingDate));
-                request.put("harvestedAt", serverFormat.format(harvestDate));
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Ошибка формата даты", Toast.LENGTH_SHORT).show();
-                return;
-            }
+
+        SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+        SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+
+        try {
+            String plantingDateStr = etPlantingDate.getText().toString().trim();
+            String harvestDateStr = etHarvestDate.getText().toString().trim();
+            Date plantingDate = uiFormat.parse(plantingDateStr);
+            Date harvestDate = uiFormat.parse(harvestDateStr);
+            request.put("plantedAt", serverFormat.format(plantingDate));
+            request.put("harvestedAt", serverFormat.format(harvestDate));
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Ошибка формата даты", Toast.LENGTH_SHORT).show();
+            return;
         }
+
         apiService.addUserCrop(request).enqueue(new Callback<Map<String, Object>>() {
             @Override
             public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
-                if (response.isSuccessful()) {
-                    Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
-                    finish();
+                if (response.isSuccessful() && response.body() != null) {
+                    Map<String, Object> body = response.body();
+                    if (body.containsKey("id")) {
+                        Number idNum = (Number) body.get("id");
+                        createdUserCropId = idNum.intValue();
+                    }
+                    createHistoryEntryIfNeeded();
                 } else {
                     String errorMsg = "Ошибка сервера: " + response.code();
                     try {
@@ -568,6 +545,60 @@ public class AddPlantActivity extends AppCompatActivity {
         });
     }
 
+    private void createHistoryEntryIfNeeded() {
+        try {
+            SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+            String plantingDateStr = etPlantingDate.getText().toString().trim();
+            Date plantingDate = uiFormat.parse(plantingDateStr);
+            Date today = new Date();
+
+            Calendar plantingCal = Calendar.getInstance();
+            plantingCal.setTime(plantingDate);
+            Calendar todayCal = Calendar.getInstance();
+            todayCal.setTime(today);
+
+            plantingCal.set(Calendar.HOUR_OF_DAY, 0);
+            plantingCal.set(Calendar.MINUTE, 0);
+            plantingCal.set(Calendar.SECOND, 0);
+            todayCal.set(Calendar.HOUR_OF_DAY, 0);
+            todayCal.set(Calendar.MINUTE, 0);
+            todayCal.set(Calendar.SECOND, 0);
+
+            if (!plantingCal.after(todayCal)) {
+                if (createdUserCropId != null) {
+                    Map<String, Object> historyRequest = new HashMap<>();
+                    historyRequest.put("userCropId", createdUserCropId);
+                    historyRequest.put("actionTypeId", 1);
+
+                    apiService.plantCrop(historyRequest).enqueue(new Callback<Map<String, Object>>() {
+                        @Override
+                        public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                            Log.d("AddPlantActivity", "История посадки создана");
+                            Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                        @Override
+                        public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                            Log.e("AddPlantActivity", "Ошибка создания истории посадки", t);
+                            Toast.makeText(AddPlantActivity.this, "Растение добавлено, но ошибка истории", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                    });
+                } else {
+                    Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+            } else {
+                Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+    }
+
     private void showExitDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Вернуться назад?")
@@ -582,12 +613,9 @@ public class AddPlantActivity extends AppCompatActivity {
             tilArea.setError("Выберите участок");
             return;
         }
+
         String plantingDateStr = etPlantingDate.getText().toString().trim();
-        String harvestDateStr = etHarvestDate.getText().toString().trim();
-        if (plantingDateStr.isEmpty() || harvestDateStr.isEmpty()) {
-            checkDuplicateAndAdd();
-            return;
-        }
+
         Area selectedArea = null;
         for (Area area : allAreas) {
             if (area.getId().equals(selectedAreaId)) {
@@ -595,13 +623,16 @@ public class AddPlantActivity extends AppCompatActivity {
                 break;
             }
         }
+
         if (selectedArea == null || selectedArea.getRegionId() == null) {
-            checkDuplicateAndAdd();
+            showPlantConfirmDialog();
             return;
         }
+
         Integer regionId = selectedArea.getRegionId();
         SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
         SimpleDateFormat apiFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+
         try {
             java.util.Date plantingDate = uiFormat.parse(plantingDateStr);
             String plantingDateApi = apiFormat.format(plantingDate);
@@ -612,16 +643,16 @@ public class AddPlantActivity extends AppCompatActivity {
                         WeatherData weather = response.body();
                         checkWeatherConditions(weather, plantingDateStr);
                     } else {
-                        checkDuplicateAndAdd();
+                        showPlantConfirmDialog();
                     }
                 }
                 @Override
                 public void onFailure(Call<WeatherData> call, Throwable t) {
-                    checkDuplicateAndAdd();
+                    showPlantConfirmDialog();
                 }
             });
         } catch (Exception e) {
-            checkDuplicateAndAdd();
+            showPlantConfirmDialog();
         }
     }
 
@@ -630,11 +661,13 @@ public class AddPlantActivity extends AppCompatActivity {
         StringBuilder warningMessage = new StringBuilder();
         Crop crop = selectedCropData;
         if (crop == null) {
-            checkDuplicateAndAdd();
+            performAddPlant();
             return;
         }
+
         double tempMin = parseDoubleSafe(weather.getTemperatureMin());
         double tempMax = parseDoubleSafe(weather.getTemperatureMax());
+
         if (crop.getMinTemp() != null && tempMin < crop.getMinTemp()) {
             hasWarning = true;
             warningMessage.append(String.format("Слишком холодно! Минимальная температура %.1f°C ниже нормы (%d°C)\n", tempMin, crop.getMinTemp()));
@@ -643,6 +676,7 @@ public class AddPlantActivity extends AppCompatActivity {
             hasWarning = true;
             warningMessage.append(String.format("Слишком жарко! Максимальная температура %.1f°C выше нормы (%d°C)\n", tempMax, crop.getMaxTemp()));
         }
+
         double humidity = parseDoubleSafe(weather.getHumidityMin());
         if (crop.getMinHumidity() != null && humidity < crop.getMinHumidity()) {
             hasWarning = true;
@@ -652,31 +686,44 @@ public class AddPlantActivity extends AppCompatActivity {
             hasWarning = true;
             warningMessage.append(String.format("Высокая влажность! %.0f%% выше нормы (%d%%)\n", humidity, crop.getMaxHumidity()));
         }
+
         double wind = parseDoubleSafe(weather.getWindMax());
         if (crop.getMaxWind() != null && wind > crop.getMaxWind()) {
             hasWarning = true;
             warningMessage.append(String.format("Сильный ветер! %.1f м/с выше нормы (%d м/с)\n", wind, crop.getMaxWind()));
         }
+
         double precipitation = parseDoubleSafe(weather.getPrecipitation());
         if (crop.getNeededPrecipitation() != null && precipitation > crop.getNeededPrecipitation()) {
             hasWarning = true;
             warningMessage.append(String.format("Много осадков! %.1f мм больше нормы (%d мм)\n", precipitation, crop.getNeededPrecipitation()));
         }
+
         if (hasWarning) {
             new AlertDialog.Builder(this)
                     .setTitle("Неблагоприятная погода")
                     .setMessage("Дата посадки: " + plantingDateStr + "\n\n" + warningMessage.toString() + "\nВы уверены, что хотите посадить растение в таких условиях?")
-                    .setPositiveButton("Да, посадить", (dialog, which) -> checkDuplicateAndAdd())
+                    .setPositiveButton("Да, посадить", (dialog, which) -> performAddPlant())
                     .setNegativeButton("Отмена", null)
                     .show();
         } else {
             new AlertDialog.Builder(this)
                     .setTitle("Погода подходит!")
                     .setMessage("На " + plantingDateStr + " погодные условия благоприятны для посадки " + crop.getName() + ".\n\nДобавить растение?")
-                    .setPositiveButton("Да, добавить", (dialog, which) -> checkDuplicateAndAdd())
+                    .setPositiveButton("Да, добавить", (dialog, which) -> performAddPlant())
                     .setNegativeButton("Отмена", null)
                     .show();
         }
+    }
+
+    private void showPlantConfirmDialog() {
+        String plantName = selectedCropData != null ? selectedCropData.getName() : "растение";
+        new AlertDialog.Builder(this)
+                .setTitle("Добавление растения")
+                .setMessage("Добавить " + plantName + " на выбранный участок?")
+                .setPositiveButton("Да", (dialog, which) -> performAddPlant())
+                .setNegativeButton("Отмена", null)
+                .show();
     }
 
     private double parseDoubleSafe(String value) {

@@ -38,7 +38,7 @@ public class PlantDetailActivity extends AppCompatActivity {
     private TextView tvValTemp, tvValHum, tvValWind, tvValPrec, tvValDepth,
             tvValSeedlings, tvValDirectSow, tvValGerm, tvValHarvest,
             tvValWaterInt, tvValFertInt, tvValSoilInt, tvValCategory, tvValProtect;
-    private TextView tvLocation; // добавим поле для отображения участка и огорода
+    private TextView tvLocation;
     private ImageView ivPhoto;
 
     @Override
@@ -88,7 +88,7 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvValProtect = findViewById(R.id.tvValProtect);
         tvValCategory = findViewById(R.id.tvValCategory);
 
-        tvLocation = findViewById(R.id.tvLocation); // если есть в разметке
+        tvLocation = findViewById(R.id.tvLocation);
     }
 
     private void loadData() {
@@ -132,7 +132,6 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvName.setText(displayName);
         tvDesc.setText(crop.getDescription() != null ? crop.getDescription() : "Описание отсутствует");
 
-        // Отображение участка и огорода
         if (tvLocation != null) {
             String location = "";
             if (uc.getArea() != null) {
@@ -147,7 +146,6 @@ public class PlantDetailActivity extends AppCompatActivity {
             tvLocation.setVisibility(View.VISIBLE);
         }
 
-        // Фото
         if (crop.getLocalPhotoPath() != null && !crop.getLocalPhotoPath().isEmpty()) {
             String photoUrl = crop.getLocalPhotoPath();
             if (!photoUrl.startsWith("http")) {
@@ -162,7 +160,6 @@ public class PlantDetailActivity extends AppCompatActivity {
             ivPhoto.setImageResource(R.drawable.ic_plant);
         }
 
-        // Параметры
         if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
             tvValTemp.setText(crop.getMinTemp() + " - " + crop.getMaxTemp() + " °C");
         } else {
@@ -187,18 +184,13 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvValSoilInt.setText(crop.getSoilCareInterval() != null ? crop.getSoilCareInterval() + " дн." : "--");
         tvValProtect.setText(crop.getProtectionInterval() != null ? crop.getProtectionInterval() + " дн." : "--");
 
-        // Категория (системная)
+        // Категория для индивидуального растения
         if (crop.getCategoryId() != null && crop.getCategoryId() > 0) {
             loadSystemCategoryName(crop.getCategoryId());
+        } else if (crop.getUserCategoryId() != null && crop.getUserCategoryId() > 0) {
+            loadUserCategoryName(crop.getUserCategoryId());
         } else {
             tvValCategory.setText("Не указана");
-        }
-
-        TextView tvUserCategory = findViewById(R.id.tvValCategory);
-        if (tvUserCategory != null && crop.getUserCategoryId() != null && crop.getUserCategoryId() > 0) {
-            loadUserCategoryName(crop.getUserCategoryId(), tvUserCategory);
-        } else if (tvUserCategory != null) {
-            tvUserCategory.setText("Не указана");
         }
     }
 
@@ -212,7 +204,6 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvName.setText(displayName);
         tvDesc.setText(crop.getDescription() != null ? crop.getDescription() : "Описание отсутствует");
 
-        // Отображение участка и огорода
         if (tvLocation != null) {
             String location = "";
             if (uc.getArea() != null) {
@@ -227,7 +218,6 @@ public class PlantDetailActivity extends AppCompatActivity {
             tvLocation.setVisibility(View.VISIBLE);
         }
 
-        // Фото
         if (crop.getPhotoPath() != null && !crop.getPhotoPath().isEmpty()) {
             String photoUrl = crop.getPhotoPath();
             if (!photoUrl.startsWith("http")) {
@@ -242,7 +232,6 @@ public class PlantDetailActivity extends AppCompatActivity {
             ivPhoto.setImageResource(R.drawable.ic_plant);
         }
 
-        // Параметры
         if (crop.getMinTemp() != null && crop.getMaxTemp() != null) {
             tvValTemp.setText(crop.getMinTemp() + " - " + crop.getMaxTemp() + " °C");
         } else {
@@ -267,11 +256,12 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvValSoilInt.setText(crop.getSoilCareInterval() != null ? crop.getSoilCareInterval() + " дн." : "--");
         tvValProtect.setText(crop.getProtectionInterval() != null ? crop.getProtectionInterval() + " дн." : "--");
 
-        tvValCategory.setText(crop.getCategory() != null ? crop.getCategory() : "--");
-
-        TextView tvUserCategory = findViewById(R.id.tvValCategory);
-        if (tvUserCategory != null) {
-            tvUserCategory.setText("--");
+        if (crop.getCategoryObject() != null) {
+            tvValCategory.setText(crop.getCategoryObject().getName());
+        } else if (crop.getCategory() != null && !crop.getCategory().isEmpty()) {
+            tvValCategory.setText(crop.getCategory());
+        } else {
+            tvValCategory.setText("Не указана");
         }
     }
 
@@ -281,7 +271,7 @@ public class PlantDetailActivity extends AppCompatActivity {
             public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     for (Category category : response.body()) {
-                        if (category.getId().equals(Long.valueOf(categoryId))) {
+                        if (category.getId().equals(categoryId)) {
                             tvValCategory.setText(category.getName());
                             return;
                         }
@@ -299,26 +289,26 @@ public class PlantDetailActivity extends AppCompatActivity {
         });
     }
 
-    private void loadUserCategoryName(int userCategoryId, TextView targetTextView) {
+    private void loadUserCategoryName(int userCategoryId) {
         apiService.getUserCategories(prefsHelper.getUser().getId()).enqueue(new Callback<List<UserCategory>>() {
             @Override
             public void onResponse(Call<List<UserCategory>> call, Response<List<UserCategory>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     for (UserCategory category : response.body()) {
                         if (category.getId().equals(userCategoryId)) {
-                            targetTextView.setText(category.getName());
+                            tvValCategory.setText(category.getName());
                             return;
                         }
                     }
-                    targetTextView.setText("Не найдена");
+                    tvValCategory.setText("Не найдена");
                 } else {
-                    targetTextView.setText("Ошибка");
+                    tvValCategory.setText("Ошибка");
                 }
             }
 
             @Override
             public void onFailure(Call<List<UserCategory>> call, Throwable t) {
-                targetTextView.setText("Ошибка");
+                tvValCategory.setText("Ошибка");
             }
         });
     }

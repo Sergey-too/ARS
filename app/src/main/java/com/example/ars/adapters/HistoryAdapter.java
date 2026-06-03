@@ -40,7 +40,10 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
         String varietyText = item.getVariety() != null && !item.getVariety().isEmpty() ? item.getVariety() : "н/д";
         holder.tvCrop.setText(cropText + " (" + varietyText + ")");
 
-        holder.tvArea.setText("Участок: " + (item.getAreaName() != null ? item.getAreaName() : "---"));
+        // Отображаем огород и участок в одной строке (как у вас в XML используется tvArea)
+        String gardenText = item.getGardenName() != null && !item.getGardenName().isEmpty() ? item.getGardenName() : "Без огорода";
+        String areaText = item.getAreaName() != null ? item.getAreaName() : "---";
+        holder.tvArea.setText(gardenText + " | " + areaText);
     }
 
     private String formatDate(String raw, String pattern) {

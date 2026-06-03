@@ -164,18 +164,6 @@
                 app:layout_constraintTop_toTopOf="parent">
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMenu1"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="Категории"
-                    android:textColor="@color/color_text_dark"
-                    android:textSize="16sp"
-                    app:icon="@drawable/ic_menu"
-                    app:iconTint="@color/color_green_primary" />
-
-                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu2"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="match_parent"
@@ -188,15 +176,15 @@
                     app:iconTint="@color/color_green_primary" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMenu3"
+                    android:id="@+id/btnMenu1"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginBottom="8dp"
-                    android:text="Грядки"
+                    android:text="Категории"
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_close"
+                    app:icon="@drawable/ic_menu"
                     app:iconTint="@color/color_green_primary" />
 
                 <com.google.android.material.button.MaterialButton
@@ -208,6 +196,18 @@
                     android:textColor="@color/color_text_dark"
                     android:textSize="16sp"
                     app:icon="@drawable/ic_area"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMenu3"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="Грядки"
+                    android:textColor="@color/color_text_dark"
+                    android:textSize="16sp"
+                    app:icon="@drawable/ic_wave"
+                    app:iconTint="@color/color_green_primary" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMenu9"

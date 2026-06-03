@@ -154,7 +154,7 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
         });
 
         btnSave.setOnClickListener(v -> {
-            if (validateFields()) {
+            if (validateAllFields()) {
                 updatePlant();
             }
         });
@@ -191,7 +191,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
     }
 
     private void fillForm() {
-        tvTitle.setText("Редактирование растения");
         tvSubtitle.setText(currentCrop.getName() + " (ID: " + currentCrop.getId() + ")");
 
         etPlantName.setText(currentCrop.getName());
@@ -227,28 +226,37 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             cbCanDirectSow.setChecked(currentCrop.getCanDirectSow());
         }
 
+        // Исправлено: отображение фото
         if (currentCrop.getPhotoPath() != null && !currentCrop.getPhotoPath().isEmpty()) {
             String photoPath = currentCrop.getPhotoPath();
             etPhotoPath.setText(photoPath);
             selectedPhotoUri = photoPath;
 
+            String imageUrl;
             if (photoPath.startsWith("http")) {
-                Picasso.get().load(photoPath).placeholder(R.drawable.ic_info).into(ivSelectedPhoto);
-            } else if (photoPath.startsWith("/")) {
-                String url = RetrofitClient.BASE_URL + "/api/img" + photoPath;
-                Picasso.get().load(url).placeholder(R.drawable.ic_info).into(ivSelectedPhoto);
+                imageUrl = photoPath;
+            } else if (photoPath.startsWith("/uploads")) {
+                imageUrl = RetrofitClient.BASE_URL + photoPath;
             } else {
-                Picasso.get().load(Uri.parse(photoPath)).placeholder(R.drawable.ic_info).into(ivSelectedPhoto);
+                imageUrl = RetrofitClient.BASE_URL + "/uploads/" + photoPath;
             }
+
+            Picasso.get()
+                    .load(imageUrl)
+                    .placeholder(R.drawable.ic_plant)
+                    .error(R.drawable.ic_plant)
+                    .into(ivSelectedPhoto);
             llPhotoPlaceholder.setVisibility(View.GONE);
         } else {
+            ivSelectedPhoto.setImageResource(R.drawable.ic_plant);
             llPhotoPlaceholder.setVisibility(View.VISIBLE);
         }
     }
 
-    private boolean validateFields() {
+    private boolean validateAllFields() {
         boolean isValid = true;
 
+        // Название
         if (TextUtils.isEmpty(etPlantName.getText().toString().trim())) {
             tilPlantName.setError("Укажите название");
             isValid = false;
@@ -256,6 +264,7 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             tilPlantName.setError(null);
         }
 
+        // Категория
         if (TextUtils.isEmpty(selectedCategoryName)) {
             tilCategory.setError("Выберите категорию");
             isValid = false;
@@ -263,6 +272,7 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             tilCategory.setError(null);
         }
 
+        // Температура
         Float minTemp = parseFloat(etMinTemp);
         Float maxTemp = parseFloat(etMaxTemp);
         if (minTemp != null && maxTemp != null && minTemp > maxTemp) {
@@ -270,45 +280,117 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             etMaxTemp.setError("Макс. температура не может быть меньше мин.");
             isValid = false;
         }
+        if (minTemp != null && (minTemp < -50 || minTemp > 60)) {
+            etMinTemp.setError("Температура должна быть от -50 до 60°C");
+            isValid = false;
+        }
+        if (maxTemp != null && (maxTemp < -50 || maxTemp > 60)) {
+            etMaxTemp.setError("Температура должна быть от -50 до 60°C");
+            isValid = false;
+        }
 
+        // Влажность
         Integer minHum = parseInteger(etMinHumidity);
         Integer maxHum = parseInteger(etMaxHumidity);
         if (minHum != null && maxHum != null && minHum > maxHum) {
             etMinHumidity.setError("Мин. влажность не может быть больше макс.");
+            etMaxHumidity.setError("Макс. влажность не может быть меньше мин.");
             isValid = false;
         }
         if ((minHum != null && (minHum < 0 || minHum > 100)) ||
                 (maxHum != null && (maxHum < 0 || maxHum > 100))) {
-            if (minHum != null) etMinHumidity.setError("Влажность должна быть от 0 до 100");
-            if (maxHum != null) etMaxHumidity.setError("Влажность должна быть от 0 до 100");
+            if (minHum != null) etMinHumidity.setError("Влажность должна быть от 0 до 100%");
+            if (maxHum != null) etMaxHumidity.setError("Влажность должна быть от 0 до 100%");
             isValid = false;
         }
 
+        // Осадки
+        Short precip = parseShort(etPrecipitation);
+        if (precip != null && (precip < 0 || precip > 500)) {
+            etPrecipitation.setError("Осадки должны быть от 0 до 500 мм");
+            isValid = false;
+        }
+
+        // Ветер
+        Short maxWind = parseShort(etMaxWind);
+        if (maxWind != null && (maxWind < 0 || maxWind > 50)) {
+            etMaxWind.setError("Скорость ветра должна быть от 0 до 50 м/с");
+            isValid = false;
+        }
+
+        // Глубина посева
+        Integer sowingDepth = parseInteger(etSowingDepth);
+        if (sowingDepth != null && (sowingDepth < 0 || sowingDepth > 50)) {
+            etSowingDepth.setError("Глубина посева должна быть от 0 до 50 см");
+            isValid = false;
+        }
+
+        // Дни до всходов
         Integer daysGerm = parseInteger(etDaysToGermination);
-        Integer daysHarvest = parseInteger(etDaysToHarvest);
         if (daysGerm != null && daysGerm < 0) {
             etDaysToGermination.setError("Не может быть отрицательным");
             isValid = false;
         }
+        if (daysGerm != null && daysGerm > 365) {
+            etDaysToGermination.setError("Дней до всходов не может быть больше 365");
+            isValid = false;
+        }
+
+        // Дни до урожая
+        Integer daysHarvest = parseInteger(etDaysToHarvest);
         if (daysHarvest != null && daysHarvest < 0) {
             etDaysToHarvest.setError("Не может быть отрицательным");
             isValid = false;
         }
+        if (daysHarvest != null && daysHarvest > 730) {
+            etDaysToHarvest.setError("Дней до урожая не может быть больше 730");
+            isValid = false;
+        }
 
-        if (parseInteger(etWateringInterval) != null && parseInteger(etWateringInterval) < 0) {
+        // Интервалы ухода
+        Integer watering = parseInteger(etWateringInterval);
+        if (watering != null && watering < 0) {
             etWateringInterval.setError("Не может быть отрицательным");
             isValid = false;
         }
-        if (parseInteger(etFertilizingInterval) != null && parseInteger(etFertilizingInterval) < 0) {
+        if (watering != null && watering > 30) {
+            etWateringInterval.setError("Интервал полива не более 30 дней");
+            isValid = false;
+        }
+
+        Integer fertilizing = parseInteger(etFertilizingInterval);
+        if (fertilizing != null && fertilizing < 0) {
             etFertilizingInterval.setError("Не может быть отрицательным");
             isValid = false;
         }
-        if (parseInteger(etSoilCareInterval) != null && parseInteger(etSoilCareInterval) < 0) {
+        if (fertilizing != null && fertilizing > 90) {
+            etFertilizingInterval.setError("Интервал удобрения не более 90 дней");
+            isValid = false;
+        }
+
+        Integer soilCare = parseInteger(etSoilCareInterval);
+        if (soilCare != null && soilCare < 0) {
             etSoilCareInterval.setError("Не может быть отрицательным");
             isValid = false;
         }
-        if (parseInteger(etProtectionInterval) != null && parseInteger(etProtectionInterval) < 0) {
+        if (soilCare != null && soilCare > 30) {
+            etSoilCareInterval.setError("Интервал рыхления не более 30 дней");
+            isValid = false;
+        }
+
+        Integer protection = parseInteger(etProtectionInterval);
+        if (protection != null && protection < 0) {
             etProtectionInterval.setError("Не может быть отрицательным");
+            isValid = false;
+        }
+        if (protection != null && protection > 60) {
+            etProtectionInterval.setError("Интервал защиты не более 60 дней");
+            isValid = false;
+        }
+
+        // Способ посадки
+        if (!cbCanSeedlings.isChecked() && !cbCanDirectSow.isChecked()) {
+            Toast.makeText(this, "Выберите хотя бы один способ посадки", Toast.LENGTH_SHORT).show();
             isValid = false;
         }
 
@@ -346,10 +428,13 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
         crop.setCanDirectSow(cbCanDirectSow.isChecked());
 
         String photoPath = etPhotoPath.getText().toString().trim();
-        if (!TextUtils.isEmpty(selectedPhotoUri) && TextUtils.isEmpty(photoPath)) {
-            photoPath = selectedPhotoUri;
+        if (!TextUtils.isEmpty(selectedPhotoUri) && !TextUtils.isEmpty(photoPath)) {
+            crop.setPhotoPath(selectedPhotoUri);
+        } else if (!TextUtils.isEmpty(photoPath)) {
+            crop.setPhotoPath(photoPath);
+        } else {
+            crop.setPhotoPath("");
         }
-        crop.setPhotoPath(photoPath);
 
         btnSave.setEnabled(false);
 
@@ -369,7 +454,7 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             @Override
             public void onFailure(Call<Crop> call, Throwable t) {
                 btnSave.setEnabled(true);
-                Toast.makeText(EditPlantActivityAdmin.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
+                Toast.makeText(EditPlantActivityAdmin.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -428,6 +513,8 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
     private void setVal(TextInputEditText et, Object val) {
         if (val != null) {
             et.setText(String.valueOf(val));
+        } else {
+            et.setText("");
         }
     }
 

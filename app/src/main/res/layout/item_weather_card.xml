@@ -88,7 +88,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_wind"
-                app:tint="#2196F3" />
+                app:tint="#4CAF50" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -107,7 +107,7 @@
                 android:text="2..5 м/с"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="#2196F3"
+                android:textColor="#4CAF50"
                 android:gravity="end" />
 
         </LinearLayout>
@@ -192,7 +192,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_rain"
-                app:tint="#4CAF50" />
+                app:tint="#2196F3" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -211,7 +211,7 @@
                 android:text="2.5 мм"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="#4CAF50"
+                android:textColor="#2196F3"
                 android:gravity="end" />
 
         </LinearLayout>
