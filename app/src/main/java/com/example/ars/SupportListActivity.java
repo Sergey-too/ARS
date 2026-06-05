@@ -1,7 +1,9 @@
 package com.example.ars;
 
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -10,6 +12,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -19,6 +22,10 @@ import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.SupportRequest;
 import com.example.ars.utils.SharedPreferencesHelper;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,9 +64,41 @@ public class SupportListActivity extends AppCompatActivity {
 
         findViewById(R.id.fabAddRequest).setOnClickListener(v -> showSupportDialog(null));
 
+        Button btnOpenPdf = findViewById(R.id.btnOpenPdf);
+        btnOpenPdf.setOnClickListener(v -> openUserManual());
+
         loadRequests();
     }
+    private void openUserManual() {
+        try {
+            String fileName = "user_manual.pdf";
 
+            File pdfFile = new File(getCacheDir(), fileName);
+
+            try (InputStream in = getAssets().open(fileName);
+                 FileOutputStream out = new FileOutputStream(pdfFile)) {
+                byte[] buffer = new byte[8192];
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+                out.flush();
+            }
+
+            Uri uri = FileProvider.getUriForFile(this,
+                    getPackageName() + ".fileprovider", pdfFile);
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(uri, "application/pdf");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            startActivity(Intent.createChooser(intent, "Открыть руководство"));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
     private void loadRequests() {
         apiService.getUserRequests(currentUserId).enqueue(new Callback<List<SupportRequest>>() {
             @Override
@@ -168,6 +207,7 @@ public class SupportListActivity extends AppCompatActivity {
             }
         });
     }
+
 
     private void confirmDeletion(Integer id) {
         new AlertDialog.Builder(this)

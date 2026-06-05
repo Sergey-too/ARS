@@ -21,6 +21,8 @@ import java.util.concurrent.Executors;
 
 public class WeatherCacheManager {
     private static final String TAG = "WeatherCacheManager";
+    private static final long CACHE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000L;
+
     private final AppDatabase database;
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -30,35 +32,27 @@ public class WeatherCacheManager {
         this.database = AppDatabase.getInstance(context);
     }
 
-    // Интерфейс для операций без возвращаемого значения
     public interface VoidCallback {
         void onSuccess();
         default void onError(String error) {}
     }
 
-    // Интерфейс для операций с возвращаемым значением
     public interface CacheCallback<T> {
         void onSuccess(T result);
         default void onError(String error) {}
     }
 
-    // ==================== РЕГИОНЫ ====================
-
     public void saveRegions(List<Region> regions, VoidCallback callback) {
         executor.execute(() -> {
             try {
                 database.regionCacheDao().deleteAll();
-
                 long now = System.currentTimeMillis();
                 List<RegionCacheEntity> entities = new ArrayList<>();
-
                 for (Region r : regions) {
                     entities.add(new RegionCacheEntity(r.getId(), r.getName(), now));
                 }
-
                 database.regionCacheDao().insertAll(entities);
                 Log.d(TAG, "Saved " + entities.size() + " regions to cache");
-
                 if (callback != null) {
                     mainHandler.post(callback::onSuccess);
                 }
@@ -75,12 +69,10 @@ public class WeatherCacheManager {
         executor.execute(() -> {
             try {
                 List<RegionCacheEntity> entities = database.regionCacheDao().getAllRegions();
-
                 if (entities == null || entities.isEmpty()) {
                     mainHandler.post(() -> callback.onSuccess(null));
                     return;
                 }
-
                 List<Region> regions = new ArrayList<>();
                 for (RegionCacheEntity entity : entities) {
                     Region r = new Region();
@@ -88,7 +80,6 @@ public class WeatherCacheManager {
                     r.setName(entity.name);
                     regions.add(r);
                 }
-
                 mainHandler.post(() -> callback.onSuccess(regions));
             } catch (Exception e) {
                 Log.e(TAG, "Error getting cached regions: " + e.getMessage());
@@ -108,8 +99,6 @@ public class WeatherCacheManager {
         });
     }
 
-    // ==================== ПОГОДА ====================
-
     public void saveForecast(int regionId, List<WeatherData> forecast, VoidCallback callback) {
         executor.execute(() -> {
             try {
@@ -124,8 +113,8 @@ public class WeatherCacheManager {
 
                 database.weatherCacheDao().insertAll(entities);
 
-                long weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-                database.weatherCacheDao().deleteOld(weekAgo);
+                long expiryTime = System.currentTimeMillis() - CACHE_EXPIRY_MS;
+                database.weatherCacheDao().deleteOld(expiryTime);
 
                 Log.d(TAG, "Saved " + entities.size() + " weather records for region " + regionId);
 
@@ -175,7 +164,7 @@ public class WeatherCacheManager {
         });
     }
 
-    public void hasFreshCache(int regionId, int maxAgeHours, CacheCallback<Boolean> callback) {
+    public void hasFreshCache(int regionId, CacheCallback<Boolean> callback) {
         executor.execute(() -> {
             try {
                 String today = sdf.format(Calendar.getInstance().getTime());
@@ -186,18 +175,35 @@ public class WeatherCacheManager {
                     return;
                 }
 
-                long ageLimit = System.currentTimeMillis() - maxAgeHours * 60 * 60 * 1000L;
                 List<WeatherCacheEntity> entities = database.weatherCacheDao().getForecast(regionId, today);
-
                 if (entities == null || entities.isEmpty()) {
                     mainHandler.post(() -> callback.onSuccess(false));
                     return;
                 }
 
+                long ageLimit = System.currentTimeMillis() - CACHE_EXPIRY_MS;
                 boolean isFresh = entities.get(0).cachedAt > ageLimit;
                 mainHandler.post(() -> callback.onSuccess(isFresh));
             } catch (Exception e) {
                 mainHandler.post(() -> callback.onError(e.getMessage()));
+            }
+        });
+    }
+
+    public void cleanOldCache(VoidCallback callback) {
+        executor.execute(() -> {
+            try {
+                long expiryTime = System.currentTimeMillis() - CACHE_EXPIRY_MS;
+                database.weatherCacheDao().deleteOld(expiryTime);
+                Log.d(TAG, "Cleaned old cache entries older than " + 7 + " days");
+                if (callback != null) {
+                    mainHandler.post(callback::onSuccess);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error cleaning old cache: " + e.getMessage());
+                if (callback != null) {
+                    mainHandler.post(() -> callback.onError(e.getMessage()));
+                }
             }
         });
     }

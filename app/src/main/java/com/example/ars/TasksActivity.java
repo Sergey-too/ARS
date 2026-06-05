@@ -1,9 +1,7 @@
 package com.example.ars;
 
 import android.app.AlertDialog;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -24,11 +22,7 @@ import com.example.ars.utils.SharedPreferencesHelper;
 import com.google.android.material.tabs.TabLayout;
 
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TasksActivity extends AppCompatActivity {
 
@@ -49,12 +43,10 @@ public class TasksActivity extends AppCompatActivity {
     private RecyclerView rvRecommendations;
     private List<UserCrop> userCrops = new ArrayList<>();
     private final Set<String> plantedKeys = new HashSet<>();
-    private final Map<String, List<WeatherData>> weatherByRegion = new HashMap<>();
-
-    private final Map<String, UserCrop> cropCache = new ConcurrentHashMap<>();
 
     private int currentTab = 0;
-    private Set<String> completedTasksFromDb = new HashSet<>();
+    private TabLayout tabTaskFilter;
+    private int currentTaskFilter = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +73,27 @@ public class TasksActivity extends AppCompatActivity {
         tvEmpty = findViewById(R.id.tvEmpty);
         tvTitle = findViewById(R.id.tvTitle);
         actvCategoryFilter = findViewById(R.id.actvCategoryFilter);
+        tabTaskFilter = findViewById(R.id.tabTaskFilter);
+
+        setupTaskFilterTabs();
+    }
+
+    private void setupTaskFilterTabs() {
+        if (tabTaskFilter != null) {
+            tabTaskFilter.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+                @Override
+                public void onTabSelected(TabLayout.Tab tab) {
+                    currentTaskFilter = tab.getPosition();
+                    applyFilter();
+                }
+
+                @Override
+                public void onTabUnselected(TabLayout.Tab tab) {}
+
+                @Override
+                public void onTabReselected(TabLayout.Tab tab) {}
+            });
+        }
     }
 
     private void setupTabs() {
@@ -91,9 +104,11 @@ public class TasksActivity extends AppCompatActivity {
                 currentTab = tab.getPosition();
                 if (currentTab == 0) {
                     showTasksView();
+                    tabTaskFilter.setVisibility(View.VISIBLE);
                     loadAllData();
                 } else {
                     showPlantingView();
+                    tabTaskFilter.setVisibility(View.GONE);
                     loadPlantingData();
                 }
             }
@@ -147,40 +162,13 @@ public class TasksActivity extends AppCompatActivity {
 
         showLoading(true);
 
-        apiService.getUserCrops(user.getId()).enqueue(new retrofit2.Callback<List<UserCrop>>() {
-            @Override
-            public void onResponse(retrofit2.Call<List<UserCrop>> call, retrofit2.Response<List<UserCrop>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    userCrops = response.body();
-                    cropCache.clear();
-                    for (UserCrop uc : userCrops) {
-                        String cropName = uc.getName();
-                        String areaName = uc.getArea() != null ? uc.getArea().getName() : "";
-                        String key = (cropName + "|" + areaName).toLowerCase().trim();
-                        cropCache.put(key, uc);
-                    }
-                }
-                loadTasks();
-            }
-
-            @Override
-            public void onFailure(retrofit2.Call<List<UserCrop>> call, Throwable t) {
-                loadTasks();
-            }
-        });
-    }
-
-    private void loadTasks() {
-        User user = prefsHelper.getUser();
-        if (user == null) return;
-
         apiService.getWeeklyTasks(user.getId()).enqueue(new retrofit2.Callback<List<TaskItem>>() {
             @Override
             public void onResponse(retrofit2.Call<List<TaskItem>> call, retrofit2.Response<List<TaskItem>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     allTasks.clear();
                     allTasks.addAll(response.body());
-                    loadWeatherAndAdjustTasks();
+                    finalizeAndFilterTasks();
                 } else {
                     showLoading(false);
                     showEmpty("Ошибка загрузки задач");
@@ -195,207 +183,8 @@ public class TasksActivity extends AppCompatActivity {
         });
     }
 
-    private void loadWeatherAndAdjustTasks() {
-        Set<Integer> regionIds = new HashSet<>();
-        for (TaskItem task : allTasks) {
-            if (task.getActionTypeId() != null && task.getActionTypeId() == 2) {
-                String key = (task.getCropName() + "|" + task.getAreaName()).toLowerCase().trim();
-                UserCrop uc = cropCache.get(key);
-                if (uc != null && uc.getArea() != null && uc.getArea().getRegionId() != null) {
-                    regionIds.add(uc.getArea().getRegionId());
-                }
-            }
-        }
-
-        if (regionIds.isEmpty()) {
-            finalizeAndFilterTasks();
-            return;
-        }
-
-        Map<Integer, List<WeatherData>> weatherCache = new HashMap<>();
-        for (Integer regionId : regionIds) {
-            loadWeatherForRegion(regionId, weatherCache, regionIds.size());
-        }
-    }
-
-    private void loadWeatherForRegion(Integer regionId, Map<Integer, List<WeatherData>> weatherCache, int totalExpected) {
-        apiService.getWeatherByRegionId(regionId).enqueue(new retrofit2.Callback<WeatherResponse>() {
-            @Override
-            public void onResponse(retrofit2.Call<WeatherResponse> call, retrofit2.Response<WeatherResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().getWeather() != null) {
-                    weatherCache.put(regionId, response.body().getWeather());
-                }
-                if (weatherCache.size() == totalExpected) {
-                    adjustTasksByWeather(weatherCache);
-                    finalizeAndFilterTasks();
-                }
-            }
-
-            @Override
-            public void onFailure(retrofit2.Call<WeatherResponse> call, Throwable t) {
-                weatherCache.put(regionId, new ArrayList<>());
-                if (weatherCache.size() == totalExpected) {
-                    adjustTasksByWeather(weatherCache);
-                    finalizeAndFilterTasks();
-                }
-            }
-        });
-    }
-
-    private void adjustTasksByWeather(Map<Integer, List<WeatherData>> weatherCache) {
-        Iterator<TaskItem> iterator = allTasks.iterator();
-
-        List<TaskItem> newWateringTasks = new ArrayList<>();
-
-        while (iterator.hasNext()) {
-            TaskItem task = iterator.next();
-
-            String key = (task.getCropName() + "|" + task.getAreaName()).toLowerCase().trim();
-            UserCrop uc = cropCache.get(key);
-            if (uc != null && uc.getGarden() != null) {
-                task.setGardenName(uc.getGarden().getName());
-            }
-
-            if (task.getActionTypeId() == null || task.getActionTypeId() != 2) {
-                continue;
-            }
-
-            if (!shouldWater(task, weatherCache)) {
-                iterator.remove();
-            }
-        }
-
-        addWeatherBasedWateringTasks(weatherCache, newWateringTasks);
-        allTasks.addAll(newWateringTasks);
-    }
-
-    private void addWeatherBasedWateringTasks(Map<Integer, List<WeatherData>> weatherCache, List<TaskItem> newTasks) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        String today = sdf.format(new Date());
-
-        for (UserCrop uc : userCrops) {
-            if (uc.getArea() == null || uc.getArea().getRegionId() == null) continue;
-
-            int regionId = uc.getArea().getRegionId();
-            List<WeatherData> weatherList = weatherCache.get(regionId);
-            if (weatherList == null || weatherList.isEmpty()) continue;
-
-            WeatherData todayWeather = null;
-            for (WeatherData wd : weatherList) {
-                if (wd.getDate() != null && wd.getDate().equals(today)) {
-                    todayWeather = wd;
-                    break;
-                }
-            }
-
-            if (todayWeather == null) continue;
-
-            boolean needsExtraWatering = false;
-            String reason = "";
-
-            double humidity = parseDouble(todayWeather.getHumidityMin());
-            double tempMax = parseDouble(todayWeather.getTemperatureMax());
-
-            Integer minHumidity = null;
-            Integer maxTemp = null;
-
-            if (uc.getCrop() != null) {
-                minHumidity = uc.getCrop().getMinHumidity();
-                maxTemp = uc.getCrop().getMaxTemp() != null ? uc.getCrop().getMaxTemp().intValue() : null;
-            } else if (uc.getIndividualCrop() != null) {
-                minHumidity = uc.getIndividualCrop().getMinHumidity();
-                maxTemp = uc.getIndividualCrop().getMaxTemp() != null ? uc.getIndividualCrop().getMaxTemp().intValue() : null;
-            }
-
-            if (minHumidity != null && humidity < minHumidity) {
-                needsExtraWatering = true;
-                reason = "Низкая влажность (" + String.format("%.0f", humidity) + "%), требуется дополнительный полив";
-            }
-            else if (maxTemp != null && tempMax > maxTemp + 5) {
-                needsExtraWatering = true;
-                reason = "Сильная жара (" + String.format("%.0f", tempMax) + "°C), требуется частый полив";
-            }
-            else if (maxTemp != null && tempMax > maxTemp) {
-                needsExtraWatering = true;
-                reason = "Высокая температура (" + String.format("%.0f", tempMax) + "°C), рекомендуется полив";
-            }
-
-            if (needsExtraWatering) {
-                TaskItem wateringTask = new TaskItem();
-                wateringTask.setCropName(uc.getName());
-                wateringTask.setVariety(uc.getCrop() != null ? uc.getCrop().getVariety() :
-                        (uc.getIndividualCrop() != null ? uc.getIndividualCrop().getVariety() : null));
-                wateringTask.setAreaName(uc.getArea().getName());
-                wateringTask.setActionTypeId(2);
-                wateringTask.setActionName("Полив");
-                wateringTask.setDueDate(today);
-                wateringTask.setLastDoneAt(null);
-                if (uc.getGarden() != null) {
-                    wateringTask.setGardenName(uc.getGarden().getName());
-                }
-
-                boolean alreadyExists = false;
-                for (TaskItem existing : allTasks) {
-                    if (existing.getCropName().equals(wateringTask.getCropName()) &&
-                            existing.getActionTypeId() == 2 &&
-                            existing.getDueDate().equals(today)) {
-                        alreadyExists = true;
-                        break;
-                    }
-                }
-                if (!alreadyExists) {
-                    newTasks.add(wateringTask);
-                    Log.d("TasksActivity", "Добавлена задача на полив для " + uc.getName() + " - " + reason);
-                }
-            }
-        }
-    }
-
-    private boolean shouldWater(TaskItem task, Map<Integer, List<WeatherData>> weatherCache) {
-        String key = (task.getCropName() + "|" + task.getAreaName()).toLowerCase().trim();
-        UserCrop uc = cropCache.get(key);
-
-        if (uc == null) return true;
-
-        Integer daysToGermination = null;
-        if (uc.getCrop() != null) {
-            daysToGermination = uc.getCrop().getDaysToGermination();
-        } else if (uc.getIndividualCrop() != null) {
-            daysToGermination = uc.getIndividualCrop().getDaysToGermination();
-        }
-
-        if (uc.getPlantedAt() != null && daysToGermination != null && daysToGermination > 0) {
-            try {
-                LocalDate plantedDate = LocalDate.parse(uc.getPlantedAt(), DateTimeFormatter.ISO_LOCAL_DATE);
-                long daysSincePlanted = ChronoUnit.DAYS.between(plantedDate, LocalDate.now());
-                if (daysSincePlanted < daysToGermination) {
-                    return false;
-                }
-            } catch (Exception e) {
-            }
-        }
-
-        if (uc.getArea() == null || uc.getArea().getRegionId() == null) return true;
-
-        List<WeatherData> weatherList = weatherCache.get(uc.getArea().getRegionId());
-        if (weatherList == null || weatherList.isEmpty()) return true;
-
-        for (WeatherData wd : weatherList) {
-            if (wd.getDate() != null && wd.getDate().equals(task.getDueDate())) {
-                double precipitation = parseDouble(wd.getPrecipitation());
-                if (precipitation >= 5) {
-                    return false;
-                }
-                break;
-            }
-        }
-
-        return true;
-    }
-
     private void finalizeAndFilterTasks() {
         removeDuplicateTasks();
-        filterCompletedFromDb();
         applyFilter();
     }
 
@@ -409,58 +198,6 @@ public class TasksActivity extends AppCompatActivity {
         }
         allTasks.clear();
         allTasks.addAll(uniqueMap.values());
-    }
-
-    private void filterCompletedFromDb() {
-        if (prefsHelper.getUser() == null) return;
-
-        int userId = prefsHelper.getUser().getId();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-
-        for (TaskItem task : allTasks) {
-            String date = task.getDueDate();
-            String cropName = task.getCropName();
-            String variety = task.getVariety();
-            String areaName = task.getAreaName();
-            String gardenName = task.getGardenName();
-            int actionTypeId = task.getActionTypeId();
-
-            try {
-                okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
-                        .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                        .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                        .build();
-
-                String url = "http://192.168.100.9:8080/api/history/check-task?userId=" + userId +
-                        "&cropName=" + java.net.URLEncoder.encode(cropName, "UTF-8") +
-                        "&variety=" + java.net.URLEncoder.encode(variety != null ? variety : "", "UTF-8") +
-                        "&areaName=" + java.net.URLEncoder.encode(areaName, "UTF-8") +
-                        "&gardenName=" + java.net.URLEncoder.encode(gardenName != null ? gardenName : "", "UTF-8") +
-                        "&actionTypeId=" + actionTypeId +
-                        "&date=" + date;
-
-                okhttp3.Request request = new okhttp3.Request.Builder().url(url).get().build();
-                okhttp3.Response response = client.newCall(request).execute();
-                String body = response.body().string();
-
-                if (body.contains("true")) {
-                    completedTasksFromDb.add(task.getCropName() + "|" + task.getAreaName() + "|" + task.getDueDate() + "|" + task.getActionTypeId());
-                }
-                response.close();
-            } catch (Exception e) {
-                Log.e("TasksActivity", "Ошибка проверки: " + e.getMessage());
-            }
-        }
-
-        List<TaskItem> filtered = new ArrayList<>();
-        for (TaskItem task : allTasks) {
-            String key = task.getCropName() + "|" + task.getAreaName() + "|" + task.getDueDate() + "|" + task.getActionTypeId();
-            if (!completedTasksFromDb.contains(key)) {
-                filtered.add(task);
-            }
-        }
-        allTasks.clear();
-        allTasks.addAll(filtered);
     }
 
     private void applyFilter() {
@@ -486,8 +223,16 @@ public class TasksActivity extends AppCompatActivity {
 
             try {
                 Date taskDate = sdf.parse(taskDateStr);
-                if (taskDate != null && (taskDate.equals(todayDate) || taskDate.after(todayDate))) {
-                    filteredTasks.add(task);
+                if (taskDate != null) {
+                    if (currentTaskFilter == 0) {
+                        if (!taskDate.after(todayDate)) {
+                            filteredTasks.add(task);
+                        }
+                    } else {
+                        if (taskDate.after(todayDate)) {
+                            filteredTasks.add(task);
+                        }
+                    }
                 }
             } catch (Exception e) {
             }
@@ -496,7 +241,7 @@ public class TasksActivity extends AppCompatActivity {
         groupTasksAndUpdate();
 
         if (filteredTasks.isEmpty()) {
-            showEmpty("Нет задач на текущую неделю");
+            showEmpty(currentTaskFilter == 0 ? "Нет текущих задач" : "Нет будущих задач");
         } else {
             hideEmpty();
         }
@@ -667,54 +412,12 @@ public class TasksActivity extends AppCompatActivity {
                         }
                     }
                 }
-                loadWeatherForRecommendations();
+                analyzeRecommendations();
             }
 
             @Override
             public void onFailure(retrofit2.Call<List<GardenHistory>> call, Throwable t) {
-                loadWeatherForRecommendations();
-            }
-        });
-    }
-
-    private void loadWeatherForRecommendations() {
-        weatherByRegion.clear();
-        Set<Integer> regionIds = new HashSet<>();
-        for (UserCrop uc : userCrops) {
-            if (uc.getArea() != null && uc.getArea().getRegionId() != null) {
-                regionIds.add(uc.getArea().getRegionId());
-            }
-        }
-
-        if (regionIds.isEmpty()) {
-            showLoading(false);
-            showEmpty("Нет благоприятных дней для посадки или все растения уже посажены");
-            return;
-        }
-
-        for (Integer regionId : regionIds) {
-            loadWeatherForRecommendationRegion(regionId, regionIds.size());
-        }
-    }
-
-    private void loadWeatherForRecommendationRegion(Integer regionId, int totalExpected) {
-        apiService.getWeatherByRegionId(regionId).enqueue(new retrofit2.Callback<WeatherResponse>() {
-            @Override
-            public void onResponse(retrofit2.Call<WeatherResponse> call, retrofit2.Response<WeatherResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().getWeather() != null) {
-                    weatherByRegion.put(String.valueOf(regionId), response.body().getWeather());
-                }
-                if (weatherByRegion.size() == totalExpected) {
-                    analyzeRecommendations();
-                }
-            }
-
-            @Override
-            public void onFailure(retrofit2.Call<WeatherResponse> call, Throwable t) {
-                weatherByRegion.put(String.valueOf(regionId), new ArrayList<>());
-                if (weatherByRegion.size() == totalExpected) {
-                    analyzeRecommendations();
-                }
+                analyzeRecommendations();
             }
         });
     }
@@ -726,32 +429,238 @@ public class TasksActivity extends AppCompatActivity {
         SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", new Locale("ru"));
         Calendar calendar = Calendar.getInstance();
 
-        for (int day = 0; day < 7; day++) {
+        Map<Integer, List<WeatherData>> weatherByRegion = new HashMap<>();
+        Set<Integer> regionIds = new HashSet<>();
+
+        for (UserCrop uc : userCrops) {
+            if (uc.getArea() != null && uc.getArea().getRegionId() != null) {
+                regionIds.add(uc.getArea().getRegionId());
+            }
+        }
+
+        for (Integer regionId : regionIds) {
+            loadWeatherForRecommendation(regionId, weatherByRegion, regionIds.size(), () -> {
+                List<PlantingRecommendation> finalRecs = buildRecommendations(
+                        userCrops, plantedKeys, weatherByRegion,
+                        sdf, dateFormat, dayFormat, calendar, 6
+                );
+                finalizeRecommendations(finalRecs);
+            });
+        }
+
+        if (regionIds.isEmpty()) {
+            List<PlantingRecommendation> finalRecs = buildRecommendations(
+                    userCrops, plantedKeys, weatherByRegion,
+                    sdf, dateFormat, dayFormat, calendar, 6
+            );
+            finalizeRecommendations(finalRecs);
+        }
+    }
+
+    private void loadWeatherForRecommendation(Integer regionId, Map<Integer, List<WeatherData>> weatherCache,
+                                              int totalExpected, Runnable callback) {
+        apiService.getWeatherByRegionId(regionId).enqueue(new retrofit2.Callback<WeatherResponse>() {
+            @Override
+            public void onResponse(retrofit2.Call<WeatherResponse> call, retrofit2.Response<WeatherResponse> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().getWeather() != null) {
+                    weatherCache.put(regionId, response.body().getWeather());
+                }
+                if (weatherCache.size() == totalExpected) {
+                    callback.run();
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<WeatherResponse> call, Throwable t) {
+                weatherCache.put(regionId, new ArrayList<>());
+                if (weatherCache.size() == totalExpected) {
+                    callback.run();
+                }
+            }
+        });
+    }
+
+    private List<PlantingRecommendation> buildRecommendations(
+            List<UserCrop> userCrops,
+            Set<String> plantedKeys,
+            Map<Integer, List<WeatherData>> weatherByRegion,
+            SimpleDateFormat sdf,
+            SimpleDateFormat dateFormat,
+            SimpleDateFormat dayFormat,
+            Calendar calendar,
+            int daysCount) {
+
+        List<PlantingRecommendation> result = new ArrayList<>();
+
+        for (int day = 0; day < daysCount; day++) {
             String dateStr = sdf.format(calendar.getTime());
             String displayDate = dateFormat.format(calendar.getTime());
             String dayOfWeek = dayFormat.format(calendar.getTime());
+            if (dayOfWeek.length() > 0) {
+                dayOfWeek = dayOfWeek.substring(0, 1).toUpperCase() + dayOfWeek.substring(1);
+            }
 
             for (UserCrop uc : userCrops) {
-                if (uc.getArea() == null || uc.getArea().getRegionId() == null) continue;
+                if (uc.getArea() == null) continue;
 
                 String key = getCropKey(uc);
                 if (plantedKeys.contains(key)) continue;
 
-                List<WeatherData> weatherList = weatherByRegion.get(String.valueOf(uc.getArea().getRegionId()));
-                if (weatherList == null) continue;
+                PlantingRecommendation rec = new PlantingRecommendation();
+                rec.setUserCropId(uc.getId());
+                rec.setDate(displayDate);
+                rec.setDayOfWeek(dayOfWeek);
+                rec.setAreaName(uc.getArea().getName());
+                rec.setAreaId(uc.getAreaId());
+                rec.setCropName(uc.getName());
+                rec.setVariety(uc.getCrop() != null ? uc.getCrop().getVariety() :
+                        (uc.getIndividualCrop() != null ? uc.getIndividualCrop().getVariety() : null));
 
-                for (WeatherData wd : weatherList) {
-                    if (wd.getDate() != null && wd.getDate().equals(dateStr)) {
-                        PlantingRecommendation rec = createRecommendation(uc, wd, displayDate, dayOfWeek);
-                        recommendations.add(rec);
-                        break;
+                if (uc.getGarden() != null) {
+                    rec.setGardenName(uc.getGarden().getName());
+                }
+
+                if (uc.getCrop() != null) {
+                    setRequiredValues(rec, uc.getCrop());
+                } else if (uc.getIndividualCrop() != null) {
+                    setRequiredValues(rec, uc.getIndividualCrop());
+                }
+
+                Integer regionId = uc.getArea().getRegionId();
+                if (regionId != null && weatherByRegion.containsKey(regionId)) {
+                    List<WeatherData> weatherList = weatherByRegion.get(regionId);
+                    for (WeatherData wd : weatherList) {
+                        if (wd.getDate() != null && wd.getDate().equals(dateStr)) {
+                            setCurrentWeather(rec, wd);
+                            break;
+                        }
                     }
                 }
+
+                if (rec.getTempCurrent() == null) {
+                    rec.setTempCurrent("Нет данных");
+                    rec.setHumidityCurrent("Нет данных");
+                    rec.setPrecipCurrent("Нет данных");
+                    rec.setWindCurrent("Нет данных");
+                    rec.setWeatherText("Прогноз недоступен");
+                }
+
+                result.add(rec);
             }
             calendar.add(Calendar.DAY_OF_YEAR, 1);
         }
 
-        finalizeRecommendations(recommendations);
+        return result;
+    }
+
+    private void setRequiredValues(PlantingRecommendation rec, Object crop) {
+        Integer minTemp = null, maxTemp = null;
+        Integer minHumidity = null, maxHumidity = null;
+        Float neededPrecip = null;
+        Float maxWind = null;
+
+        if (crop instanceof Crop) {
+            Crop c = (Crop) crop;
+            if (c.getMinTemp() != null) minTemp = c.getMinTemp().intValue();
+            if (c.getMaxTemp() != null) maxTemp = c.getMaxTemp().intValue();
+            minHumidity = c.getMinHumidity();
+            maxHumidity = c.getMaxHumidity();
+            neededPrecip = Float.valueOf(c.getNeededPrecipitation());
+            maxWind = Float.valueOf(c.getMaxWind());
+        } else if (crop instanceof IndividualUserCrop) {
+            IndividualUserCrop ic = (IndividualUserCrop) crop;
+            if (ic.getMinTemp() != null) minTemp = ic.getMinTemp().intValue();
+            if (ic.getMaxTemp() != null) maxTemp = ic.getMaxTemp().intValue();
+            minHumidity = ic.getMinHumidity();
+            maxHumidity = ic.getMaxHumidity();
+            neededPrecip = Float.valueOf(ic.getNeededPrecipitation());
+            maxWind = Float.valueOf(ic.getMaxWind());
+        }
+
+        if (minTemp != null && maxTemp != null) {
+            rec.setTempRequired(minTemp + "..." + maxTemp + "°C");
+        } else if (minTemp != null) {
+            rec.setTempRequired("от " + minTemp + "°C");
+        } else if (maxTemp != null) {
+            rec.setTempRequired("до " + maxTemp + "°C");
+        } else {
+            rec.setTempRequired("—");
+        }
+
+        if (minHumidity != null && maxHumidity != null) {
+            rec.setHumidityRequired(minHumidity + "..." + maxHumidity + "%");
+        } else if (minHumidity != null) {
+            rec.setHumidityRequired("от " + minHumidity + "%");
+        } else if (maxHumidity != null) {
+            rec.setHumidityRequired("до " + maxHumidity + "%");
+        } else {
+            rec.setHumidityRequired("—");
+        }
+
+        if (neededPrecip != null) {
+            rec.setPrecipRequired(String.format(Locale.getDefault(), "%.1f мм", neededPrecip));
+        } else {
+            rec.setPrecipRequired("—");
+        }
+
+        if (maxWind != null) {
+            rec.setWindRequired(String.format(Locale.getDefault(), "до %.1f м/с", maxWind));
+        } else {
+            rec.setWindRequired("—");
+        }
+    }
+
+    private void setCurrentWeather(PlantingRecommendation rec, WeatherData wd) {
+        double tempMin = parseDouble(wd.getTemperatureMin());
+        double tempMax = parseDouble(wd.getTemperatureMax());
+        double precipitation = parseDouble(wd.getPrecipitation());
+        double humidityMin = parseDouble(wd.getHumidityMin());
+        double humidityMax = parseDouble(wd.getHumidityMax());
+        double windMin = parseDouble(wd.getWindMin());
+        double windMax = parseDouble(wd.getWindMax());
+
+        rec.setTempCurrent(String.format(Locale.getDefault(), "%.0f...%.0f°C", tempMin, tempMax));
+        rec.setHumidityCurrent(String.format(Locale.getDefault(), "%.0f...%.0f%%", humidityMin, humidityMax));
+        rec.setPrecipCurrent(String.format(Locale.getDefault(), "%.1f мм", precipitation));
+        rec.setWindCurrent(String.format(Locale.getDefault(), "%.1f...%.1f м/с", windMin, windMax));
+        rec.setWeatherText(getWeatherDescription(tempMin, tempMax, precipitation, humidityMin, windMax));
+    }
+
+    private String getWeatherDescription(double tempMin, double tempMax, double precipitation, double humidity, double windSpeed) {
+        StringBuilder desc = new StringBuilder();
+
+        if (tempMin > 0 && tempMax > 20) {
+            desc.append("Тепло");
+        } else if (tempMin < 0) {
+            desc.append("Холодно");
+        } else {
+            desc.append("Умеренно");
+        }
+
+        if (precipitation > 5) {
+            desc.append(", осадки");
+        } else if (precipitation > 0) {
+            desc.append(", небольшие осадки");
+        } else {
+            desc.append(", без осадков");
+        }
+
+        if (humidity > 70) {
+            desc.append(", высокая влажность");
+        } else if (humidity < 40) {
+            desc.append(", низкая влажность");
+        }
+
+        return desc.toString();
+    }
+
+    private double parseDouble(String value) {
+        if (value == null || value.isEmpty()) return 0.0;
+        try {
+            return Double.parseDouble(value.replace(",", "."));
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 
     private String getCropKey(UserCrop uc) {
@@ -762,33 +671,6 @@ public class TasksActivity extends AppCompatActivity {
         return cropName.trim().toLowerCase() + "|" +
                 (variety != null ? variety.trim().toLowerCase() : "обычный") + "|" +
                 areaName.trim().toLowerCase();
-    }
-
-    private PlantingRecommendation createRecommendation(UserCrop uc, WeatherData wd, String date, String dayOfWeek) {
-        PlantingRecommendation rec = new PlantingRecommendation();
-        rec.setUserCropId(uc.getId());
-        rec.setDate(date);
-        rec.setDayOfWeek(dayOfWeek);
-        rec.setAreaName(uc.getArea().getName());
-        rec.setAreaId(uc.getAreaId());
-
-        if (uc.getGarden() != null) {
-            rec.setGardenName(uc.getGarden().getName());
-        } else {
-            rec.setGardenName("");
-        }
-
-        double tempMin = parseDouble(wd.getTemperatureMin());
-        double tempMax = parseDouble(wd.getTemperatureMax());
-
-        rec.setCropName(uc.getName());
-        rec.setVariety(uc.getCrop() != null ? uc.getCrop().getVariety() :
-                (uc.getIndividualCrop() != null ? uc.getIndividualCrop().getVariety() : null));
-
-        rec.setTempCurrent(String.format("%.0f...%.0f°C", tempMin, tempMax));
-        rec.setWeatherText((int)tempMin + "-" + (int)tempMax + "°C");
-
-        return rec;
     }
 
     private void finalizeRecommendations(List<PlantingRecommendation> recommendations) {
@@ -804,36 +686,6 @@ public class TasksActivity extends AppCompatActivity {
     }
 
     private void onPlantClick(PlantingRecommendation item) {
-        try {
-            Calendar today = Calendar.getInstance();
-            today.set(Calendar.HOUR_OF_DAY, 0);
-            today.set(Calendar.MINUTE, 0);
-            today.set(Calendar.SECOND, 0);
-            today.set(Calendar.MILLISECOND, 0);
-
-            SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM", new Locale("ru"));
-            Date recDate = sdf.parse(item.getDate());
-
-            Calendar recCalendar = Calendar.getInstance();
-            recCalendar.setTime(recDate);
-            recCalendar.set(Calendar.YEAR, today.get(Calendar.YEAR));
-            recCalendar.set(Calendar.HOUR_OF_DAY, 0);
-            recCalendar.set(Calendar.MINUTE, 0);
-            recCalendar.set(Calendar.SECOND, 0);
-            recCalendar.set(Calendar.MILLISECOND, 0);
-
-            if (recCalendar.getTime().after(today.getTime())) {
-                new AlertDialog.Builder(this)
-                        .setTitle("Нельзя посадить")
-                        .setMessage("Нельзя посадить растение в будущем. Выберите сегодняшний или прошедший день.")
-                        .setPositiveButton("OK", null)
-                        .show();
-                return;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         new AlertDialog.Builder(this)
                 .setTitle("Посадка")
                 .setMessage("Посадить " + item.getCropName() + " на участке " + item.getAreaName() + "?")
@@ -873,15 +725,6 @@ public class TasksActivity extends AppCompatActivity {
                 Toast.makeText(TasksActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    private double parseDouble(String value) {
-        if (value == null || value.isEmpty()) return 0.0;
-        try {
-            return Double.parseDouble(value.replace(",", "."));
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
     }
 
     private void showLoading(boolean show) {

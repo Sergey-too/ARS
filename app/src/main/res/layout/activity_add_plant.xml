@@ -45,6 +45,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            android:layout_marginBottom="80dp"
             app:cardBackgroundColor="@color/color_surface_white"
             app:cardCornerRadius="24dp"
             app:cardElevation="8dp"
@@ -244,11 +245,118 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/tvDescriptionLabel" />
 
+                <!-- Блок настройки совместимости (исправленный) -->
+                <TextView
+                    android:id="@+id/tvCompatibilityLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Совместимость с другими растениями:"
+                    android:textStyle="bold"
+                    android:textColor="@color/color_green_primary"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tvPlantDescription" />
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cvCompatibilityContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="200dp"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tvCompatibilityLabel">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="4dp">
+
+                        <View
+                            android:id="@+id/corner"
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:background="#E8F5E9"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <HorizontalScrollView
+                            android:id="@+id/headerScroll"
+                            android:layout_width="0dp"
+                            android:layout_height="80dp"
+                            android:scrollbars="none"
+                            android:background="#F1F8E9"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/corner"
+                            app:layout_constraintTop_toTopOf="parent">
+
+                            <LinearLayout
+                                android:id="@+id/containerTopNames"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal" />
+                        </HorizontalScrollView>
+
+                        <ScrollView
+                            android:id="@+id/sideScroll"
+                            android:layout_width="80dp"
+                            android:layout_height="0dp"
+                            android:scrollbars="none"
+                            android:background="#F1F8E9"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/corner">
+
+                            <LinearLayout
+                                android:id="@+id/containerLeftNames"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical" />
+                        </ScrollView>
+
+                        <HorizontalScrollView
+                            android:id="@+id/dataHorizontalScroll"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/sideScroll"
+                            app:layout_constraintTop_toBottomOf="@+id/headerScroll">
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/rvCompatibilityList"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:padding="2dp" />
+                        </HorizontalScrollView>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSaveCompatibility"
+                            android:layout_width="match_parent"
+                            android:layout_height="36dp"
+                            android:layout_marginTop="4dp"
+                            android:text="СОХРАНИТЬ"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="8dp"
+                            app:backgroundTint="@color/color_green_primary"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                </androidx.cardview.widget.CardView>
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnAddPlant"
                     android:layout_width="0dp"
                     android:layout_height="56dp"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="8dp"
                     android:text="ДОБАВИТЬ РАСТЕНИЕ"
                     android:textSize="14sp"
@@ -257,8 +365,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvPlantDescription" />
-
+                    app:layout_constraintTop_toBottomOf="@+id/cvCompatibilityContainer" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
