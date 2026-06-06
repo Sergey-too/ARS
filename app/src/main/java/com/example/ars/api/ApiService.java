@@ -159,7 +159,7 @@ public interface ApiService {
     Call<IndividualUserCrop> updateUserCrop(@Path("id") int id, @Body IndividualUserCrop crop);
 
     @DELETE("/api/my-crops/{id}")
-    Call<Void> deleteUserCrop(@Path("id") int id);
+    Call<Map<String, Object>> deleteUserCrop(@Path("id") int id);
 
     @GET("/api/individual-compatibility/matrix/{userId}")
     Call<List<IndividualCompatibilityDTO>> getIndividualCompatibilityMatrix(@Path("userId") int userId);

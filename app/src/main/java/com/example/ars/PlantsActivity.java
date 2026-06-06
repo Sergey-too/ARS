@@ -1,5 +1,7 @@
 package com.example.ars;
 
+import static androidx.fragment.app.FragmentManager.TAG;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,6 +22,7 @@ import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
 import com.example.ars.models.Crop;
 import com.example.ars.models.UserCrop;
+import com.example.ars.models.WeatherAlert;
 import com.example.ars.utils.SharedPreferencesHelper;
 import com.example.ars.utils.WeatherBackgroundUpdater;
 
@@ -70,6 +73,12 @@ public class PlantsActivity extends AppCompatActivity {
 
     private void initViews() {
     }
+    private void checkAlertsNow() {
+        if (prefsHelper.getUser() != null) {
+            Log.d("PlantsActivity", "Принудительная проверка уведомлений");
+            AlertWorker.checkNow(this);
+        }
+    }
 
     private void startAlertWorker() {
         Constraints constraints = new Constraints.Builder()
@@ -97,6 +106,7 @@ public class PlantsActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadAllData();
+        checkAlertsNow();
     }
 
     private void updateWeatherInBackground() {

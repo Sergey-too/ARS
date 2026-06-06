@@ -44,6 +44,11 @@ public class AlertWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
+        return checkAndNotify();
+    }
+
+    // Публичный метод для принудительной проверки из Activity
+    public Result checkAndNotify() {
         SharedPreferencesHelper prefsHelper = new SharedPreferencesHelper(getApplicationContext());
 
         if (prefsHelper.getUser() == null) {
@@ -52,20 +57,28 @@ public class AlertWorker extends Worker {
         }
 
         int userId = prefsHelper.getUser().getId();
-        Log.d(TAG, "Запуск проверки для пользователя: " + userId);
+        Log.d(TAG, "=== ЗАПУСК ПРОВЕРКИ УВЕДОМЛЕНИЙ для пользователя: " + userId + " ===");
 
         try {
             ApiService apiService = RetrofitClient.getApiService();
 
+            // Проверяем системные оповещения
             Response<List<WeatherAlert>> alertsResponse = apiService.checkAlerts(userId).execute();
             if (alertsResponse.isSuccessful() && alertsResponse.body() != null) {
+                Log.d(TAG, "Найдено системных оповещений: " + alertsResponse.body().size());
                 processAlerts(alertsResponse.body(), userId);
+            } else {
+                Log.d(TAG, "Системных оповещений нет");
             }
 
+            // Проверяем погодные условия для растений
+            Log.d(TAG, "Проверка погодных условий для растений...");
             checkUserCropsWeather(userId, apiService);
 
+            // Очищаем старые ключи
             cleanOldKeys(userId);
 
+            Log.d(TAG, "=== ПРОВЕРКА УВЕДОМЛЕНИЙ ЗАВЕРШЕНА ===");
             return Result.success();
         } catch (Exception e) {
             Log.e(TAG, "Ошибка: " + e.getMessage(), e);
@@ -79,20 +92,20 @@ public class AlertWorker extends Worker {
         int maxId = lastShownId;
 
         for (WeatherAlert alert : alerts) {
-            if (alert.getId() > lastShownId) {
-                String alertKey = getAlertKey(userId, "system_alert_" + alert.getId());
+            String alertKey = getAlertKey(userId, "system_alert_" + alert.getId());
 
-                if (!isNotificationShownToday(alertKey, alert.getAlertDate())) {
-                    String alertType = getAlertType(alert.getAlertText());
-                    String title = alertType + " " + formatAlertDate(alert.getAlertDate());
+            // Проверяем, не показывали ли уже это оповещение сегодня
+            if (!isNotificationShownToday(alertKey, alert.getAlertDate())) {
+                String alertType = getAlertType(alert.getAlertText());
+                String title = alertType + " " + formatAlertDate(alert.getAlertDate());
 
-                    showNotification(alert.getAlertText(), alert.getAlertDate(), title, alertKey);
-                    markNotificationShown(alertKey, alert.getAlertDate());
-                }
+                showNotification(alert.getAlertText(), alert.getAlertDate(), title, alertKey);
+                markNotificationShown(alertKey, alert.getAlertDate());
+                Log.d(TAG, "Показано системное оповещение: " + alert.getAlertText());
+            }
 
-                if (alert.getId() > maxId) {
-                    maxId = alert.getId();
-                }
+            if (alert.getId() > maxId) {
+                maxId = alert.getId();
             }
         }
 
@@ -110,10 +123,13 @@ public class AlertWorker extends Worker {
             }
 
             List<UserCrop> userCrops = cropsResponse.body();
+            Log.d(TAG, "Найдено растений: " + userCrops.size());
+
             Map<Integer, List<WeatherData>> weatherCache = new HashMap<>();
 
             for (UserCrop crop : userCrops) {
                 if (crop.getArea() == null || crop.getArea().getRegionId() == null) {
+                    Log.d(TAG, "У растения " + crop.getName() + " нет региона");
                     continue;
                 }
 
@@ -124,6 +140,7 @@ public class AlertWorker extends Worker {
                             apiService.getWeatherByRegionId(regionId).execute();
                     if (weatherResponse.isSuccessful() && weatherResponse.body() != null) {
                         weatherCache.put(regionId, weatherResponse.body().getWeather());
+                        Log.d(TAG, "Загружена погода для региона " + regionId);
                     }
                 }
 
@@ -142,6 +159,7 @@ public class AlertWorker extends Worker {
                 }
 
                 if (todayWeather != null) {
+                    Log.d(TAG, "Проверка условий для растения: " + crop.getName());
                     checkAndNotifyForCrop(crop, todayWeather, userId);
                 }
             }
@@ -163,6 +181,9 @@ public class AlertWorker extends Worker {
         double wind = parseDouble(weather.getWindMax());
         double precipitation = parseDouble(weather.getPrecipitation());
 
+        Log.d(TAG, cropName + ": temp=" + tempMin + "-" + tempMax +
+                ", влажность=" + humidity + ", ветер=" + wind + ", осадки=" + precipitation);
+
         if (crop.getCrop() != null) {
             warningKey = checkCropConditions(crop.getCrop(), tempMin, tempMax, humidity, wind, precipitation,
                     cropName, areaName, warnings, userId);
@@ -174,8 +195,11 @@ public class AlertWorker extends Worker {
         if (warnings.length() > 0 && warningKey != null) {
             String dateStr = weather.getDate() != null ? weather.getDate() : getTodayDate();
             if (!isNotificationShownToday(warningKey, dateStr)) {
+                Log.d(TAG, "Показываем уведомление для " + cropName + ": " + warnings.toString());
                 showNotification(warnings.toString(), weather.getDate(), cropName, warningKey);
                 markNotificationShown(warningKey, dateStr);
+            } else {
+                Log.d(TAG, "Уведомление для " + cropName + " уже показывалось сегодня");
             }
         }
     }
@@ -188,38 +212,39 @@ public class AlertWorker extends Worker {
         boolean hasWarning = false;
 
         if (crop.getMinTemp() != null && tempMin < crop.getMinTemp()) {
-            warnings.append("Слишком холодно! ").append(String.format("%.1f°C", tempMin))
-                    .append(" ниже нормы (").append(crop.getMinTemp()).append("°C)\n");
+            warnings.append("❄ Слишком холодно! ").append(String.format("%.1f°C", tempMin))
+                    .append(" (норма от ").append(crop.getMinTemp()).append("°C)\n");
             keyBuilder.append("temp_low");
             hasWarning = true;
-        }
-        if (crop.getMaxTemp() != null && tempMax > crop.getMaxTemp()) {
+        } else if (crop.getMaxTemp() != null && tempMax > crop.getMaxTemp()) {
             warnings.append("Слишком жарко! ").append(String.format("%.1f°C", tempMax))
-                    .append(" выше нормы (").append(crop.getMaxTemp()).append("°C)\n");
+                    .append(" (норма до ").append(crop.getMaxTemp()).append("°C)\n");
             keyBuilder.append("temp_high");
             hasWarning = true;
         }
+
         if (crop.getMinHumidity() != null && humidity < crop.getMinHumidity()) {
             warnings.append("Низкая влажность! ").append(String.format("%.0f%%", humidity))
-                    .append(" ниже нормы (").append(crop.getMinHumidity()).append("%)\n");
+                    .append(" (норма от ").append(crop.getMinHumidity()).append("%)\n");
             keyBuilder.append("hum_low");
             hasWarning = true;
-        }
-        if (crop.getMaxHumidity() != null && humidity > crop.getMaxHumidity()) {
+        } else if (crop.getMaxHumidity() != null && humidity > crop.getMaxHumidity()) {
             warnings.append("Высокая влажность! ").append(String.format("%.0f%%", humidity))
-                    .append(" выше нормы (").append(crop.getMaxHumidity()).append("%)\n");
+                    .append(" (норма до ").append(crop.getMaxHumidity()).append("%)\n");
             keyBuilder.append("hum_high");
             hasWarning = true;
         }
+
         if (crop.getMaxWind() != null && wind > crop.getMaxWind()) {
             warnings.append("Сильный ветер! ").append(String.format("%.1f м/с", wind))
-                    .append(" выше нормы (").append(crop.getMaxWind()).append(" м/с)\n");
+                    .append(" (норма до ").append(crop.getMaxWind()).append(" м/с)\n");
             keyBuilder.append("wind");
             hasWarning = true;
         }
+
         if (crop.getNeededPrecipitation() != null && precipitation > crop.getNeededPrecipitation()) {
             warnings.append("Много осадков! ").append(String.format("%.1f мм", precipitation))
-                    .append(" больше нормы (").append(crop.getNeededPrecipitation()).append(" мм)\n");
+                    .append(" (норма до ").append(crop.getNeededPrecipitation()).append(" мм)\n");
             keyBuilder.append("precip");
             hasWarning = true;
         }
@@ -239,38 +264,39 @@ public class AlertWorker extends Worker {
         boolean hasWarning = false;
 
         if (crop.getMinTemp() != null && tempMin < crop.getMinTemp()) {
-            warnings.append("❄Слишком холодно! ").append(String.format("%.1f°C", tempMin))
-                    .append(" ниже нормы (").append(crop.getMinTemp()).append("°C)\n");
+            warnings.append("❄ Слишком холодно! ").append(String.format("%.1f°C", tempMin))
+                    .append(" (норма от ").append(crop.getMinTemp()).append("°C)\n");
             keyBuilder.append("temp_low");
             hasWarning = true;
-        }
-        if (crop.getMaxTemp() != null && tempMax > crop.getMaxTemp()) {
+        } else if (crop.getMaxTemp() != null && tempMax > crop.getMaxTemp()) {
             warnings.append("Слишком жарко! ").append(String.format("%.1f°C", tempMax))
-                    .append(" выше нормы (").append(crop.getMaxTemp()).append("°C)\n");
+                    .append(" (норма до ").append(crop.getMaxTemp()).append("°C)\n");
             keyBuilder.append("temp_high");
             hasWarning = true;
         }
+
         if (crop.getMinHumidity() != null && humidity < crop.getMinHumidity()) {
             warnings.append("Низкая влажность! ").append(String.format("%.0f%%", humidity))
-                    .append(" ниже нормы (").append(crop.getMinHumidity()).append("%)\n");
+                    .append(" (норма от ").append(crop.getMinHumidity()).append("%)\n");
             keyBuilder.append("hum_low");
             hasWarning = true;
-        }
-        if (crop.getMaxHumidity() != null && humidity > crop.getMaxHumidity()) {
+        } else if (crop.getMaxHumidity() != null && humidity > crop.getMaxHumidity()) {
             warnings.append("Высокая влажность! ").append(String.format("%.0f%%", humidity))
-                    .append(" выше нормы (").append(crop.getMaxHumidity()).append("%)\n");
+                    .append(" (норма до ").append(crop.getMaxHumidity()).append("%)\n");
             keyBuilder.append("hum_high");
             hasWarning = true;
         }
+
         if (crop.getMaxWind() != null && wind > crop.getMaxWind()) {
             warnings.append("Сильный ветер! ").append(String.format("%.1f м/с", wind))
-                    .append(" выше нормы (").append(crop.getMaxWind()).append(" м/с)\n");
+                    .append(" (норма до ").append(crop.getMaxWind()).append(" м/с)\n");
             keyBuilder.append("wind");
             hasWarning = true;
         }
+
         if (crop.getNeededPrecipitation() != null && precipitation > crop.getNeededPrecipitation()) {
             warnings.append("Много осадков! ").append(String.format("%.1f мм", precipitation))
-                    .append(" больше нормы (").append(crop.getNeededPrecipitation()).append(" мм)\n");
+                    .append(" (норма до ").append(crop.getNeededPrecipitation()).append(" мм)\n");
             keyBuilder.append("precip");
             hasWarning = true;
         }
@@ -304,7 +330,8 @@ public class AlertWorker extends Worker {
         long lastShownTime = prefs.getLong(storedKey + "_time", 0);
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastShownTime < NOTIFICATION_COOLDOWN_MS) {
-            Log.d(TAG, "Уведомление " + key + " в кулдауне");
+            Log.d(TAG, "Уведомление " + key + " в кулдауне (" +
+                    TimeUnit.MILLISECONDS.toMinutes(NOTIFICATION_COOLDOWN_MS - (currentTime - lastShownTime)) + " мин)");
             return true;
         }
 
@@ -318,6 +345,7 @@ public class AlertWorker extends Worker {
                 .putString(key, today)
                 .putLong(key + "_time", System.currentTimeMillis())
                 .apply();
+        Log.d(TAG, "Отметили уведомление " + key + " как показанное в " + today);
     }
 
     private void cleanOldKeys(int userId) {
@@ -363,7 +391,7 @@ public class AlertWorker extends Worker {
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             Date date = inputFormat.parse(dateStr);
             SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM", Locale.getDefault());
-            return "(" + outputFormat.format(date) + ")";
+            return outputFormat.format(date);
         } catch (Exception e) {
             return "";
         }
@@ -397,6 +425,7 @@ public class AlertWorker extends Worker {
             );
             channel.setDescription("Оповещения о погодных условиях для ваших растений");
             channel.enableVibration(true);
+            channel.setBypassDnd(true);
             manager.createNotificationChannel(channel);
         }
 
@@ -420,6 +449,24 @@ public class AlertWorker extends Worker {
             return Double.parseDouble(value.replace(",", "."));
         } catch (NumberFormatException e) {
             return 0.0;
+        }
+    }
+
+    public static void checkNow(Context context) {
+        try {
+            // Создаём экземпляр с пустыми параметрами
+            AlertWorker worker = new AlertWorker(context, null);
+
+            // Вызываем doWork напрямую
+            Result result = worker.doWork();
+
+            if (result == Result.success()) {
+                Log.d(TAG, "Ручная проверка уведомлений выполнена успешно");
+            } else {
+                Log.d(TAG, "Ручная проверка уведомлений завершилась с ошибкой");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Ошибка при ручной проверке: " + e.getMessage(), e);
         }
     }
 }

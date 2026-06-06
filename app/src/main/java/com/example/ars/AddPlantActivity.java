@@ -812,10 +812,81 @@ public class AddPlantActivity extends AppCompatActivity {
             return;
         }
 
+        // НОВАЯ ПРОВЕРКА: валидация даты сбора
+        if (!validateHarvestDate()) {
+            return;
+        }
+
         // Проверяем совместимость перед добавлением
         loadExistingPlantsOnArea(selectedAreaId, () -> {
             checkCompatibilityBeforeAdd();
         });
+    }
+    private boolean validateHarvestDate() {
+        String plantingDateStr = etPlantingDate.getText().toString().trim();
+        String harvestDateStr = etHarvestDate.getText().toString().trim();
+
+        // Если даты не указаны, пропускаем проверку
+        if (plantingDateStr.isEmpty() || harvestDateStr.isEmpty()) {
+            return true;
+        }
+
+        // Получаем дни до сбора урожая из выбранной культуры
+        Integer daysToHarvest = null;
+        if (selectedCropData != null) {
+            daysToHarvest = selectedCropData.getDaysToHarvest();
+        } else if (selectedIndividualCropId != null) {
+            // Если это пользовательское растение, нужно загрузить его данные
+            // или использовать already loaded individualCrop data
+            for (IndividualUserCrop ic : allUserPlants) {
+                if (ic.getId().equals(selectedIndividualCropId)) {
+                    daysToHarvest = ic.getDaysToHarvest();
+                    break;
+                }
+            }
+        }
+
+        // Если не указано через сколько дней собирать урожай, пропускаем проверку
+        if (daysToHarvest == null || daysToHarvest <= 0) {
+            return true;
+        }
+
+        SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+        SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+
+        try {
+            Date plantingDate = uiFormat.parse(plantingDateStr);
+            Date harvestDate = uiFormat.parse(harvestDateStr);
+
+            if (plantingDate == null || harvestDate == null) {
+                return true;
+            }
+
+            // Вычисляем ожидаемую дату сбора
+            Calendar expectedHarvest = Calendar.getInstance();
+            expectedHarvest.setTime(plantingDate);
+            expectedHarvest.add(Calendar.DAY_OF_YEAR, daysToHarvest);
+
+            Calendar harvestCal = Calendar.getInstance();
+            harvestCal.setTime(harvestDate);
+
+            // Если дата сбора раньше ожидаемой
+            if (harvestCal.before(expectedHarvest)) {
+                SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM.yyyy", new Locale("ru"));
+                String expectedDateStr = outputFormat.format(expectedHarvest.getTime());
+
+                tilHarvestDate.setError("Сбор урожая возможен не ранее " + expectedDateStr +
+                        " (через " + daysToHarvest + " дней после посадки)");
+                return false;
+            }
+
+            tilHarvestDate.setError(null);
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return true;
+        }
     }
 
     private void checkCompatibilityBeforeAdd() {
@@ -953,17 +1024,27 @@ public class AddPlantActivity extends AppCompatActivity {
         SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
         SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
 
+        final String plantedAtStr;
+        final String harvestedAtStr;
+
         try {
             String plantingDateStr = etPlantingDate.getText().toString().trim();
             String harvestDateStr = etHarvestDate.getText().toString().trim();
             if (!plantingDateStr.isEmpty() && !harvestDateStr.isEmpty()) {
                 Date plantingDate = uiFormat.parse(plantingDateStr);
                 Date harvestDate = uiFormat.parse(harvestDateStr);
-                request.put("plantedAt", serverFormat.format(plantingDate));
-                request.put("harvestedAt", serverFormat.format(harvestDate));
+                plantedAtStr = serverFormat.format(plantingDate);
+                harvestedAtStr = serverFormat.format(harvestDate);
+                request.put("plantedAt", plantedAtStr);
+                request.put("harvestedAt", harvestedAtStr);
+            } else {
+                plantedAtStr = null;
+                harvestedAtStr = null;
             }
         } catch (Exception e) {
             e.printStackTrace();
+            Toast.makeText(this, "Ошибка при обработке дат", Toast.LENGTH_SHORT).show();
+            return;
         }
 
         apiService.addUserCrop(request).enqueue(new Callback<Map<String, Object>>() {
@@ -975,6 +1056,9 @@ public class AddPlantActivity extends AppCompatActivity {
                         Number idNum = (Number) body.get("id");
                         createdUserCropId = idNum.intValue();
                     }
+
+                    createPlantingHistoryIfNeeded(plantedAtStr);
+
                     Toast.makeText(AddPlantActivity.this, "Растение добавлено!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
@@ -982,9 +1066,71 @@ public class AddPlantActivity extends AppCompatActivity {
                     Toast.makeText(AddPlantActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                 }
             }
+
             @Override
             public void onFailure(Call<Map<String, Object>> call, Throwable t) {
                 Toast.makeText(AddPlantActivity.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void createPlantingHistoryIfNeeded(String plantedAtStr) {
+        if (plantedAtStr == null || plantedAtStr.isEmpty()) {
+            return;
+        }
+
+        String todayStr = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        if (plantedAtStr.compareTo(todayStr) > 0) {
+            return;
+        }
+
+        String cropName = "";
+        String variety = "";
+        String areaName = selectedArea != null ? selectedArea.getName() : "";
+        String gardenName = selectedGarden != null ? selectedGarden.getName() : "";
+
+        if (selectedCropData != null) {
+            cropName = selectedCropData.getName();
+            variety = selectedCropData.getVariety() != null ? selectedCropData.getVariety() : "Обычный";
+        } else if (selectedIndividualCropId != null) {
+            // Нужно получить данные пользовательского растения
+            for (IndividualUserCrop ic : allUserPlants) {
+                if (ic.getId().equals(selectedIndividualCropId)) {
+                    cropName = ic.getName();
+                    variety = ic.getVariety() != null ? ic.getVariety() : "Обычный";
+                    break;
+                }
+            }
+        }
+
+        if (cropName.isEmpty()) {
+            return;
+        }
+
+        Map<String, Object> historyRequest = new HashMap<>();
+        historyRequest.put("userId", prefsHelper.getUser().getId());
+        historyRequest.put("actionTypeId", 1);
+        historyRequest.put("doneAt", plantedAtStr);
+        historyRequest.put("cropName", cropName);
+        historyRequest.put("variety", variety);
+        historyRequest.put("areaName", areaName);
+        historyRequest.put("gardenName", gardenName);
+        historyRequest.put("regionId", selectedArea != null ? selectedArea.getRegionId() : null);
+
+        String finalCropName = cropName;
+        apiService.addGardenHistory(historyRequest).enqueue(new Callback<Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "История посадки создана для " + finalCropName);
+                } else {
+                    Log.e(TAG, "Ошибка создания истории посадки: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                Log.e(TAG, "Ошибка сети при создании истории посадки: " + t.getMessage());
             }
         });
     }

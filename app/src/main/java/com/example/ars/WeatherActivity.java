@@ -1,7 +1,10 @@
 package com.example.ars;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +15,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.ars.api.ApiService;
@@ -38,6 +42,9 @@ import retrofit2.Response;
 
 public class WeatherActivity extends AppCompatActivity {
 
+    private static final String TAG = "WeatherActivity";
+    private static final String PREF_LAST_REGION = "last_selected_region";
+
     private String selectedRegion = "Минск";
     private WeatherCacheManager cacheManager;
     private LinearLayout container;
@@ -48,8 +55,7 @@ public class WeatherActivity extends AppCompatActivity {
     private Map<Integer, List<WeatherData>> allWeatherCache = new HashMap<>();
     private ApiService apiService;
     private SharedPreferences sharedPrefs;
-    private static final String PREF_LAST_REGION = "last_selected_region";
-    private boolean isOnline = true;
+    private boolean isLoadingFromServer = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +66,6 @@ public class WeatherActivity extends AppCompatActivity {
         apiService = RetrofitClient.getApiService();
         sharedPrefs = getSharedPreferences("weather_prefs", MODE_PRIVATE);
 
-        // Загружаем последний выбранный регион
         String savedRegion = sharedPrefs.getString(PREF_LAST_REGION, "Минск");
         selectedRegion = savedRegion;
 
@@ -76,39 +81,137 @@ public class WeatherActivity extends AppCompatActivity {
         actvRegion = findViewById(R.id.actvRegion);
 
         MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
-        btnRefresh.setOnClickListener(v -> refreshWeather());
+        btnRefresh.setOnClickListener(v -> {
+            if (isNetworkAvailable()) {
+                forceRefresh();
+            } else {
+                Toast.makeText(this, "Нет интернет-соединения", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         loadData();
     }
 
+    private boolean isNetworkAvailable() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+    }
+
     private void loadData() {
         showLoading(true);
+        if (isNetworkAvailable()) {
+            loadFromServer();
+        } else {
+            loadFromCache();
+        }
+    }
 
-        // Сначала пытаемся загрузить регионы из кэша
+    private void loadFromServer() {
+        if (isLoadingFromServer) return;
+        isLoadingFromServer = true;
+
+        Log.d(TAG, "=== ЗАГРУЗКА С СЕРВЕРА ===");
+
+        apiService.getRegions().enqueue(new Callback<List<Region>>() {
+            @Override
+            public void onResponse(Call<List<Region>> call, Response<List<Region>> response) {
+                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
+                    regionsList = response.body();
+                    cacheManager.saveRegions(regionsList, null);
+                    updateRegionDropdown(regionsList);
+                    loadAllWeatherFromServer();
+                } else {
+                    isLoadingFromServer = false;
+                    showLoading(false);
+                    showError("Ошибка загрузки регионов");
+                    loadFromCache();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Region>> call, Throwable t) {
+                isLoadingFromServer = false;
+                Log.e(TAG, "Ошибка сети: " + t.getMessage());
+                loadFromCache();
+            }
+        });
+    }
+
+    private void loadAllWeatherFromServer() {
+        if (regionsList.isEmpty()) {
+            isLoadingFromServer = false;
+            showLoading(false);
+            return;
+        }
+
+        final int[] pendingRequests = {regionsList.size()};
+
+        for (Region region : regionsList) {
+            apiService.getWeatherByRegionId(region.getId()).enqueue(new Callback<WeatherResponse>() {
+                @Override
+                public void onResponse(Call<WeatherResponse> call, Response<WeatherResponse> response) {
+                    if (response.isSuccessful() && response.body() != null && response.body().getWeather() != null) {
+                        List<WeatherData> weatherList = response.body().getWeather();
+                        allWeatherCache.put(region.getId(), weatherList);
+                        cacheManager.saveForecast(region.getId(), weatherList, null);
+
+                        if (region.getName().equals(selectedRegion)) {
+                            updateWeatherUI(weatherList);
+                            updateTimeStamp();
+                        }
+                    }
+
+                    synchronized (pendingRequests) {
+                        pendingRequests[0]--;
+                        if (pendingRequests[0] == 0) {
+                            isLoadingFromServer = false;
+                            showLoading(false);
+                            Log.d(TAG, "Все данные загружены с сервера");
+                        }
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<WeatherResponse> call, Throwable t) {
+                    Log.e(TAG, "Ошибка загрузки погоды для " + region.getName());
+                    synchronized (pendingRequests) {
+                        pendingRequests[0]--;
+                        if (pendingRequests[0] == 0) {
+                            isLoadingFromServer = false;
+                            showLoading(false);
+                            if (region.getName().equals(selectedRegion)) {
+                                loadWeatherFromCacheForSelectedRegion();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    private void loadFromCache() {
+        Log.d(TAG, "=== ЗАГРУЗКА ИЗ КЭША (ОФЛАЙН) ===");
+
         cacheManager.getCachedRegions(new WeatherCacheManager.CacheCallback<List<Region>>() {
             @Override
             public void onSuccess(List<Region> cachedRegions) {
                 if (cachedRegions != null && !cachedRegions.isEmpty()) {
-                    // Успешно загрузили регионы из кэша
                     regionsList = cachedRegions;
                     updateRegionDropdown(regionsList);
-
-                    // Загружаем погоду для выбранного региона из кэша
                     loadWeatherFromCacheForSelectedRegion();
                     showLoading(false);
-
-                    // Фоновое обновление с сервера, если есть интернет
-                    tryUpdateFromServer();
+                    Toast.makeText(WeatherActivity.this, "Офлайн-режим. Данные из кэша.", Toast.LENGTH_SHORT).show();
                 } else {
-                    // Нет кэша - загружаем с сервера
-                    loadFromServer();
+                    showLoading(false);
+                    showError("Нет сохраненных данных. Подключитесь к интернету.");
                 }
             }
 
             @Override
             public void onError(String error) {
-                Log.e("WeatherActivity", "Cache error: " + error);
-                loadFromServer();
+                showLoading(false);
+                showError("Нет сохраненных данных");
             }
         });
     }
@@ -122,7 +225,7 @@ public class WeatherActivity extends AppCompatActivity {
                     if (cachedWeather != null && !cachedWeather.isEmpty()) {
                         allWeatherCache.put(regionId, cachedWeather);
                         updateWeatherUI(cachedWeather);
-                        updateTimeStampFromCache(regionId);
+                        tvUpdated.setText("Данные из кэша");
                     } else {
                         showNoDataMessage();
                     }
@@ -130,181 +233,10 @@ public class WeatherActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(String error) {
-                    showError("Ошибка загрузки погоды из кэша: " + error);
+                    showError("Ошибка загрузки погоды из кэша");
                 }
             });
         }
-    }
-
-    private void updateTimeStampFromCache(int regionId) {
-        // Получаем время кэша из первой записи
-        cacheManager.getForecast(regionId, new WeatherCacheManager.CacheCallback<List<WeatherData>>() {
-            @Override
-            public void onSuccess(List<WeatherData> result) {
-                if (result != null && !result.isEmpty() && tvUpdated != null) {
-                    tvUpdated.setText("Данные из кэша");
-                }
-            }
-            @Override
-            public void onError(String error) {}
-        });
-    }
-
-    private void tryUpdateFromServer() {
-        // Проверяем, нужно ли обновить кэш
-        for (Region region : regionsList) {
-            cacheManager.hasFreshCache(region.getId(), new WeatherCacheManager.CacheCallback<Boolean>() {
-                @Override
-                public void onSuccess(Boolean isFresh) {
-                    if (!isFresh) {
-                        // Кэш устарел, обновляем с сервера
-                        updateRegionFromServer(region);
-                    }
-                }
-                @Override
-                public void onError(String error) {
-                    // При ошибке проверки кэша всё равно пробуем обновить
-                    updateRegionFromServer(region);
-                }
-            });
-        }
-    }
-
-    private void updateRegionFromServer(Region region) {
-        apiService.getWeatherByRegionId(region.getId()).enqueue(new Callback<WeatherResponse>() {
-            @Override
-            public void onResponse(Call<WeatherResponse> call, Response<WeatherResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().getWeather() != null) {
-                    List<WeatherData> weatherList = response.body().getWeather();
-                    allWeatherCache.put(region.getId(), weatherList);
-                    cacheManager.saveForecast(region.getId(), weatherList, null);
-
-                    // Если это текущий выбранный регион, обновляем UI
-                    if (region.getName().equals(selectedRegion)) {
-                        updateWeatherUI(weatherList);
-                        updateTimeStamp();
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<WeatherResponse> call, Throwable t) {
-                Log.e("WeatherActivity", "Server update failed for " + region.getName());
-            }
-        });
-    }
-
-    private void loadFromServer() {
-        showLoading(true);
-
-        apiService.getRegions().enqueue(new Callback<List<Region>>() {
-            @Override
-            public void onResponse(Call<List<Region>> call, Response<List<Region>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    regionsList = response.body();
-
-                    // Сохраняем регионы в кэш
-                    cacheManager.saveRegions(regionsList, new WeatherCacheManager.VoidCallback() {
-                        @Override
-                        public void onSuccess() {
-                            Log.d("WeatherActivity", "Regions saved to cache");
-                        }
-                        @Override
-                        public void onError(String error) {
-                            Log.e("WeatherActivity", "Save regions error: " + error);
-                        }
-                    });
-
-                    updateRegionDropdown(regionsList);
-
-                    // Загружаем погоду для всех регионов
-                    loadAllWeatherFromServer();
-                } else {
-                    showLoading(false);
-                    showError("Ошибка загрузки регионов");
-                    // Пробуем загрузить из кэша как запасной вариант
-                    loadFromCacheFallback();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Region>> call, Throwable t) {
-                showLoading(false);
-                isOnline = false;
-                showError("Нет подключения к интернету");
-                // Пробуем загрузить из кэша
-                loadFromCacheFallback();
-            }
-        });
-    }
-
-    private void loadFromCacheFallback() {
-        cacheManager.getCachedRegions(new WeatherCacheManager.CacheCallback<List<Region>>() {
-            @Override
-            public void onSuccess(List<Region> cachedRegions) {
-                if (cachedRegions != null && !cachedRegions.isEmpty()) {
-                    regionsList = cachedRegions;
-                    updateRegionDropdown(regionsList);
-                    loadWeatherFromCacheForSelectedRegion();
-                    showLoading(false);
-                    Toast.makeText(WeatherActivity.this, "Работа в офлайн-режиме", Toast.LENGTH_SHORT).show();
-                } else {
-                    showLoading(false);
-                    showError("Нет сохраненных данных. Подключитесь к интернету для первого запуска.");
-                }
-            }
-
-            @Override
-            public void onError(String error) {
-                showLoading(false);
-                showError("Нет сохраненных данных");
-            }
-        });
-    }
-
-    private void loadAllWeatherFromServer() {
-        for (Region region : regionsList) {
-            loadWeatherForRegion(region);
-        }
-    }
-
-    private void loadWeatherForRegion(Region region) {
-        apiService.getWeatherByRegionId(region.getId()).enqueue(new Callback<WeatherResponse>() {
-            @Override
-            public void onResponse(Call<WeatherResponse> call, Response<WeatherResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().getWeather() != null) {
-                    List<WeatherData> weatherList = response.body().getWeather();
-                    allWeatherCache.put(region.getId(), weatherList);
-
-                    // Сохраняем в кэш
-                    cacheManager.saveForecast(region.getId(), weatherList, new WeatherCacheManager.VoidCallback() {
-                        @Override
-                        public void onSuccess() {
-                            Log.d("WeatherActivity", "Weather saved for region: " + region.getName());
-                        }
-                        @Override
-                        public void onError(String error) {
-                            Log.e("WeatherActivity", "Save weather error: " + error);
-                        }
-                    });
-
-                    if (region.getName().equals(selectedRegion)) {
-                        updateWeatherUI(weatherList);
-                        updateTimeStamp();
-                        showLoading(false);
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<WeatherResponse> call, Throwable t) {
-                Log.e("WeatherActivity", "Weather API error for " + region.getName() + ": " + t.getMessage());
-                if (region.getName().equals(selectedRegion)) {
-                    // Если сервер не ответил, пробуем загрузить из кэша
-                    loadWeatherFromCacheForRegion(region.getId(), region.getName());
-                }
-            }
-        });
     }
 
     private void loadWeatherFromCacheForRegion(int regionId, String regionName) {
@@ -334,17 +266,11 @@ public class WeatherActivity extends AppCompatActivity {
         });
     }
 
-    private void refreshWeather() {
-        if (!isOnline) {
-            // Проверяем интернет перед обновлением
-            Toast.makeText(this, "Нет интернет-соединения. Показаны кэшированные данные.", Toast.LENGTH_SHORT).show();
-            loadFromCacheFallback();
-            return;
+    private void forceRefresh() {
+        if (isNetworkAvailable() && !isLoadingFromServer) {
+            showLoading(true);
+            loadFromServer();
         }
-
-        showLoading(true);
-        // Принудительное обновление с сервера
-        loadAllWeatherFromServer();
     }
 
     private void updateRegionDropdown(List<Region> regions) {
@@ -358,16 +284,12 @@ public class WeatherActivity extends AppCompatActivity {
         actvRegion.setOnItemClickListener((parent, view, position, id) -> {
             Region region = (Region) parent.getItemAtPosition(position);
             selectedRegion = region.getName();
-
-            // Сохраняем выбранный регион
             sharedPrefs.edit().putString(PREF_LAST_REGION, selectedRegion).apply();
-
             updateRegionInfo();
             displayWeatherForRegion(selectedRegion);
         });
 
         if (!regions.isEmpty()) {
-            // Устанавливаем последний выбранный регион
             boolean regionFound = false;
             for (Region r : regions) {
                 if (r.getName().equals(selectedRegion)) {
@@ -405,13 +327,13 @@ public class WeatherActivity extends AppCompatActivity {
             return;
         }
 
-        // Сначала пробуем из памяти
         List<WeatherData> weatherList = allWeatherCache.get(regionId);
         if (weatherList != null && !weatherList.isEmpty()) {
             updateWeatherUI(weatherList);
-            updateTimeStamp();
+            if (isNetworkAvailable() && !isLoadingFromServer) {
+                updateTimeStamp();
+            }
         } else {
-            // Пробуем из кэша
             loadWeatherFromCacheForRegion(regionId, regionName);
         }
     }
@@ -430,21 +352,16 @@ public class WeatherActivity extends AppCompatActivity {
         container.removeAllViews();
 
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_YEAR, 6);
-        String sixDaysLater = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.getTime());
 
-        int displayedCount = 0;
         for (WeatherData weather : weatherList) {
             String date = weather.getDate();
-            if (date != null && date.compareTo(today) >= 0 && date.compareTo(sixDaysLater) <= 0) {
+            if (date != null && date.compareTo(today) >= 0) {
                 View cardView = createWeatherCard(weather);
                 container.addView(cardView);
-                displayedCount++;
             }
         }
 
-        if (displayedCount == 0) {
+        if (container.getChildCount() == 0) {
             showNoDataMessage();
         }
     }
@@ -470,7 +387,7 @@ public class WeatherActivity extends AppCompatActivity {
     private void showLoading(boolean show) {
         View progressBar = findViewById(R.id.progressBar);
         if (progressBar != null) {
-            progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+               progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
         }
         if (show) {
             if (container != null) container.setVisibility(View.GONE);

@@ -34,6 +34,7 @@ import com.squareup.picasso.Picasso;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -612,15 +613,27 @@ public class EditPlantActivityUser extends AppCompatActivity {
     }
 
     private void deleteCrop() {
-        apiService.deleteUserCrop(cropId).enqueue(new Callback<Void>() {
+        apiService.deleteUserCrop(cropId).enqueue(new Callback<Map<String, Object>>() {
             @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                Toast.makeText(EditPlantActivityUser.this, "Удалено", Toast.LENGTH_SHORT).show();
-                finish();
+            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Map<String, Object> body = response.body();
+                    Boolean success = (Boolean) body.get("success");
+                    if (success != null && success) {
+                        Toast.makeText(EditPlantActivityUser.this, "Растение удалено", Toast.LENGTH_SHORT).show();
+                        finish();
+                    } else {
+                        String error = (String) body.get("error");
+                        Toast.makeText(EditPlantActivityUser.this, error != null ? error : "Ошибка удаления", Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    Toast.makeText(EditPlantActivityUser.this, "Ошибка удаления: код " + response.code(), Toast.LENGTH_LONG).show();
+                }
             }
+
             @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-                Toast.makeText(EditPlantActivityUser.this, "Ошибка удаления", Toast.LENGTH_SHORT).show();
+            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                Toast.makeText(EditPlantActivityUser.this, "Ошибка сети: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
     }
