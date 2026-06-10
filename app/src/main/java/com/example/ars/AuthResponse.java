@@ -8,8 +8,7 @@ public class AuthResponse {
     private String token;
     private User user;
     private String error;
-    
-    // Геттеры и сеттеры
+
     public boolean isSuccess() { return success; }
     public void setSuccess(boolean success) { this.success = success; }
     

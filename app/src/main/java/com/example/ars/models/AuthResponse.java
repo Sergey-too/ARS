@@ -1,4 +1,3 @@
-// AuthResponse.java
 package com.example.ars.models;
 
 public class AuthResponse {
@@ -8,7 +7,6 @@ public class AuthResponse {
     private User user;
     private String error;
 
-    // Геттеры и сеттеры
     public boolean isSuccess() { return success; }
     public void setSuccess(boolean success) { this.success = success; }
 

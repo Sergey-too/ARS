@@ -47,7 +47,6 @@ public class AlertWorker extends Worker {
         return checkAndNotify();
     }
 
-    // Публичный метод для принудительной проверки из Activity
     public Result checkAndNotify() {
         SharedPreferencesHelper prefsHelper = new SharedPreferencesHelper(getApplicationContext());
 
@@ -61,8 +60,7 @@ public class AlertWorker extends Worker {
 
         try {
             ApiService apiService = RetrofitClient.getApiService();
-
-            // Проверяем системные оповещения
+            
             Response<List<WeatherAlert>> alertsResponse = apiService.checkAlerts(userId).execute();
             if (alertsResponse.isSuccessful() && alertsResponse.body() != null) {
                 Log.d(TAG, "Найдено системных оповещений: " + alertsResponse.body().size());
@@ -71,11 +69,9 @@ public class AlertWorker extends Worker {
                 Log.d(TAG, "Системных оповещений нет");
             }
 
-            // Проверяем погодные условия для растений
             Log.d(TAG, "Проверка погодных условий для растений...");
             checkUserCropsWeather(userId, apiService);
 
-            // Очищаем старые ключи
             cleanOldKeys(userId);
 
             Log.d(TAG, "=== ПРОВЕРКА УВЕДОМЛЕНИЙ ЗАВЕРШЕНА ===");
@@ -94,7 +90,6 @@ public class AlertWorker extends Worker {
         for (WeatherAlert alert : alerts) {
             String alertKey = getAlertKey(userId, "system_alert_" + alert.getId());
 
-            // Проверяем, не показывали ли уже это оповещение сегодня
             if (!isNotificationShownToday(alertKey, alert.getAlertDate())) {
                 String alertType = getAlertType(alert.getAlertText());
                 String title = alertType + " " + formatAlertDate(alert.getAlertDate());
@@ -212,7 +207,7 @@ public class AlertWorker extends Worker {
         boolean hasWarning = false;
 
         if (crop.getMinTemp() != null && tempMin < crop.getMinTemp()) {
-            warnings.append("❄ Слишком холодно! ").append(String.format("%.1f°C", tempMin))
+            warnings.append("Слишком холодно! ").append(String.format("%.1f°C", tempMin))
                     .append(" (норма от ").append(crop.getMinTemp()).append("°C)\n");
             keyBuilder.append("temp_low");
             hasWarning = true;
@@ -264,7 +259,7 @@ public class AlertWorker extends Worker {
         boolean hasWarning = false;
 
         if (crop.getMinTemp() != null && tempMin < crop.getMinTemp()) {
-            warnings.append("❄ Слишком холодно! ").append(String.format("%.1f°C", tempMin))
+            warnings.append("Слишком холодно! ").append(String.format("%.1f°C", tempMin))
                     .append(" (норма от ").append(crop.getMinTemp()).append("°C)\n");
             keyBuilder.append("temp_low");
             hasWarning = true;
@@ -454,10 +449,8 @@ public class AlertWorker extends Worker {
 
     public static void checkNow(Context context) {
         try {
-            // Создаём экземпляр с пустыми параметрами
             AlertWorker worker = new AlertWorker(context, null);
 
-            // Вызываем doWork напрямую
             Result result = worker.doWork();
 
             if (result == Result.success()) {

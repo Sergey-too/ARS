@@ -19,8 +19,6 @@ public class SupportRequest {
         this.content = content;
         this.statusId = 1;
     }
-
-    // Геттеры и сеттеры
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

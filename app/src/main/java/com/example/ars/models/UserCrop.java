@@ -21,7 +21,7 @@ public class UserCrop implements Serializable {
     private Crop crop;
     private IndividualUserCrop individualCrop;
     private Area area;
-    private Garden garden;  // НОВОЕ ПОЛЕ
+    private Garden garden;
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }

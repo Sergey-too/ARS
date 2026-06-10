@@ -90,8 +90,84 @@ public class EditPlantActivityUser extends AppCompatActivity {
         initViews();
         setupPhotoLauncher();
         setupListeners();
-        loadCategories();
-        loadCropData();
+
+        loadCategoriesThenCrop();
+    }
+
+    private void loadCategoriesThenCrop() {
+        apiService.getCategories().enqueue(new Callback<List<Category>>() {
+            @Override
+            public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    systemCategories = response.body();
+                }
+
+                if (prefsHelper.getUser() != null) {
+                    int userId = prefsHelper.getUser().getId();
+                    apiService.getUserCategories(userId).enqueue(new Callback<List<UserCategory>>() {
+                        @Override
+                        public void onResponse(Call<List<UserCategory>> call, Response<List<UserCategory>> response) {
+                            if (response.isSuccessful() && response.body() != null) {
+                                userCategories = response.body();
+                            }
+
+                            updateCategoryDropdown();
+                            loadCropData();
+                        }
+
+                        @Override
+                        public void onFailure(Call<List<UserCategory>> call, Throwable t) {
+                            updateCategoryDropdown();
+                            loadCropData();
+                        }
+                    });
+                } else {
+                    updateCategoryDropdown();
+                    loadCropData();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Category>> call, Throwable t) {
+                updateCategoryDropdown();
+                loadCropData();
+            }
+        });
+    }
+
+    private void updateCategoryDropdown() {
+        List<String> displayNames = new ArrayList<>();
+        for (Category c : systemCategories) {
+            displayNames.add(c.getName());
+        }
+        for (UserCategory uc : userCategories) {
+            displayNames.add(uc.getName());
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, displayNames);
+        actvCategory.setAdapter(adapter);
+
+        if (actvCategory.getOnItemClickListener() == null) {
+            actvCategory.setOnItemClickListener((parent, view, position, id) -> {
+                String selectedName = (String) parent.getItemAtPosition(position);
+                selectedCategoryName = selectedName;
+                selectedCategoryId = null;
+                selectedUserCategoryId = null;
+                for (Category c : systemCategories) {
+                    if (c.getName().equals(selectedName)) {
+                        selectedCategoryId = c.getId().intValue();
+                        break;
+                    }
+                }
+                for (UserCategory uc : userCategories) {
+                    if (uc.getName().equals(selectedName)) {
+                        selectedUserCategoryId = uc.getId();
+                        break;
+                    }
+                }
+                tilCategory.setError(null);
+            });
+        }
     }
 
     private void initViews() {
@@ -212,41 +288,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
         }
     }
 
-    private void updateCategoryDropdown() {
-        List<String> displayNames = new ArrayList<>();
-        for (Category c : systemCategories) {
-            displayNames.add(c.getName());
-        }
-        for (UserCategory uc : userCategories) {
-            displayNames.add(uc.getName());
-        }
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, displayNames);
-        actvCategory.setAdapter(adapter);
-
-        actvCategory.setOnItemClickListener((parent, view, position, id) -> {
-            String selectedName = (String) parent.getItemAtPosition(position);
-            selectedCategoryName = selectedName;
-
-            // Определяем, системная это категория или пользовательская
-            selectedCategoryId = null;
-            selectedUserCategoryId = null;
-            for (Category c : systemCategories) {
-                if (c.getName().equals(selectedName)) {
-                    selectedCategoryId = c.getId().intValue();
-                    break;
-                }
-            }
-            for (UserCategory uc : userCategories) {
-                if (uc.getName().equals(selectedName)) {
-                    selectedUserCategoryId = uc.getId();
-                    break;
-                }
-            }
-            tilCategory.setError(null);
-        });
-    }
-
     private void uploadImageAndUpdate() {
         btnSave.setEnabled(false);
         btnSave.setText("Загрузка фото...");
@@ -325,7 +366,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
         cbCanSeedlings.setChecked(Boolean.TRUE.equals(currentCrop.getCanSeedlings()));
         cbCanDirectSow.setChecked(Boolean.TRUE.equals(currentCrop.getCanDirectSow()));
 
-        // Заполняем категорию
         if (currentCrop.getCategoryId() != null) {
             for (Category c : systemCategories) {
                 if (c.getId().intValue() == currentCrop.getCategoryId()) {
@@ -372,7 +412,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
     private boolean validateAllFields() {
         boolean isValid = true;
 
-        // Название
         if (TextUtils.isEmpty(etPlantName.getText().toString().trim())) {
             tilPlantName.setError("Укажите название");
             isValid = false;
@@ -380,7 +419,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
             tilPlantName.setError(null);
         }
 
-        // Категория
         if (selectedCategoryId == null && selectedUserCategoryId == null && TextUtils.isEmpty(selectedCategoryName)) {
             tilCategory.setError("Выберите категорию");
             isValid = false;
@@ -388,7 +426,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
             tilCategory.setError(null);
         }
 
-        // Температура
         Short minTemp = parseShort(etMinTemp);
         Short maxTemp = parseShort(etMaxTemp);
         if (minTemp != null && maxTemp != null && minTemp > maxTemp) {
@@ -405,7 +442,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
             isValid = false;
         }
 
-        // Влажность
         Integer minHum = parseInteger(etMinHumidity);
         Integer maxHum = parseInteger(etMaxHumidity);
         if (minHum != null && maxHum != null && minHum > maxHum) {
@@ -420,28 +456,24 @@ public class EditPlantActivityUser extends AppCompatActivity {
             isValid = false;
         }
 
-        // Осадки
         Short precip = parseShort(etNeededPrecipitation);
         if (precip != null && (precip < 0 || precip > 500)) {
             etNeededPrecipitation.setError("Осадки должны быть от 0 до 500 мм");
             isValid = false;
         }
 
-        // Ветер
         Short maxWind = parseShort(etMaxWind);
         if (maxWind != null && (maxWind < 0 || maxWind > 50)) {
             etMaxWind.setError("Скорость ветра должна быть от 0 до 50 м/с");
             isValid = false;
         }
 
-        // Глубина посева
         Integer sowingDepth = parseInteger(etSowingDepth);
         if (sowingDepth != null && (sowingDepth < 0 || sowingDepth > 50)) {
             etSowingDepth.setError("Глубина посева должна быть от 0 до 50 см");
             isValid = false;
         }
 
-        // Дни до всходов
         Integer daysGerm = parseInteger(etDaysToGermination);
         if (daysGerm != null && daysGerm < 0) {
             etDaysToGermination.setError("Не может быть отрицательным");
@@ -452,7 +484,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
             isValid = false;
         }
 
-        // Дни до урожая
         Integer daysHarvest = parseInteger(etDaysToHarvest);
         if (daysHarvest != null && daysHarvest < 0) {
             etDaysToHarvest.setError("Не может быть отрицательным");
@@ -463,7 +494,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
             isValid = false;
         }
 
-        // Интервалы ухода
         Integer watering = parseInteger(etWateringInterval);
         if (watering != null && watering < 0) {
             etWateringInterval.setError("Не может быть отрицательным");
@@ -504,7 +534,6 @@ public class EditPlantActivityUser extends AppCompatActivity {
             isValid = false;
         }
 
-        // Способ посадки
         if (!cbCanSeedlings.isChecked() && !cbCanDirectSow.isChecked()) {
             Toast.makeText(this, "Выберите хотя бы один способ посадки", Toast.LENGTH_SHORT).show();
             isValid = false;

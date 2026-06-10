@@ -9,7 +9,6 @@ public class WeatherResponse {
     private String message;
     private int count;
 
-    // Геттеры и сеттеры
     public String getRegion() { return region; }
     public void setRegion(String region) { this.region = region; }
 

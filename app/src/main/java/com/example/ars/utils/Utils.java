@@ -1,4 +1,3 @@
-// Utils.java
 package com.example.ars.utils;
 
 import android.app.Activity;

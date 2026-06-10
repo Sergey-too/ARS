@@ -127,7 +127,7 @@ public interface ApiService {
     @GET("/api/crops/compatibility")
     Call<List<CompatibilityDTO>> getCompatibilityMatrix();
 
-    @POST("api/compatibility/update")
+    @POST("/api/compatibility/update")
     Call<Void> updateCompatibility(@Body CompatibilityDTO dto);
 
     // User Crops

@@ -3,6 +3,7 @@ package com.example.ars;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -39,7 +40,7 @@ public class AdminCompatibilityActivity extends AppCompatActivity implements Adm
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_compatibility);
+        setContentView(R.layout.activity_admin_compatibility);
 
         rvCompatibility = findViewById(R.id.rvCompatibility);
         containerTopNames = findViewById(R.id.containerTopNames);
@@ -59,9 +60,13 @@ public class AdminCompatibilityActivity extends AppCompatActivity implements Adm
                 if (response.isSuccessful() && response.body() != null) {
                     matrixData = response.body();
                     setupTable(matrixData);
+                } else {
+                    Toast.makeText(AdminCompatibilityActivity.this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
                 }
             }
-            @Override public void onFailure(Call<List<CompatibilityDTO>> call, Throwable t) {
+
+            @Override
+            public void onFailure(Call<List<CompatibilityDTO>> call, Throwable t) {
                 Toast.makeText(AdminCompatibilityActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
             }
         });
@@ -75,34 +80,50 @@ public class AdminCompatibilityActivity extends AppCompatActivity implements Adm
                 .collect(Collectors.toList());
 
         int n = crops.size();
+        int cellSize = (int) (45 * getResources().getDisplayMetrics().density);
+        int nameWidth = (int) (120 * getResources().getDisplayMetrics().density);
 
         containerTopNames.removeAllViews();
         containerLeftNames.removeAllViews();
-
-        int cellSize = (int) (51 * getResources().getDisplayMetrics().density);
 
         for (String name : crops) {
             TextView tvTop = new TextView(this);
             tvTop.setText(name);
             tvTop.setGravity(Gravity.CENTER);
-            tvTop.setLayoutParams(new LinearLayout.LayoutParams(cellSize, 240));
+            tvTop.setTextSize(10);
+            tvTop.setSingleLine(true);
+            tvTop.setEllipsize(null);
+            LinearLayout.LayoutParams topParams = new LinearLayout.LayoutParams(cellSize, nameWidth);
+            tvTop.setLayoutParams(topParams);
             tvTop.setRotation(-90);
             containerTopNames.addView(tvTop);
+        }
 
+        for (String name : crops) {
             TextView tvLeft = new TextView(this);
             tvLeft.setText(name);
-            tvLeft.setGravity(Gravity.CENTER_VERTICAL);
-            tvLeft.setPadding(10, 0, 0, 0);
-            tvLeft.setLayoutParams(new LinearLayout.LayoutParams(240, cellSize));
+            tvLeft.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            tvLeft.setTextSize(10);
+            tvLeft.setSingleLine(true);
+            tvLeft.setEllipsize(null);
+            tvLeft.setPadding(8, 0, 8, 0);
+            LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(nameWidth, cellSize);
+            tvLeft.setLayoutParams(leftParams);
             containerLeftNames.addView(tvLeft);
         }
 
         rvCompatibility.setLayoutManager(new GridLayoutManager(this, n));
-
         adminAdapter = new AdminCompatibilityAdapter(data, this);
         rvCompatibility.setAdapter(adminAdapter);
 
-        dataHorizontalScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> headerScroll.scrollTo(x, 0));
+        setupScrollSync();
+    }
+
+    private void setupScrollSync() {
+        dataHorizontalScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> {
+            headerScroll.scrollTo(x, 0);
+        });
+
         rvCompatibility.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
@@ -144,7 +165,6 @@ public class AdminCompatibilityActivity extends AppCompatActivity implements Adm
             adminAdapter.notifyItemChanged(position);
 
             updateMirrorCellLocally(item.getCrop2(), item.getCrop1(), newStatus);
-
             sendNewStatusToServer(item);
 
             dialog.dismiss();

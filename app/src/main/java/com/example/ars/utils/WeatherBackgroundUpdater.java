@@ -35,7 +35,6 @@ public class WeatherBackgroundUpdater {
                 if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
                     List<Region> regions = response.body();
 
-                    // Сохраняем регионы в кэш
                     cacheManager.saveRegions(regions, new WeatherCacheManager.VoidCallback() {
                         @Override
                         public void onSuccess() {
@@ -48,7 +47,6 @@ public class WeatherBackgroundUpdater {
                         }
                     });
 
-                    // Для каждого региона сохраняем погоду
                     for (Region region : regions) {
                         updateWeatherForRegion(region);
                     }

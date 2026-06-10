@@ -184,7 +184,6 @@ public class PlantDetailActivity extends AppCompatActivity {
         tvValSoilInt.setText(crop.getSoilCareInterval() != null ? crop.getSoilCareInterval() + " дн." : "--");
         tvValProtect.setText(crop.getProtectionInterval() != null ? crop.getProtectionInterval() + " дн." : "--");
 
-        // Категория для индивидуального растения
         if (crop.getCategoryId() != null && crop.getCategoryId() > 0) {
             loadSystemCategoryName(crop.getCategoryId());
         } else if (crop.getUserCategoryId() != null && crop.getUserCategoryId() > 0) {

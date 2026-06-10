@@ -36,7 +36,6 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        // Инициализация Retrofit
         prefsHelper = new SharedPreferencesHelper(this);
         RetrofitClient.initialize(prefsHelper);
         apiService = RetrofitClient.getApiService();
@@ -70,7 +69,6 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void attemptRegistration() {
-        // Сбрасываем ошибки
         tilName.setError(null);
         tilEmail.setError(null);
         tilPassword.setError(null);
@@ -83,7 +81,6 @@ public class RegisterActivity extends AppCompatActivity {
 
         boolean hasError = false;
 
-        // Валидация имени
         if (TextUtils.isEmpty(name)) {
             tilName.setError("Введите имя");
             hasError = true;
@@ -92,7 +89,6 @@ public class RegisterActivity extends AppCompatActivity {
             hasError = true;
         }
 
-        // Валидация email
         if (TextUtils.isEmpty(email)) {
             tilEmail.setError("Введите email");
             hasError = true;
@@ -101,7 +97,6 @@ public class RegisterActivity extends AppCompatActivity {
             hasError = true;
         }
 
-        // Валидация пароля
         if (TextUtils.isEmpty(password)) {
             tilPassword.setError("Введите пароль");
             hasError = true;
@@ -110,7 +105,6 @@ public class RegisterActivity extends AppCompatActivity {
             hasError = true;
         }
 
-        // Валидация подтверждения пароля
         if (TextUtils.isEmpty(confirmPassword)) {
             tilConfirmPassword.setError("Подтвердите пароль");
             hasError = true;
@@ -119,7 +113,6 @@ public class RegisterActivity extends AppCompatActivity {
             hasError = true;
         }
 
-        // Валидация чекбокса
         if (!cbTerms.isChecked()) {
             Toast.makeText(this, "Необходимо принять условия использования", Toast.LENGTH_SHORT).show();
             hasError = true;
@@ -134,16 +127,13 @@ public class RegisterActivity extends AppCompatActivity {
         btnRegister.setEnabled(false);
         btnRegister.setText("Регистрация...");
 
-        // Генерируем логин из email
         String login = email.split("@")[0];
         login = login.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
 
-        // Если логин пустой после обработки
         if (login.isEmpty()) {
             login = "user" + System.currentTimeMillis();
         }
 
-        // Создаем пользователя с логином
         User user = new User();
         user.setName(name);
         user.setEmail(email);
@@ -160,7 +150,6 @@ public class RegisterActivity extends AppCompatActivity {
                     AuthResponse authResponse = response.body();
 
                     if (authResponse.isSuccess()) {
-                        // Автоматически логиним пользователя после регистрации
                         prefsHelper.saveToken(authResponse.getToken());
                         prefsHelper.saveUser(authResponse.getUser());
                         prefsHelper.setLoggedIn(true);
@@ -168,7 +157,6 @@ public class RegisterActivity extends AppCompatActivity {
                         Toast.makeText(RegisterActivity.this,
                                 "Регистрация успешна!", Toast.LENGTH_SHORT).show();
 
-                        // Переходим на главный экран
                         Intent intent = new Intent(RegisterActivity.this, PlantsActivity.class);
                         startActivity(intent);
                         finish();

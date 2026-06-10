@@ -226,7 +226,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             cbCanDirectSow.setChecked(currentCrop.getCanDirectSow());
         }
 
-        // Исправлено: отображение фото
         if (currentCrop.getPhotoPath() != null && !currentCrop.getPhotoPath().isEmpty()) {
             String photoPath = currentCrop.getPhotoPath();
             etPhotoPath.setText(photoPath);
@@ -256,7 +255,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
     private boolean validateAllFields() {
         boolean isValid = true;
 
-        // Название
         if (TextUtils.isEmpty(etPlantName.getText().toString().trim())) {
             tilPlantName.setError("Укажите название");
             isValid = false;
@@ -264,7 +262,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             tilPlantName.setError(null);
         }
 
-        // Категория
         if (TextUtils.isEmpty(selectedCategoryName)) {
             tilCategory.setError("Выберите категорию");
             isValid = false;
@@ -272,7 +269,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             tilCategory.setError(null);
         }
 
-        // Температура
         Float minTemp = parseFloat(etMinTemp);
         Float maxTemp = parseFloat(etMaxTemp);
         if (minTemp != null && maxTemp != null && minTemp > maxTemp) {
@@ -289,7 +285,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             isValid = false;
         }
 
-        // Влажность
         Integer minHum = parseInteger(etMinHumidity);
         Integer maxHum = parseInteger(etMaxHumidity);
         if (minHum != null && maxHum != null && minHum > maxHum) {
@@ -304,28 +299,24 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             isValid = false;
         }
 
-        // Осадки
         Short precip = parseShort(etPrecipitation);
         if (precip != null && (precip < 0 || precip > 500)) {
             etPrecipitation.setError("Осадки должны быть от 0 до 500 мм");
             isValid = false;
         }
 
-        // Ветер
         Short maxWind = parseShort(etMaxWind);
         if (maxWind != null && (maxWind < 0 || maxWind > 50)) {
             etMaxWind.setError("Скорость ветра должна быть от 0 до 50 м/с");
             isValid = false;
         }
 
-        // Глубина посева
         Integer sowingDepth = parseInteger(etSowingDepth);
         if (sowingDepth != null && (sowingDepth < 0 || sowingDepth > 50)) {
             etSowingDepth.setError("Глубина посева должна быть от 0 до 50 см");
             isValid = false;
         }
 
-        // Дни до всходов
         Integer daysGerm = parseInteger(etDaysToGermination);
         if (daysGerm != null && daysGerm < 0) {
             etDaysToGermination.setError("Не может быть отрицательным");
@@ -336,7 +327,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             isValid = false;
         }
 
-        // Дни до урожая
         Integer daysHarvest = parseInteger(etDaysToHarvest);
         if (daysHarvest != null && daysHarvest < 0) {
             etDaysToHarvest.setError("Не может быть отрицательным");
@@ -347,7 +337,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             isValid = false;
         }
 
-        // Интервалы ухода
         Integer watering = parseInteger(etWateringInterval);
         if (watering != null && watering < 0) {
             etWateringInterval.setError("Не может быть отрицательным");
@@ -388,7 +377,6 @@ public class EditPlantActivityAdmin extends AppCompatActivity {
             isValid = false;
         }
 
-        // Способ посадки
         if (!cbCanSeedlings.isChecked() && !cbCanDirectSow.isChecked()) {
             Toast.makeText(this, "Выберите хотя бы один способ посадки", Toast.LENGTH_SHORT).show();
             isValid = false;

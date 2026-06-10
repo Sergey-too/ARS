@@ -18,7 +18,6 @@ public class History {
 
     private WeatherData weather;
 
-    // Геттеры
     public String getDoneAt() { return doneAt; }
     public String getCropName() { return cropName; }
     public String getVariety() { return variety; }

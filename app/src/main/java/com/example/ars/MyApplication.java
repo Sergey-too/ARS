@@ -28,7 +28,7 @@ public class MyApplication extends Application {
 
         PeriodicWorkRequest alertWorkRequest = new PeriodicWorkRequest.Builder(
                 AlertWorker.class,
-                1, TimeUnit.MINUTES
+                15, TimeUnit.MINUTES
         )
                 .setConstraints(constraints)
                 .addTag("alert_worker")

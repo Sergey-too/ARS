@@ -45,7 +45,6 @@ public class LoginActivity extends AppCompatActivity {
 
         prefsHelper = new SharedPreferencesHelper(this);
 
-        // Проверяем, был ли уже вход
         if (prefsHelper.isLoggedIn() && prefsHelper.getToken() != null) {
             User user = prefsHelper.getUser();
             if (user != null && user.getIsAdmin()) {

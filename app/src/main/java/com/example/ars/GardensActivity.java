@@ -112,14 +112,11 @@ public class GardensActivity extends AppCompatActivity {
         MaterialButton btnSave = view.findViewById(R.id.btnSaveGarden);
         MaterialButton btnDelete = view.findViewById(R.id.btnDeleteGarden);
 
-        // Адаптер для выбора участка
         ArrayAdapter<Area> areasAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, allUserAreas);
         actvArea.setAdapter(areasAdapter);
 
-        // Выбранный участок (огород находится на этом участке)
         final Area[] selectedAreaHolder = {null};
 
-        // Обработчик выбора участка
         actvArea.setOnItemClickListener((parent, view1, position, id) -> {
             selectedAreaHolder[0] = (Area) parent.getItemAtPosition(position);
             tilArea.setError(null);
@@ -127,7 +124,6 @@ public class GardensActivity extends AppCompatActivity {
 
         if (garden != null) {
             etName.setText(garden.getName());
-            // Если у огорода есть участок (он может быть только на одном участке)
             if (garden.getAreas() != null && !garden.getAreas().isEmpty()) {
                 Area gardenArea = garden.getAreas().get(0);
                 selectedAreaHolder[0] = gardenArea;
@@ -189,7 +185,6 @@ public class GardensActivity extends AppCompatActivity {
             public void onResponse(Call<Garden> call, Response<Garden> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     Garden createdGarden = response.body();
-                    // Добавляем участок к созданному огороду
                     addAreaToGarden(createdGarden.getId(), area, d);
                 } else {
                     Toast.makeText(GardensActivity.this, "Ошибка создания", Toast.LENGTH_SHORT).show();
@@ -237,7 +232,6 @@ public class GardensActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<Garden> call, Response<Garden> response) {
                 if (response.isSuccessful()) {
-                    // Обновляем участок: сначала удаляем старые связи, потом добавляем новую
                     updateGardenAreas(gardenId, area, dialog);
                 } else {
                     Toast.makeText(GardensActivity.this, "Ошибка обновления", Toast.LENGTH_SHORT).show();
@@ -252,22 +246,18 @@ public class GardensActivity extends AppCompatActivity {
     }
 
     private void updateGardenAreas(int gardenId, Area newArea, AlertDialog dialog) {
-        // Сначала удаляем все существующие связи
         for (Area area : allUserAreas) {
             apiService.removeAreaFromGarden(gardenId, area.getId()).enqueue(new Callback<Void>() {
                 @Override
                 public void onResponse(Call<Void> call, Response<Void> response) {
-                    // Игнорируем
                 }
 
                 @Override
                 public void onFailure(Call<Void> call, Throwable t) {
-                    // Игнорируем
                 }
             });
         }
 
-        // Добавляем новый участок
         Map<String, Integer> request = new HashMap<>();
         request.put("areaId", newArea.getId());
 

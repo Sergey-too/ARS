@@ -8,7 +8,6 @@ public class DeleteResponse {
     private String date;
     private String region;
 
-    // Геттеры и сеттеры
     public boolean isSuccess() { return success; }
     public void setSuccess(boolean success) { this.success = success; }
 

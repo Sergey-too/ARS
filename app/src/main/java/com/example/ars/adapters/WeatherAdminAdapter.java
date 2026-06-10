@@ -66,7 +66,6 @@ public class WeatherAdminAdapter extends RecyclerView.Adapter<WeatherAdminAdapte
 
     private String formatDate(String date) {
         if (date == null || date.isEmpty()) return "---";
-        // Преобразуем 2025-05-06 -> 06.05.2025
         if (date.contains("-")) {
             String[] parts = date.split("-");
             if (parts.length == 3) {

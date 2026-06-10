@@ -74,7 +74,6 @@ public class AddPlantActivity extends AppCompatActivity {
     private List<CompatibilityDTO> currentCompatibilityMatrix = new ArrayList<>();
     private SinglePlantCompatibilityAdapter singlePlantAdapter;
 
-    // Кэш для системной совместимости
     private List<CompatibilityDTO> systemCompatibilityMatrix = new ArrayList<>();
     private boolean systemCompatibilityLoaded = false;
 
@@ -190,7 +189,6 @@ public class AddPlantActivity extends AppCompatActivity {
                     systemCompatibilityLoaded = true;
                     Log.d(TAG, "Загружено системных совместимостей: " + systemCompatibilityMatrix.size());
 
-                    // Выводим список несовместимых пар для отладки
                     for (CompatibilityDTO dto : systemCompatibilityMatrix) {
                         if (dto.getStatus() != null && dto.getStatus() == 2) {
                             Log.d(TAG, "НЕСОВМЕСТИМЫ: " + dto.getCropName1() + " + " + dto.getCropName2());
@@ -278,11 +276,9 @@ public class AddPlantActivity extends AppCompatActivity {
 
         int cellSize = (int) (45 * getResources().getDisplayMetrics().density);
 
-        // Очищаем контейнеры
         containerTopNames.removeAllViews();
         containerLeftNames.removeAllViews();
 
-        // Верхний ряд: имена других растений
         for (String name : userCropNames) {
             TextView tvTop = new TextView(this);
             tvTop.setText(name);
@@ -296,7 +292,6 @@ public class AddPlantActivity extends AppCompatActivity {
             containerTopNames.addView(tvTop);
         }
 
-        // Левый столбец: только НОВОЕ растение (один раз)
         TextView tvLeft = new TextView(this);
         tvLeft.setText(newPlantName);
         tvLeft.setGravity(Gravity.CENTER);
@@ -308,7 +303,6 @@ public class AddPlantActivity extends AppCompatActivity {
         tvLeft.setLayoutParams(leftParams);
         containerLeftNames.addView(tvLeft);
 
-        // Создаем матрицу совместимости для НОВОГО растения со ВСЕМИ другими
         Map<String, Integer> compatibilityMap = new HashMap<>();
         for (IndividualCompatibilityDTO dto : individualCompatibilities) {
             if (dto.getCrop1Id().equals(newPlantId) || dto.getCrop2Id().equals(newPlantId)) {
@@ -812,12 +806,10 @@ public class AddPlantActivity extends AppCompatActivity {
             return;
         }
 
-        // НОВАЯ ПРОВЕРКА: валидация даты сбора
         if (!validateHarvestDate()) {
             return;
         }
 
-        // Проверяем совместимость перед добавлением
         loadExistingPlantsOnArea(selectedAreaId, () -> {
             checkCompatibilityBeforeAdd();
         });
@@ -826,18 +818,14 @@ public class AddPlantActivity extends AppCompatActivity {
         String plantingDateStr = etPlantingDate.getText().toString().trim();
         String harvestDateStr = etHarvestDate.getText().toString().trim();
 
-        // Если даты не указаны, пропускаем проверку
         if (plantingDateStr.isEmpty() || harvestDateStr.isEmpty()) {
             return true;
         }
 
-        // Получаем дни до сбора урожая из выбранной культуры
         Integer daysToHarvest = null;
         if (selectedCropData != null) {
             daysToHarvest = selectedCropData.getDaysToHarvest();
         } else if (selectedIndividualCropId != null) {
-            // Если это пользовательское растение, нужно загрузить его данные
-            // или использовать already loaded individualCrop data
             for (IndividualUserCrop ic : allUserPlants) {
                 if (ic.getId().equals(selectedIndividualCropId)) {
                     daysToHarvest = ic.getDaysToHarvest();
@@ -846,7 +834,6 @@ public class AddPlantActivity extends AppCompatActivity {
             }
         }
 
-        // Если не указано через сколько дней собирать урожай, пропускаем проверку
         if (daysToHarvest == null || daysToHarvest <= 0) {
             return true;
         }
@@ -862,7 +849,6 @@ public class AddPlantActivity extends AppCompatActivity {
                 return true;
             }
 
-            // Вычисляем ожидаемую дату сбора
             Calendar expectedHarvest = Calendar.getInstance();
             expectedHarvest.setTime(plantingDate);
             expectedHarvest.add(Calendar.DAY_OF_YEAR, daysToHarvest);
@@ -870,7 +856,6 @@ public class AddPlantActivity extends AppCompatActivity {
             Calendar harvestCal = Calendar.getInstance();
             harvestCal.setTime(harvestDate);
 
-            // Если дата сбора раньше ожидаемой
             if (harvestCal.before(expectedHarvest)) {
                 SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM.yyyy", new Locale("ru"));
                 String expectedDateStr = outputFormat.format(expectedHarvest.getTime());
@@ -895,7 +880,6 @@ public class AddPlantActivity extends AppCompatActivity {
         if (!systemCompatibilityLoaded) {
             Log.d(TAG, "Системная совместимость еще не загружена, ждем...");
             Toast.makeText(this, "Загрузка данных о совместимости...", Toast.LENGTH_SHORT).show();
-            // Ждем загрузки и пробуем снова
             loadSystemCompatibility();
             etPlantingDate.postDelayed(this::addPlantToUser, 1000);
             return;
@@ -917,7 +901,7 @@ public class AddPlantActivity extends AppCompatActivity {
 
             Log.d(TAG, "Растение: " + existingPlantName + ", статус совместимости: " + compatibilityStatus);
 
-            if (compatibilityStatus == 2) { // 2 = конфликт
+            if (compatibilityStatus == 2) {
                 incompatiblePlants.add(existingPlantName);
             }
         }
@@ -933,17 +917,14 @@ public class AddPlantActivity extends AppCompatActivity {
         boolean existingIsIndividual = (existing.getIndividualCropId() != null);
         Integer existingId = existingIsIndividual ? existing.getIndividualCropId() : existing.getCropId();
 
-        // Если оба системные - проверяем системную совместимость
         if (!isIndividualPlant && !existingIsIndividual) {
             return getSystemCompatibilityStatus(newPlantId, existingId);
         }
 
-        // Если оба пользовательские - проверяем пользовательскую совместимость
         if (isIndividualPlant && existingIsIndividual) {
             return getIndividualCompatibilityStatus(newPlantId, existingId);
         }
 
-        // Разные типы - считаем нейтральными
         return 3;
     }
 
@@ -1093,7 +1074,6 @@ public class AddPlantActivity extends AppCompatActivity {
             cropName = selectedCropData.getName();
             variety = selectedCropData.getVariety() != null ? selectedCropData.getVariety() : "Обычный";
         } else if (selectedIndividualCropId != null) {
-            // Нужно получить данные пользовательского растения
             for (IndividualUserCrop ic : allUserPlants) {
                 if (ic.getId().equals(selectedIndividualCropId)) {
                     cropName = ic.getName();

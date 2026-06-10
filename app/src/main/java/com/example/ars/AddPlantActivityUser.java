@@ -269,10 +269,8 @@
         private void validateAndSave() {
             boolean isValid = true;
 
-            // Очищаем все ошибки
             clearAllErrors();
 
-            // 1. Название растения (обязательно)
             if (TextUtils.isEmpty(etName.getText().toString().trim())) {
                 tilPlantName.setError("Введите название растения");
                 isValid = false;
@@ -283,13 +281,11 @@
                 isValid = false;
             }
 
-            // 2. Категория (обязательно)
             if (selectedCategoryId == null && selectedUserCategoryId == null) {
                 tilCategory.setError("Выберите категорию");
                 isValid = false;
             }
 
-            // 3. Мин. температура (обязательно)
             Float minT = null;
             if (TextUtils.isEmpty(etMinTemp.getText().toString().trim())) {
                 tilMinTemp.setError("Укажите минимальную температуру");
@@ -302,7 +298,6 @@
                 }
             }
 
-            // 4. Макс. температура (обязательно)
             Float maxT = null;
             if (TextUtils.isEmpty(etMaxTemp.getText().toString().trim())) {
                 tilMaxTemp.setError("Укажите максимальную температуру");
@@ -315,14 +310,12 @@
                 }
             }
 
-            // Проверка соотношения температур
             if (minT != null && maxT != null && minT > maxT) {
                 tilMinTemp.setError("Мин. температура не может быть выше максимальной");
                 tilMaxTemp.setError("Макс. температура не может быть ниже минимальной");
                 isValid = false;
             }
 
-            // 5. Мин. влажность (обязательно)
             Integer minH = null;
             if (TextUtils.isEmpty(etMinHumidity.getText().toString().trim())) {
                 tilMinHumidity.setError("Укажите минимальную влажность");
@@ -335,7 +328,6 @@
                 }
             }
 
-            // 6. Макс. влажность (обязательно)
             Integer maxH = null;
             if (TextUtils.isEmpty(etMaxHumidity.getText().toString().trim())) {
                 tilMaxHumidity.setError("Укажите максимальную влажность");
@@ -348,14 +340,12 @@
                 }
             }
 
-            // Проверка соотношения влажности
             if (minH != null && maxH != null && minH > maxH) {
                 tilMinHumidity.setError("Мин. влажность не может быть выше максимальной");
                 tilMaxHumidity.setError("Макс. влажность не может быть ниже минимальной");
                 isValid = false;
             }
 
-            // 7. Осадки (обязательно)
             if (TextUtils.isEmpty(etPrecipitation.getText().toString().trim())) {
                 tilPrecipitation.setError("Укажите количество осадков");
                 isValid = false;
@@ -367,7 +357,6 @@
                 }
             }
 
-            // 8. Макс. ветер (обязательно)
             if (TextUtils.isEmpty(etMaxWind.getText().toString().trim())) {
                 tilMaxWind.setError("Укажите максимальную скорость ветра");
                 isValid = false;
@@ -379,7 +368,6 @@
                 }
             }
 
-            // 9. Глубина посева (обязательно)
             if (TextUtils.isEmpty(etSowingDepth.getText().toString().trim())) {
                 tilSowingDepth.setError("Укажите глубину посева");
                 isValid = false;
@@ -391,7 +379,6 @@
                 }
             }
 
-            // 10. Дни до всходов (обязательно)
             if (TextUtils.isEmpty(etGermination.getText().toString().trim())) {
                 tilDaysToGermination.setError("Укажите дни до всходов");
                 isValid = false;
@@ -403,7 +390,6 @@
                 }
             }
 
-            // 11. Дни до урожая (обязательно)
             if (TextUtils.isEmpty(etHarvest.getText().toString().trim())) {
                 tilDaysToHarvest.setError("Укажите дни до урожая");
                 isValid = false;
@@ -415,7 +401,6 @@
                 }
             }
 
-            // 12. Интервал полива (обязательно)
             if (TextUtils.isEmpty(etWatering.getText().toString().trim())) {
                 tilWateringInterval.setError("Укажите интервал полива");
                 isValid = false;
@@ -427,7 +412,6 @@
                 }
             }
 
-            // 13. Интервал удобрения (обязательно)
             if (TextUtils.isEmpty(etFertilizing.getText().toString().trim())) {
                 tilFertilizingInterval.setError("Укажите интервал удобрения");
                 isValid = false;
@@ -439,7 +423,6 @@
                 }
             }
 
-            // 14. Интервал рыхления
             if (TextUtils.isEmpty(etSoilCare.getText().toString().trim())) {
                 tilSoilCareInterval.setError("Укажите интервал рыхления");
                 isValid = false;
@@ -451,7 +434,6 @@
                 }
             }
 
-            // 15. Интервал защиты
             if (TextUtils.isEmpty(etProtection.getText().toString().trim())) {
                 tilProtectionInterval.setError("Укажите интервал защиты");
                 isValid = false;
@@ -463,7 +445,6 @@
                 }
             }
 
-            // 16. Способ посадки
             if (!cbCanSeedlings.isChecked() && !cbCanDirectSow.isChecked()) {
                 Toast.makeText(this, "Выберите хотя бы один способ посадки", Toast.LENGTH_SHORT).show();
                 isValid = false;
@@ -471,7 +452,6 @@
 
             if (!isValid) return;
 
-            // Если все проверки пройдены, сохраняем
             if (selectedImagePath != null) {
                 uploadImageToServer(selectedImagePath);
             } else {

@@ -70,11 +70,10 @@ public class WeatherAdminActivity extends AppCompatActivity {
         btnApplyFilter = findViewById(R.id.btnApplyFilter);
         btnSortNewest = findViewById(R.id.btnSortNewest);
         btnSortOldest = findViewById(R.id.btnSortOldest);
-        btnRefresh = findViewById(R.id.btnRefresh);  // кнопка обновления
+        btnRefresh = findViewById(R.id.btnRefresh);
     }
 
     private void setupToolbar() {
-        // Кнопка назад
         View btnBack = findViewById(R.id.btnBack);
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());

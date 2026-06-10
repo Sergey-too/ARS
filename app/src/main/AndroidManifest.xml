@@ -43,117 +43,145 @@
         <!-- RegisterActivity -->
         <activity
             android:name=".RegisterActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <!-- MainActivity -->
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".PlantsActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".AddPlantActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".WeatherActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".PlantDetailActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".AdminDashboardActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".AddPlantActivityAdmin"
+            android:screenOrientation="portrait"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".EditPlantActivityAdmin"
+            android:screenOrientation="portrait"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".UserCategoriesActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".AreasActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".WeatherStatsActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".CompatibilityActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".SupportListActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".PlantsListActivityAdmin"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".UsersListActivityAdmin"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".RegionsAdminActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".UserCropsActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".AddPlantActivityUser"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".CategoriesAdminActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".WeatherAdminActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".TasksActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".HistoryActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".AdminCompatibilityActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".AdminSupportActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".ChatActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".EditPlantActivityUser"
+            android:screenOrientation="portrait"
             android:exported="false" />
 
         <activity
             android:name=".GardensActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
     </application>
 

@@ -7,7 +7,6 @@ public class WeatherComparisonDTO {
     private Double avgFactHumidity;
     private Double normalHumidity;
 
-    // Геттеры
     public String getMonthName() { return monthName; }
     public Double getAvgFactTemp() { return avgFactTemp; }
     public Double getNormalTemp() { return normalTemp; }

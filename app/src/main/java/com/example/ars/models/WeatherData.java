@@ -40,7 +40,6 @@ public class WeatherData {
     @SerializedName("gustsOfWind")
     private String gustsOfWind;
 
-    // Геттеры
     public Integer getId() { return id; }
     public Integer getRegionId() { return regionId; }
     public String getDate() { return date; }
