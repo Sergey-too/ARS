@@ -130,6 +130,12 @@ public interface ApiService {
     @POST("/api/compatibility/update")
     Call<Void> updateCompatibility(@Body CompatibilityDTO dto);
 
+    @GET("/api/tasks/user/{userId}/planned-plantings")
+    Call<List<TaskItem>> getPlannedPlantings(@Path("userId") Integer userId);
+
+    @POST("/api/tasks/user/{userId}/sync-past-plantings")
+    Call<Map<String, Object>> syncPastPlantings(@Path("userId") Integer userId);
+
     // User Crops
     @GET("/api/crops/user/{userId}")
     Call<List<UserCrop>> getUserCrops(@Path("userId") Integer userId);
@@ -306,6 +312,9 @@ public interface ApiService {
     Call<Void> deleteUserCategory(@Path("id") int id);
     @PUT("/api/user-categories/{id}")
     Call<UserCategory> updateUserCategory(@Path("id") int id, @Body UserCategory category);
+
+    @GET("/api/compatibility/check")
+    Call<Map<String, Object>> checkCompatibility(@Query("cropId1") Integer cropId1, @Query("cropId2") Integer cropId2);
 
     class LoginRequest {
         private String identifier;

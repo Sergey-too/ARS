@@ -153,6 +153,47 @@ public class TasksActivity extends AppCompatActivity {
         findViewById(R.id.tilCategory).setVisibility(View.GONE);
     }
 
+    // ==================== НОВЫЕ МЕТОДЫ ДЛЯ ЗАПЛАНИРОВАННЫХ ПОСАДОК ====================
+
+    private void syncPastPlantings() {
+        User user = prefsHelper.getUser();
+        if (user == null) return;
+
+        apiService.syncPastPlantings(user.getId()).enqueue(new retrofit2.Callback<Map<String, Object>>() {
+            @Override
+            public void onResponse(retrofit2.Call<Map<String, Object>> call, retrofit2.Response<Map<String, Object>> response) {
+                // Можно залогировать, но пользователю не показываем
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<Map<String, Object>> call, Throwable t) {
+                // Игнорируем ошибки синхронизации
+            }
+        });
+    }
+
+    private void loadPlannedPlantings() {
+        User user = prefsHelper.getUser();
+        if (user == null) return;
+
+        apiService.getPlannedPlantings(user.getId()).enqueue(new retrofit2.Callback<List<TaskItem>>() {
+            @Override
+            public void onResponse(retrofit2.Call<List<TaskItem>> call, retrofit2.Response<List<TaskItem>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    allTasks.addAll(response.body());
+                }
+                finalizeAndFilterTasks();
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<List<TaskItem>> call, Throwable t) {
+                finalizeAndFilterTasks();
+            }
+        });
+    }
+
+    // ==================== ИЗМЕНЁННЫЙ loadAllData ====================
+
     private void loadAllData() {
         User user = prefsHelper.getUser();
         if (user == null) {
@@ -161,27 +202,30 @@ public class TasksActivity extends AppCompatActivity {
         }
 
         showLoading(true);
+        allTasks.clear();  // очищаем перед загрузкой
 
+        // 1. Синхронизируем прошлые посадки
+        syncPastPlantings();
+
+        // 2. Загружаем обычные задачи
         apiService.getWeeklyTasks(user.getId()).enqueue(new retrofit2.Callback<List<TaskItem>>() {
             @Override
             public void onResponse(retrofit2.Call<List<TaskItem>> call, retrofit2.Response<List<TaskItem>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    allTasks.clear();
                     allTasks.addAll(response.body());
-                    finalizeAndFilterTasks();
-                } else {
-                    showLoading(false);
-                    showEmpty("Ошибка загрузки задач");
                 }
+                // 3. Загружаем запланированные посадки
+                loadPlannedPlantings();
             }
 
             @Override
             public void onFailure(retrofit2.Call<List<TaskItem>> call, Throwable t) {
-                showLoading(false);
-                showEmpty("Ошибка: " + t.getMessage());
+                loadPlannedPlantings();
             }
         });
     }
+
+    // ==================== ОСТАЛЬНЫЕ МЕТОДЫ (БЕЗ ИЗМЕНЕНИЙ) ====================
 
     private void finalizeAndFilterTasks() {
         removeDuplicateTasks();
@@ -327,6 +371,8 @@ public class TasksActivity extends AppCompatActivity {
         request.put("gardenName", task.getGardenName());
         request.put("userId", prefsHelper.getUser().getId());
         request.put("dueDate", task.getDueDate());
+        request.put("isPlanned", task.isPlanned());
+        request.put("userCropId", task.getUserCropId());
 
         apiService.completeTask(request).enqueue(new retrofit2.Callback<Map<String, Object>>() {
             @Override

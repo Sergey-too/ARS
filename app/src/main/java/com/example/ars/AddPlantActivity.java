@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -649,7 +650,10 @@ public class AddPlantActivity extends AppCompatActivity {
                             existingPlantsOnArea.add(uc);
                         }
                     }
-                    Log.d(TAG, "Загружено растений на участке: " + existingPlantsOnArea.size());
+                    Log.d(TAG, "Загружено растений на участке " + areaId + ": " + existingPlantsOnArea.size());
+                    for (UserCrop uc : existingPlantsOnArea) {
+                        Log.d(TAG, "  - " + uc.getCrop().getName());
+                    }
                 }
                 if (onComplete != null) {
                     onComplete.run();
@@ -663,7 +667,6 @@ public class AddPlantActivity extends AppCompatActivity {
             }
         });
     }
-
     private void showGardensOnArea(Area selectedArea) {
         List<Garden> gardensOnArea = new ArrayList<>();
         for (Garden garden : userGardens) {
@@ -839,7 +842,6 @@ public class AddPlantActivity extends AppCompatActivity {
         }
 
         SimpleDateFormat uiFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
-        SimpleDateFormat serverFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
 
         try {
             Date plantingDate = uiFormat.parse(plantingDateStr);
@@ -849,19 +851,32 @@ public class AddPlantActivity extends AppCompatActivity {
                 return true;
             }
 
-            Calendar expectedHarvest = Calendar.getInstance();
-            expectedHarvest.setTime(plantingDate);
-            expectedHarvest.add(Calendar.DAY_OF_YEAR, daysToHarvest);
+            Calendar earliestHarvest = Calendar.getInstance();
+            earliestHarvest.setTime(plantingDate);
+            earliestHarvest.add(Calendar.DAY_OF_YEAR, daysToHarvest);
+
+            Calendar latestHarvest = Calendar.getInstance();
+            latestHarvest.setTime(plantingDate);
+            latestHarvest.add(Calendar.DAY_OF_YEAR, daysToHarvest + 15);
 
             Calendar harvestCal = Calendar.getInstance();
             harvestCal.setTime(harvestDate);
 
-            if (harvestCal.before(expectedHarvest)) {
+            // Не раньше минимальной даты
+            if (harvestCal.before(earliestHarvest)) {
                 SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM.yyyy", new Locale("ru"));
-                String expectedDateStr = outputFormat.format(expectedHarvest.getTime());
-
-                tilHarvestDate.setError("Сбор урожая возможен не ранее " + expectedDateStr +
+                String earliestDateStr = outputFormat.format(earliestHarvest.getTime());
+                tilHarvestDate.setError("Сбор урожая возможен не ранее " + earliestDateStr +
                         " (через " + daysToHarvest + " дней после посадки)");
+                return false;
+            }
+
+            // Не позже максимальной даты (daysToHarvest + 15)
+            if (harvestCal.after(latestHarvest)) {
+                SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM.yyyy", new Locale("ru"));
+                String latestDateStr = outputFormat.format(latestHarvest.getTime());
+                tilHarvestDate.setError("Сбор урожая должен быть не позднее " + latestDateStr +
+                        " (максимум " + (daysToHarvest + 15) + " дней после посадки)");
                 return false;
             }
 
@@ -875,73 +890,62 @@ public class AddPlantActivity extends AppCompatActivity {
     }
 
     private void checkCompatibilityBeforeAdd() {
-        Log.d(TAG, "=== ПРОВЕРКА СОВМЕСТИМОСТИ ===");
-
-        if (!systemCompatibilityLoaded) {
-            Log.d(TAG, "Системная совместимость еще не загружена, ждем...");
-            Toast.makeText(this, "Загрузка данных о совместимости...", Toast.LENGTH_SHORT).show();
-            loadSystemCompatibility();
-            etPlantingDate.postDelayed(this::addPlantToUser, 1000);
-            return;
-        }
-
         if (existingPlantsOnArea.isEmpty()) {
-            Log.d(TAG, "Нет существующих растений - можно сажать");
             performAddPlant();
             return;
         }
 
+        // Проверяем совместимость с каждым растением на участке
         List<String> incompatiblePlants = new ArrayList<>();
+        AtomicInteger checkedCount = new AtomicInteger(0);
+        int total = existingPlantsOnArea.size();
 
         for (UserCrop existing : existingPlantsOnArea) {
-            boolean existingIsIndividual = (existing.getIndividualCropId() != null);
-            String existingPlantName = getPlantDisplayName(existing);
+            Integer existingId = existing.getCropId() != null ? existing.getCropId() : existing.getIndividualCropId();
 
-            int compatibilityStatus = getCompatibilityStatus(existing);
+            getSystemCompatibilityStatus(newPlantId, existingId, status -> {
+                if (status == 2) {
+                    incompatiblePlants.add(getPlantDisplayName(existing));
+                }
 
-            Log.d(TAG, "Растение: " + existingPlantName + ", статус совместимости: " + compatibilityStatus);
-
-            if (compatibilityStatus == 2) {
-                incompatiblePlants.add(existingPlantName);
-            }
-        }
-
-        if (!incompatiblePlants.isEmpty()) {
-            showIncompatibilityDialog(incompatiblePlants);
-        } else {
-            performAddPlant();
+                if (checkedCount.incrementAndGet() == total) {
+                    if (!incompatiblePlants.isEmpty()) {
+                        showIncompatibilityDialog(incompatiblePlants);
+                    } else {
+                        performAddPlant();
+                    }
+                }
+            });
         }
     }
 
-    private int getCompatibilityStatus(UserCrop existing) {
-        boolean existingIsIndividual = (existing.getIndividualCropId() != null);
-        Integer existingId = existingIsIndividual ? existing.getIndividualCropId() : existing.getCropId();
-
-        if (!isIndividualPlant && !existingIsIndividual) {
-            return getSystemCompatibilityStatus(newPlantId, existingId);
-        }
-
-        if (isIndividualPlant && existingIsIndividual) {
-            return getIndividualCompatibilityStatus(newPlantId, existingId);
-        }
-
-        return 3;
-    }
-
-    private int getSystemCompatibilityStatus(Integer cropId1, Integer cropId2) {
-        for (CompatibilityDTO dto : systemCompatibilityMatrix) {
-            Integer id1 = dto.getCropId1();
-            Integer id2 = dto.getCropId2();
-
-            if ((id1 != null && id1.equals(cropId1) && id2 != null && id2.equals(cropId2)) ||
-                    (id1 != null && id1.equals(cropId2) && id2 != null && id2.equals(cropId1))) {
-                Integer status = dto.getStatus();
-                Log.d(TAG, "Найдена совместимость: " + dto.getCropName1() + " + " + dto.getCropName2() + " = " + status);
-                return status != null ? status : 3;
+    private void getSystemCompatibilityStatus(Integer cropId1, Integer cropId2, CompatibilityCallback callback) {
+        apiService.checkCompatibility(cropId1, cropId2).enqueue(new Callback<Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Object statusObj = response.body().get("status");
+                    int status = 3;
+                    if (statusObj instanceof Integer) {
+                        status = (Integer) statusObj;
+                    } else if (statusObj instanceof Double) {
+                        status = ((Double) statusObj).intValue();
+                    } else if (statusObj instanceof Long) {
+                        status = ((Long) statusObj).intValue();
+                    }
+                    callback.onResult(status);
+                } else {
+                    callback.onResult(3);
+                }
             }
-        }
-        Log.d(TAG, "Совместимость не найдена для " + cropId1 + " и " + cropId2 + ", возвращаем 3");
-        return 3;
+            @Override
+            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                callback.onResult(3);
+            }
+        });
+    }
+    interface CompatibilityCallback {
+        void onResult(int status);
     }
 
     private int getIndividualCompatibilityStatus(Integer individualId1, Integer individualId2) {

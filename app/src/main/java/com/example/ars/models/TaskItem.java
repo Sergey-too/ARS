@@ -10,6 +10,8 @@ public class TaskItem {
     private Boolean isOverdue;
     private String lastDoneAt;
     private String gardenName;
+    private boolean isPlanned;
+    private Integer userCropId;
 
     public String getCropName() { return cropName; }
     public void setCropName(String cropName) { this.cropName = cropName; }
@@ -39,4 +41,9 @@ public class TaskItem {
     public String getDisplayName() {
         return (variety != null && !variety.isEmpty()) ? cropName + " (" + variety + ")" : cropName;
     }
+    public boolean isPlanned() { return isPlanned; }
+    public void setPlanned(boolean planned) { isPlanned = planned; }
+
+    public Integer getUserCropId() { return userCropId; }
+    public void setUserCropId(Integer userCropId) { this.userCropId = userCropId; }
 }
