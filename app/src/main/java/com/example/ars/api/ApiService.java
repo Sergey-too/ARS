@@ -285,7 +285,10 @@ public interface ApiService {
     // Gardens
     @GET("/api/gardens/user/{userId}")
     Call<List<Garden>> getUserGardens(@Path("userId") int userId);
-
+    @PUT("/api/gardens/{gardenId}/areas")
+    Call<Void> updateGardenAreas(@Path("gardenId") int gardenId, @Body Map<String, Integer> request);
+    @GET("/api/gardens/{gardenId}/areas")
+    Call<List<Area>> getGardenAreas(@Path("gardenId") int gardenId);
     @POST("/api/gardens")
     Call<Garden> createGarden(@Body Garden garden);
 

@@ -153,8 +153,6 @@ public class TasksActivity extends AppCompatActivity {
         findViewById(R.id.tilCategory).setVisibility(View.GONE);
     }
 
-    // ==================== НОВЫЕ МЕТОДЫ ДЛЯ ЗАПЛАНИРОВАННЫХ ПОСАДОК ====================
-
     private void syncPastPlantings() {
         User user = prefsHelper.getUser();
         if (user == null) return;

@@ -7,14 +7,12 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.ars.R;
 import com.example.ars.adapters.GardenAdapter;
 import com.example.ars.api.ApiService;
 import com.example.ars.api.RetrofitClient;
@@ -88,7 +86,9 @@ public class GardensActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     currentUserGardens = response.body();
                     originalGardens = new ArrayList<>(currentUserGardens);
-                    adapter.updateList(currentUserGardens);
+
+                    // Загружаем участки для каждого огорода
+                    loadAreasForGardens(currentUserGardens);
                 } else {
                     Toast.makeText(GardensActivity.this, "Нет огородов", Toast.LENGTH_SHORT).show();
                 }
@@ -99,6 +99,48 @@ public class GardensActivity extends AppCompatActivity {
                 Toast.makeText(GardensActivity.this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    // Метод для загрузки участков для всех огородов
+    private void loadAreasForGardens(List<Garden> gardens) {
+        if (gardens == null || gardens.isEmpty()) {
+            adapter.updateList(gardens);
+            return;
+        }
+
+        final int[] loadedCount = {0};
+        int totalGardens = gardens.size();
+
+        for (Garden garden : gardens) {
+            apiService.getGardenAreas(garden.getId()).enqueue(new Callback<List<Area>>() {
+                @Override
+                public void onResponse(Call<List<Area>> call, Response<List<Area>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        garden.setAreas(response.body());
+                        Log.d("GardensActivity", "Огород '" + garden.getName() +
+                                "' загружено участков: " + response.body().size());
+                    } else {
+                        Log.e("GardensActivity", "Ошибка загрузки участков для '" +
+                                garden.getName() + "', код: " + response.code());
+                    }
+
+                    loadedCount[0]++;
+                    if (loadedCount[0] == totalGardens) {
+                        // Все участки загружены
+                        adapter.updateList(gardens);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<List<Area>> call, Throwable t) {
+                    Log.e("GardensActivity", "Ошибка загрузки участков для '" + garden.getName() + "'", t);
+                    loadedCount[0]++;
+                    if (loadedCount[0] == totalGardens) {
+                        adapter.updateList(gardens);
+                    }
+                }
+            });
+        }
     }
 
     private void showGardenDialog(Garden garden) {
@@ -123,13 +165,15 @@ public class GardensActivity extends AppCompatActivity {
         });
 
         if (garden != null) {
+            btnSave.setText("Сохранить");
             etName.setText(garden.getName());
+            btnDelete.setVisibility(View.VISIBLE);
+
             if (garden.getAreas() != null && !garden.getAreas().isEmpty()) {
                 Area gardenArea = garden.getAreas().get(0);
                 selectedAreaHolder[0] = gardenArea;
                 actvArea.setText(gardenArea.getName(), false);
             }
-            btnDelete.setVisibility(View.VISIBLE);
 
             btnDelete.setOnClickListener(v -> {
                 new AlertDialog.Builder(this)
@@ -139,6 +183,9 @@ public class GardensActivity extends AppCompatActivity {
                         .setNegativeButton("Отмена", null)
                         .show();
             });
+        } else {
+            btnSave.setText("Добавить");
+            btnDelete.setVisibility(View.GONE);
         }
 
         btnSave.setOnClickListener(v -> {
@@ -174,6 +221,23 @@ public class GardensActivity extends AppCompatActivity {
         dialog.setView(view);
         dialog.show();
     }
+    private void loadGardenAreaForDialog(int gardenId, AutoCompleteTextView actvArea, Area[] selectedAreaHolder) {
+        apiService.getGardenAreas(gardenId).enqueue(new Callback<List<Area>>() {
+            @Override
+            public void onResponse(Call<List<Area>> call, Response<List<Area>> response) {
+                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
+                    Area area = response.body().get(0);
+                    selectedAreaHolder[0] = area;
+                    actvArea.setText(area.getName(), false);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Area>> call, Throwable t) {
+                Log.e("GardensActivity", "Ошибка загрузки участка для диалога", t);
+            }
+        });
+    }
 
     private void createGarden(String name, Area area, AlertDialog d) {
         Garden garden = new Garden();
@@ -208,7 +272,7 @@ public class GardensActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     Toast.makeText(GardensActivity.this, "Огород создан!", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(GardensActivity.this, "Ошибка при добавлении участка", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(GardensActivity.this, "Ошибка при добавлении участка: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
                 d.dismiss();
                 loadUserGardens();
@@ -232,9 +296,10 @@ public class GardensActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<Garden> call, Response<Garden> response) {
                 if (response.isSuccessful()) {
-                    updateGardenAreas(gardenId, area, dialog);
+                    // Сначала удаляем старую связь
+                    removeOldGardenArea(gardenId, area, dialog);
                 } else {
-                    Toast.makeText(GardensActivity.this, "Ошибка обновления", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(GardensActivity.this, "Ошибка обновления: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -245,26 +310,51 @@ public class GardensActivity extends AppCompatActivity {
         });
     }
 
-    private void updateGardenAreas(int gardenId, Area newArea, AlertDialog dialog) {
-        for (Area area : allUserAreas) {
-            apiService.removeAreaFromGarden(gardenId, area.getId()).enqueue(new Callback<Void>() {
-                @Override
-                public void onResponse(Call<Void> call, Response<Void> response) {
-                }
+    private void removeOldGardenArea(int gardenId, Area newArea, AlertDialog dialog) {
+        // Сначала получаем старый участок
+        apiService.getGardenAreas(gardenId).enqueue(new Callback<List<Area>>() {
+            @Override
+            public void onResponse(Call<List<Area>> call, Response<List<Area>> response) {
+                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
+                    // Удаляем старый участок
+                    Area oldArea = response.body().get(0);
+                    apiService.removeAreaFromGarden(gardenId, oldArea.getId()).enqueue(new Callback<Void>() {
+                        @Override
+                        public void onResponse(Call<Void> call, Response<Void> response) {
+                            // Добавляем новый участок
+                            addNewAreaToGarden(gardenId, newArea, dialog);
+                        }
 
-                @Override
-                public void onFailure(Call<Void> call, Throwable t) {
+                        @Override
+                        public void onFailure(Call<Void> call, Throwable t) {
+                            addNewAreaToGarden(gardenId, newArea, dialog);
+                        }
+                    });
+                } else {
+                    // Если нет старого участка, просто добавляем новый
+                    addNewAreaToGarden(gardenId, newArea, dialog);
                 }
-            });
-        }
+            }
 
+            @Override
+            public void onFailure(Call<List<Area>> call, Throwable t) {
+                addNewAreaToGarden(gardenId, newArea, dialog);
+            }
+        });
+    }
+
+    private void addNewAreaToGarden(int gardenId, Area newArea, AlertDialog dialog) {
         Map<String, Integer> request = new HashMap<>();
         request.put("areaId", newArea.getId());
 
         apiService.addAreaToGarden(gardenId, request).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                Toast.makeText(GardensActivity.this, "Огород обновлен!", Toast.LENGTH_SHORT).show();
+                if (response.isSuccessful()) {
+                    Toast.makeText(GardensActivity.this, "Огород обновлен!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(GardensActivity.this, "Ошибка обновления участка: " + response.code(), Toast.LENGTH_SHORT).show();
+                }
                 dialog.dismiss();
                 loadUserGardens();
             }
@@ -287,7 +377,7 @@ public class GardensActivity extends AppCompatActivity {
                     dialog.dismiss();
                     loadUserGardens();
                 } else {
-                    Toast.makeText(GardensActivity.this, "Нельзя удалить огород", Toast.LENGTH_LONG).show();
+                    Toast.makeText(GardensActivity.this, "Нельзя удалить огород: " + response.code(), Toast.LENGTH_LONG).show();
                 }
             }
 
